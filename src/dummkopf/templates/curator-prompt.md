@@ -6,8 +6,9 @@ Working directory: the root of this brain. Run these steps in order.
 2. Run `dummkopf curator` and `dummkopf links`.
 3. Read the curator report and `{links_file}`. For each finding, propose one action with a one-line reason.
    Allowed actions: `update`, `write conclusion`, `archive`, `delete`, `keep`.
-4. Write the result to `{report_dir}YYYY-WW.md` (ISO calendar week, e.g. `2026-40.md`) with `dummkopf write`.
-   Content:
+4. Write the result to `{report_dir}YYYY-WW.md` (ISO calendar week, e.g. `2026-40.md`) with one
+   `dummkopf ingest` package. On the first run `{report_dir}{readme}` does not exist yet: add it to the same
+   package with a `{scope_key}` from your scopes, because a new topic needs its README. The report content:
    - Frontmatter, so the pre-commit hook indexes the file cleanly:
      ```
      ---
@@ -27,7 +28,7 @@ Working directory: the root of this brain. Run these steps in order.
    not an action. The human decides from the report.
 6. Open and name no sensitive paths (see `{paths_file}` and the `{marker}` marker). Both commands already
    leave them out and only count them; copy that count line into the report unchanged.
-7. `dummkopf write` commits and pushes. If it exits with code 3, run `dummkopf sync` once more.
+7. `dummkopf ingest` commits and pushes. If it exits with code 3, run `dummkopf sync` once more.
 
 The report is a template for a five-minute decision, not an execution. Keep proposals short: one finding,
 one proposal, one line of reason. No closing summary.

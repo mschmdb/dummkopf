@@ -156,3 +156,14 @@ def test_cli(repo: Brain) -> None:
     assert code == 0 and "Curator" in output
     repo.configure("[extras]\ncurator = false\n")
     assert invoke(repo, "curator")[0] == 2
+
+
+def test_frontmatter_date_is_not_an_as_of_date(repo: Brain) -> None:
+    repo.write("topics/foo/bar.md", "---\nupdated: 2026-01-01\n---\n\n# Bar\n\nAs of 2026-02-02 all good.\n")
+    assert "topics/foo/bar.md" not in paths(run(repo), "conflicting_dates")
+
+
+def test_prompt_creates_the_report_topic_with_ingest(repo: Brain) -> None:
+    text = prompt(repo.config)
+    assert "dummkopf ingest" in text
+    assert "topics/curator/README.md" in text

@@ -254,6 +254,16 @@ def test_install_refuses_a_foreign_pre_commit_hook(fresh: Path) -> None:
                           "`dummkopf hook pre-commit` from your hook, or move it away and run `dummkopf install` "
                           "again.\n")
     assert hook.read_text(encoding="utf-8") == "#!/bin/sh\necho mine\n"
+    assert not (fresh / ".claude" / "settings.json").exists(), "exit 2 must change nothing"
+    assert not (fresh / ".codex" / "hooks.json").exists()
+
+
+def test_init_remote_in_an_existing_repo_adds_the_git_remote(tmp_path: Path) -> None:
+    target = tmp_path / "existing"
+    target.mkdir()
+    git(target, "init", "-q", "-b", "main")
+    assert run("init", str(target), "--remote", "git@example.org:me/brain.git").code == 0
+    assert git(target, "remote", "get-url", "origin") == "git@example.org:me/brain.git"
 
 
 def test_install_replaces_its_own_older_hook(fresh: Path) -> None:
