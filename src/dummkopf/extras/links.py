@@ -179,10 +179,15 @@ def render_markdown(report: LinksReport, config: Config) -> str:
 
 
 def output_path(config: Config, out: str | None) -> Path:
-    """The links file must be a .md file inside the brain, outside .git, and not a symlink."""
-    path = (config.root / (out or config.links.output)).resolve()
-    if (not path.is_relative_to(config.root) or path.suffix != ".md" or path.is_symlink()
-            or path.relative_to(config.root).parts[0] == ".git"):
+    """A .md file inside the brain, outside .git and the note folders, in an existing folder, no symlink.
+
+    Inside a note folder the map (which names topics of every scope) would turn into a searchable note.
+    """
+    raw = config.root / (out or config.links.output)
+    path = raw.resolve()
+    rel = path.relative_to(config.root).parts if path.is_relative_to(config.root) else ()
+    if (not rel or path.suffix != ".md" or raw.is_symlink() or rel[0] in (".git", *config.layout.roots)
+            or not path.parent.is_dir()):
         raise Rejected("links_output", path=out or config.links.output)
     return path
 

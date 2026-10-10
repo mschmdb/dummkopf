@@ -47,7 +47,18 @@ def reference_line(text: str, reference: str) -> int | None:
     return None
 
 
-HINTS = {"link-denied": "hint_link_denied", "link-scope": "hint_link_scope", "link-missing": "hint_link_missing"}
+HINTS = {"link-unavailable": "hint_link_unavailable", "link-scope": "hint_link_scope"}
+
+
+def readable(access: Access, rel: str, overlay: Mapping[str, str]) -> bool:
+    try:
+        if rel in overlay:
+            access.preview(rel, overlay[rel], overlay)
+        else:
+            access.read(rel)
+    except AccessDenied:
+        return False
+    return True
 
 
 def crosses_barrier(barriers: tuple[str, ...], note: Note, source: Note) -> bool:
@@ -57,7 +68,11 @@ def crosses_barrier(barriers: tuple[str, ...], note: Note, source: Note) -> bool
 
 def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
                 previous: Note | None = None) -> list[Issue]:
-    """Security problems are always errors; other problems only for links new in this write."""
+    """Security problems are always errors; other problems only for links new in this write.
+
+    A missing target and a hidden target give the same issue, so a link check never reveals
+    that a sensitive or out-of-scope note exists.
+    """
     layout = access.config.layout
     problems: list[Issue] = []
     old = set(references(previous.text)) if previous else set()
@@ -76,8 +91,9 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
                               layout.notes + "/" + name + ".md", layout.bookmarks + "/" + name + ".md"):
                 if candidate in overlay or (access.root / candidate).is_file():
                     candidates.add(candidate)
+            candidates = {path for path in candidates if readable(access, path, overlay)}
             if len(candidates) != 1:
-                problem("link-missing", "link_wiki_missing")
+                problem("link-unavailable", "link_unavailable")
                 continue
             rel = next(iter(candidates))
         else:
@@ -85,19 +101,19 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
             if parsed.scheme in ALLOWED_SCHEMES:
                 continue
             if parsed.scheme or parsed.netloc:
-                problem("link-denied", "link_scheme", security=True)
+                problem("link-invalid", "link_scheme", security=True)
                 continue
             target = unquote(parsed.path)
             if not target:
                 continue
             path = (access.root / PurePosixPath(note.path).parent / target).resolve()
             if not path.is_relative_to(access.root):
-                problem("link-denied", "link_escapes", security=True)
+                problem("link-invalid", "link_escapes", security=True)
                 continue
             rel = path.relative_to(access.root).as_posix()
         target_path = access.root / rel
         if rel not in overlay and not target_path.exists():
-            problem("link-missing", "link_missing")
+            problem("link-unavailable", "link_unavailable")
             continue
         if PurePosixPath(rel).parts[0] not in layout.roots:
             continue
@@ -112,5 +128,5 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
                     access.config.scopes.link_barriers, note, source):
                 problem("link-scope", "link_scope", security=True)
         except AccessDenied:
-            problem("link-denied", "link_denied", security=True)
+            problem("link-unavailable", "link_unavailable")
     return problems

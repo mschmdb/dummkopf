@@ -231,13 +231,13 @@ def coerce(kind: Any, raw: Any, key: str) -> Any:
     raise TypeError("unsupported config type for " + key)
 
 
-def relative_path(value: str, key: str, allow_dir: bool = False) -> None:
+def relative_path(value: str, key: str, allow_dir: bool = False, written: bool = False) -> None:
     """Relative, normalized (no `./`, no `//`), inside the brain. Prefix matching relies on the exact form."""
     plain = value.rstrip("/") if allow_dir else value
     path = PurePosixPath(plain)
     if (not plain or path.is_absolute() or ".." in path.parts or "\\" in value
             or not path.parts or value.startswith("~") or path.as_posix() != plain
-            or path.parts[0] in (".git", CONFIG_NAME)):
+            or (written and path.parts[0] in (".git", CONFIG_NAME))):
         raise invalid(key, "must be a normalized relative path inside the brain")
 
 
@@ -315,11 +315,13 @@ def validate(config: Config) -> None:
         raise invalid("limits.find_limit", "must be at most 10")
 
     relative_path(config.context.routes_file, "context.routes_file")
-    relative_path(config.links.output, "links.output")
+    relative_path(config.links.output, "links.output", written=True)
     if not config.links.output.endswith(".md"):
         raise invalid("links.output", "must be a .md file")
+    if PurePosixPath(config.links.output).parts[0] in layout.roots:
+        raise invalid("links.output", "must lie outside the note folders, or it becomes a searchable note")
     relative_path(config.links.entities_file, "links.entities_file")
-    relative_path(config.curator.report_dir, "curator.report_dir", allow_dir=True)
+    relative_path(config.curator.report_dir, "curator.report_dir", allow_dir=True, written=True)
     if config.links.min_topics < 1:
         raise invalid("links.min_topics", "must be at least 1")
 

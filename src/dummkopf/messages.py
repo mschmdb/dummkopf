@@ -45,18 +45,14 @@ PLAIN: dict[str, str] = {
     "flat_path": "Notes and bookmarks need a flat target path, e.g. {root}/<name>.md.",
     "topic_path": "Topic files need a topic folder, e.g. {root}/<topic>/<file>.md.",
     "kebab_case": "Target paths need kebab-case names and .md files.",
-    "link_wiki_missing": "A wiki link is missing or ambiguous.",
     "link_scheme": "This link scheme is not allowed.",
     "link_escapes": "A local link leaves the brain.",
-    "link_missing": "A local link target is missing.",
+    "link_unavailable": "A link target is missing or not released.",
     "link_scope": "A link crosses a sensitivity or scope boundary.",
-    "link_denied": "A link target is not released.",
-    "hint_link_denied": (
-        "The target is sensitive or outside the scope. "
-        "Check --allow-sensitive and --scope, or remove the link."
-    ),
     "hint_link_scope": "A non-sensitive or work note must not link to sensitive or private targets.",
-    "hint_link_missing": "Check the target path relative to the note.",
+    "hint_link_unavailable": (
+        "Check the target path relative to the note, --scope and --allow-sensitive, or remove the link."
+    ),
     "packet_shape": "A write package must contain only `changes`.",
     "changes_count": "changes needs 1 to {max} file entries.",
     "entry_shape": (
@@ -120,7 +116,10 @@ PLAIN: dict[str, str] = {
         "For Markdown content, `dummkopf write` or a quoted heredoc (<<'EOF') is safer."
     ),
     "check_paths_or_input": "check takes file paths or --input, not both.",
-    "links_output": "{path}: the links file must be a .md file inside the brain, outside .git.",
+    "links_output": (
+        "{path}: the links file must be a .md file inside the brain, in an existing folder, "
+        "outside .git and outside the note folders."
+    ),
     "extra_disabled": "The extra `{name}` is disabled in dummkopf.toml ([extras] {name} = false).",
     # rendered output
     "out_period": "Requested period: {start} to {end}",

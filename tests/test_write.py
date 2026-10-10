@@ -216,7 +216,7 @@ def test_rejected_link_names_note_line_and_hint_but_not_target(brain: Brain) -> 
     with pytest.raises(DummkopfError) as caught:
         write(brain, packet(change("notes/a.md", document(body="Text.\n\n[[locked]]"))))
     message = str(caught.value)
-    assert "link-denied" in message
+    assert "link-unavailable" in message
     assert "notes/a.md, line 15:" in message
     assert "--allow-sensitive" in message
     assert "locked" not in message
@@ -227,7 +227,7 @@ def test_new_broken_link_is_rejected_but_legacy_link_is_warning(brain: Brain) ->
         write(brain, packet(change("notes/a.md", document(body="[Source](missing.md)"))))
     brain.write("notes/old.md", document(body="[Source](missing.md)"))
     result = check(Access(brain.config))
-    assert any(issue["code"] == "link-missing" for issue in result["issues"])
+    assert any(issue["code"] == "link-unavailable" for issue in result["issues"])
 
 
 def test_original_source_cannot_be_overwritten(brain: Brain, german: Brain) -> None:
