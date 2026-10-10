@@ -91,9 +91,12 @@ notes, `--scope both` shows all. Scopes never lock anything; they keep a work an
 
 **Sensitivity** hides notes. A note is sensitive when:
 
-- it contains the marker line (`> SENSITIVE` by default) at the start of a line, or
+- it contains the marker line (`> SENSITIVE` by default) on a line of its own, or
 - a `README.md` in one of its folders contains the marker, or
 - its path sits under a `sensitive.always` prefix (for example `topics/health/`).
+
+The marker also counts when it is indented, so a note that quotes `> SENSITIVE` in an indented block
+becomes sensitive too. That is on purpose: hiding one note too many is the cheaper mistake.
 
 Sensitive notes stay out of search results, `INDEX.md`, the file tables of open topics, the links map and
 the curator scan. `read`, `find`, `context`, link checks and new files in a topic answer a hidden path exactly like a
@@ -193,6 +196,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 
 ## Extras
 
+- `links`, `curator` and `meta report` take `--scope` (default `scopes.query_default`) and show only notes
+  the read gate releases for that scope.
 - **links**: writes `LINKS.md` (never inside a note folder, so it never turns into a searchable note) with topics that share a month or an entity, and months where topics on both
   sides of a scope barrier are busy. Entities come from `entities.txt`: one per line, `Name|alias|alias`,
   prefix `i:` for case-insensitive matching.
@@ -204,8 +209,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`
   lets `context "meal plan next week"` open exactly the plan files named `plan-2026-10-05-to-11.md` that
   overlap next week, and only their matching table rows. A route never opens the rest of the folder.
-  An alias must contain a real word (three letters or more, not a filler word), because naming the alias
-  releases the plan.
+  An alias must contain a real word (three letters or more, not a filler word). A route opens sensitive
+  plan files only with `"allow_sensitive": true` in its entry; without it the normal sensitivity rules apply.
 
 ## FAQ
 
