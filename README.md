@@ -2,15 +2,12 @@
 
 Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.
 
+*Without memory, every agent is a Dummkopf.*
+
 ˈdʊmkɔpf turns a folder of Markdown notes into a memory that Claude Code, Codex and other agents can query and
 write through one CLI. Hooks commit and push every change, so the memory follows you to every machine.
 Notes carry a scope (`private`, `work`, or your own) and can be marked sensitive. Agents never see sensitive
 notes unless the user names the topic.
-
-## Why the name
-
-Linus Torvalds named Git after British slang for an unpleasant person. ˈdʊmkɔpf continues that tradition.
-Without memory, every agent is a Dummkopf. This tool fixes that, one note at a time.
 
 ## Quickstart (5 minutes)
 
