@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-import unicodedata
 from collections.abc import Sequence
 from pathlib import PurePosixPath
 from typing import TypedDict
@@ -13,6 +12,7 @@ from dummkopf.access import Access, Note
 from dummkopf.errors import AccessDenied, Rejected
 from dummkopf.locale import get_locale
 from dummkopf.routes import plan_lines, select
+from dummkopf.text import words
 
 
 class SourceLine(TypedDict):
@@ -48,13 +48,6 @@ class Packet(ContextFields):
     match: str
     more: bool
     truncated: bool
-
-
-def words(value: str) -> list[str]:
-    """Case- and accent-folded word tokens: `Straße Café` -> `strasse cafe`."""
-    folded = "".join(char for char in unicodedata.normalize("NFKD", value.casefold())
-                     if not unicodedata.combining(char))
-    return re.findall(r"[^\W_]+", folded)
 
 
 def source_hit(note: Note, start: int, end: int) -> Hit:

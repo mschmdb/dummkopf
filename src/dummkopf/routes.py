@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, TypedDict
 from dummkopf.config import Config
 from dummkopf.errors import AccessDenied
 from dummkopf.locale import Locale, get_locale
+from dummkopf.text import words
 
 if TYPE_CHECKING:
     from dummkopf.access import Access, Note
@@ -71,13 +72,22 @@ def file_period(path: str, locale: Locale) -> Period | None:
         return None
 
 
+MIN_ALIAS_WORD = 3
+
+
+def specific(alias: str, locale: Locale) -> bool:
+    """An alias releases sensitive plans, so it must name something: not only filler words."""
+    return any(len(token) >= MIN_ALIAS_WORD and token not in locale.stopwords for token in words(alias))
+
+
 def _valid(route: object, config: Config) -> bool:
     if not isinstance(route, dict):
         return False
     aliases, source = route.get("aliases"), route.get("sources")
     if not isinstance(aliases, list) or not aliases or not isinstance(source, str):
         return False
-    if any(not isinstance(alias, str) or not alias.strip() for alias in aliases):
+    locale = get_locale(config.ui.locale)
+    if any(not isinstance(alias, str) or not specific(alias, locale) for alias in aliases):
         return False
     parts = PurePosixPath(source).parts
     return not (PurePosixPath(source).is_absolute() or ".." in parts or "\\" in source
@@ -100,6 +110,14 @@ def routes(config: Config) -> list[Route]:
         return result
     except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
         raise AccessDenied("routes_invalid") from error
+
+
+def readable(access: Access, rel: str) -> bool:
+    try:
+        access.with_grants([rel]).read(rel)
+    except AccessDenied:
+        return False
+    return True
 
 
 def select(access: Access, query: str, normalize: Normalize, today: dt.date) -> Selection | None:
@@ -138,7 +156,8 @@ def select(access: Access, query: str, normalize: Normalize, today: dt.date) -> 
             if not rel.startswith(topic_prefix):
                 continue
             dates = file_period(rel, locale)
-            if dates:
+            # Only plans this call may read compete for "latest", so a hidden newer plan reveals nothing.
+            if dates and readable(access, rel):
                 candidates.append((dates, rel))
         if period:
             selected.extend(rel for dates, rel in candidates
