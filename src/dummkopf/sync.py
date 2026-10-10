@@ -71,13 +71,35 @@ def prepare_repository(config: Config) -> None:
         refresh(config)
 
 
+def commit_notes_only(config: Config) -> None:
+    """Commit staged note changes. Anything a human staged under sync_exclude stays staged, uncommitted.
+
+    `git commit -- <pathspec>` would do this too, but drops what the pre-commit hook stages.
+    So the foreign staged changes are parked as a patch and restored after the commit.
+    """
+    staged = set(git(config, "diff", "--cached", "--name-only", "-z").stdout.split("\0"))
+    notes = set(git(config, "diff", "--cached", "--name-only", "-z", *note_pathspec(config)).stdout.split("\0"))
+    foreign = sorted(path for path in staged - notes if path)
+    parked = git(config, "diff", "--cached", "--binary", "--", *foreign).stdout if foreign else ""
+    if foreign:
+        git(config, "reset", "-q", "--", *foreign)
+    try:
+        git(config, "commit", "-m", config.repo.commit_message)
+    finally:
+        if parked:
+            restore = subprocess.run(["git", "apply", "--cached"], cwd=config.root, input=parked, text=True,
+                                     capture_output=True, timeout=config.limits.git_timeout_s, check=False)
+            if restore.returncode != 0:
+                raise SyncError("git_failed", step="apply")
+
+
 def sync_locked(config: Config, refresh_remote: bool = False) -> None:
     verify(config)
     spec = note_pathspec(config)
     if git(config, "status", "--porcelain", "--untracked-files=all", *spec).stdout:
         git(config, "add", "-A", *spec)
-        if git(config, "diff", "--cached", "--quiet", allowed=(0, 1)).returncode == 1:
-            git(config, "commit", "-m", config.repo.commit_message)
+        if git(config, "diff", "--cached", "--quiet", *spec, allowed=(0, 1)).returncode == 1:
+            commit_notes_only(config)
     if not config.repo.auto_push:
         return
     ahead = int(git(config, "rev-list", "--count", remote_ref(config) + "..HEAD").stdout.strip())
