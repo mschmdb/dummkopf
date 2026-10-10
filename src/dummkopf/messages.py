@@ -239,7 +239,8 @@ HELP: dict[str, str] = {
         "Maintain frontmatter and generated indexes.\n"
         "migrate: add missing frontmatter. generate: rebuild INDEX.md and README file tables.\n"
         "report: list notes without date, stale notes and missing key facts.\n"
-        "index: regenerate the sensitive-paths list, then the tables.\n\n"
+        "index: regenerate the sensitive-paths list, then the tables.\n"
+        "agents: print AGENTS.md rendered for this brain's config.\n\n"
         "Example:\n  dummkopf meta report --max-age 30"
     ),
     "ex_links": (
@@ -262,7 +263,7 @@ HELP: dict[str, str] = {
     "init_remote": "Git remote URL for repo.remote.",
     "init_locale": "Language of generated headings and text heuristics: en or de.",
     "hook_kind": "pre-commit or agent.",
-    "meta_action": "migrate, generate, report or index.",
+    "meta_action": "migrate, generate, report, index or agents.",
     "meta_only": "migrate only these paths (repeatable).",
     "meta_max_age": "Days after which an active note counts as stale (default: limits.stale_after_days).",
     "ex_check": "Check frontmatter and links.\n\nExample:\n  dummkopf check notes/topic.md",

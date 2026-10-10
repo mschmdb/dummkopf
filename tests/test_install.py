@@ -111,3 +111,17 @@ def test_init_refuses_existing_brain(tmp_path: Path) -> None:
 def test_init_without_remote_leaves_a_placeholder(tmp_path: Path) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert "you/your-brain.git" in (tmp_path / "dummkopf.toml").read_text()
+
+
+def test_agents_rules_are_rendered_for_the_config(tmp_path: Path, german: Brain) -> None:
+    import re
+
+    assert main(["init", str(tmp_path / "en")]) == 0
+    text = (tmp_path / "en" / "AGENTS.md").read_text()
+    assert "> SENSITIVE" in text and "`private`, `work`" in text and "key_fact" in text
+    assert "a `work` note must not link to a `private` note" in text
+    assert not re.search(r"\{[a-z_]+\}", text), "unfilled placeholder"
+    code, output, _ = invoke(german, "meta", "agents")
+    assert code == 0
+    assert "> SENSIBEL" in output and "`topics/gesundheit/`" in output and "kernfakt" in output
+    assert "quellen/" in output and "Optional: Claude desktop app" in output

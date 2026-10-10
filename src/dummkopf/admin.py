@@ -17,7 +17,7 @@ from dummkopf.install import install
 from dummkopf.messages import HELP
 from dummkopf.messages import text as say
 from dummkopf.meta import generate, migrate, report
-from dummkopf.scaffold import init
+from dummkopf.scaffold import init, render_agents
 from dummkopf.sensitive import Sensitivity
 
 
@@ -30,7 +30,8 @@ def register(adder: Callable[[str], argparse.ArgumentParser]) -> None:
     command = adder("hook")
     command.add_argument("kind", choices=("pre-commit", "agent"), help=HELP["hook_kind"])
     command = adder("meta")
-    command.add_argument("action", choices=("migrate", "generate", "report", "index"), help=HELP["meta_action"])
+    command.add_argument("action", choices=("migrate", "generate", "report", "index", "agents"),
+                         help=HELP["meta_action"])
     command.add_argument("--dry-run", action="store_true", help=HELP["dry_run"])
     command.add_argument("--only", action="append", default=[], metavar="PATH", help=HELP["meta_only"])
     command.add_argument("--max-age", type=int, default=None, help=HELP["meta_max_age"])
@@ -78,6 +79,9 @@ def run_install(args: argparse.Namespace, config: Config, tone: str) -> int:
 def run_meta(args: argparse.Namespace, config: Config, tone: str) -> int:
     if args.action == "report":
         sys.stdout.write(report(config, args.max_age) + "\n")
+        return 0
+    if args.action == "agents":
+        sys.stdout.write(render_agents(config))
         return 0
     changed: list[str] = []
     if args.action == "migrate":

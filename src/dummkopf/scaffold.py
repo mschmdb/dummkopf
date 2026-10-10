@@ -6,7 +6,7 @@ import subprocess
 from importlib.resources import files
 from pathlib import Path
 
-from dummkopf.config import CONFIG_NAME, load_config
+from dummkopf.config import CONFIG_NAME, Config, load_config
 from dummkopf.errors import Rejected
 from dummkopf.locale import get_locale
 from dummkopf.sensitive import Sensitivity
@@ -16,6 +16,32 @@ PLACEHOLDER_REMOTE = "git@github.com:you/your-brain.git"
 
 def template(name: str) -> str:
     return files("dummkopf").joinpath("templates", name).read_text(encoding="utf-8")
+
+
+def code_list(values: tuple[str, ...]) -> str:
+    return ", ".join("`" + value + "`" for value in values)
+
+
+def render_agents(config: Config) -> str:
+    """AGENTS.md with this brain's folders, keys, scopes and marker filled in."""
+    fm = config.frontmatter
+    layout = config.layout
+    barriers = [barrier.partition(">") for barrier in config.scopes.link_barriers]
+    if barriers:
+        barrier_text = ("Links respect scope barriers: " + "; ".join(
+            f"a `{left}` note must not link to a `{right}` note" for left, _, right in barriers) + ".")
+    else:
+        barrier_text = "Links may cross scopes."
+    always = ""
+    if config.sensitive.always:
+        always = (" These paths are always sensitive, marker or not: " + code_list(config.sensitive.always)
+                  + ". New files there get the marker automatically.")
+    return template("AGENTS.md").format(
+        topics=layout.topics, notes=layout.notes, bookmarks=layout.bookmarks, sources=layout.sources,
+        readme=layout.topic_readme, index=layout.index, scope_key=fm.scope, scopes=code_list(config.scopes.values),
+        all=config.scopes.all, barriers=barrier_text, marker=config.sensitive.marker,
+        paths_file=config.sensitive.paths_file, always=always, key_fact=fm.key_fact, updated=fm.updated,
+        status=fm.status, summary=fm.summary, aliases=fm.aliases, period=fm.period, entities=fm.entities)
 
 
 def index_text(locale_name: str) -> str:
@@ -39,7 +65,7 @@ def init(target: Path, remote: str | None, locale: str) -> Path:
     (target / CONFIG_NAME).write_text(settings.replace("{locale}", locale), encoding="utf-8")
     config = load_config(target)
     files_to_write = {
-        "AGENTS.md": template("AGENTS.md"),
+        "AGENTS.md": render_agents(config),
         "CLAUDE.md": template("CLAUDE.md"),
         ".gitignore": template("gitignore"),
         config.layout.index: index_text(locale),
