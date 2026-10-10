@@ -1,0 +1,26 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Security problems (leaks of sensitive notes and similar) go to Security → Report a vulnerability, not here."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands and a minimal brain layout. Never paste real private notes.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: dummkopf version, Python version, OS
+    validations:
+      required: true

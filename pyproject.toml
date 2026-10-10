@@ -25,6 +25,11 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/mschmdb/dummkopf"
+Issues = "https://github.com/mschmdb/dummkopf/issues"
+Changelog = "https://github.com/mschmdb/dummkopf/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = ["pytest>=8", "mypy>=1.10", "ruff>=0.5"]
 
