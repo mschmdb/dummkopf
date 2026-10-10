@@ -189,7 +189,7 @@ are an error, so a typo never switches a rule off silently. The full file with e
 | `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus` | Search ranking. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
 | `[extras]` | `links`, `curator`, `codex_sync` | Switch each extra on or off. |
-| `[links]` | `output`, `entities_file`, `min_topics` | Options of the links extra. |
+| `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
 | `[curator]` | `open_days`, `stale_days`, `report_dir` | Options of the curator extra. |
 
 **An existing brain in another language** runs on ˈdʊmkɔpf through configuration alone.

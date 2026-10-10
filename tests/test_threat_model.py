@@ -315,3 +315,40 @@ def test_extras_default_to_query_default(brain: Brain) -> None:
     scoped_topics(brain)
     code, output, _ = invoke(brain, "curator", "--json", "--open-days", "1")
     assert code == 0 and "divorce" not in output
+
+
+# --- links.allow_outside -----------------------------------------------------------------------
+
+
+def test_links_into_allowed_outside_folders_are_fine(brain: Brain) -> None:
+    brain.configure("[links]\nallow_outside = ['archive', 'assets']\n")
+    brain.write("archive/old.md", "# Old\n")
+    brain.write("assets/diagram.png", "png")
+    assert link_result(brain, "../archive/old.md") == "accepted"
+    assert link_result(brain, "../assets/diagram.png") == "accepted"
+
+
+def test_allow_outside_keeps_everything_else_closed(brain: Brain, tmp_path: Path) -> None:
+    brain.configure("[links]\nallow_outside = ['archive']\n")
+    brain.write("archive/sub/x.md", "# X\n")
+    (tmp_path / "secret.md").write_text("x", encoding="utf-8")
+    (brain.root / "archive" / "link.md").symlink_to(tmp_path / "secret.md")
+    absent = link_result(brain, "../archive/absent.md")
+    assert "link-unavailable" in absent
+    for target in ("../archive/link.md", "../archive", "../archive/sub", "../.git/HEAD", "../dummkopf.toml",
+                   "../archiveX/x.md"):
+        assert link_result(brain, target) == absent, target
+    assert link_result(brain, "../archive/sub/x.md") == "accepted"
+
+
+def test_non_markdown_files_inside_note_folders_are_fine(brain: Brain) -> None:
+    brain.write("notes/chart.png", "png")
+    assert link_result(brain, "chart.png") == "accepted"
+
+
+@pytest.mark.parametrize("value", ["['.git']", "['dummkopf.toml']", "['../x']", "['notes']", "['./archive']"])
+def test_allow_outside_rejects_dangerous_or_pointless_entries(brain: Brain, value: str) -> None:
+    from dummkopf.errors import ConfigError
+
+    with pytest.raises(ConfigError, match=r"links\.allow_outside"):
+        brain.configure("[links]\nallow_outside = " + value + "\n")

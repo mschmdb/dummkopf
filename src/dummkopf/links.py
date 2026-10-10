@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import posixpath
 import re
 from collections.abc import Mapping
 from pathlib import PurePosixPath
@@ -10,6 +11,7 @@ from urllib.parse import unquote, urlsplit
 
 from dummkopf.access import Access, Note
 from dummkopf.errors import AccessDenied
+from dummkopf.files import inside_without_symlinks
 from dummkopf.messages import text as say
 
 ALLOWED_SCHEMES = ("http", "https", "mailto")
@@ -54,6 +56,18 @@ def reference_line(text: str, reference: str) -> int | None:
 
 
 HINTS = {"link-unavailable": "hint_link_unavailable", "link-scope": "hint_link_scope"}
+
+
+def allowed_outside(access: Access, rel: str) -> bool:
+    """An existing file, no symlink on the way, under a folder listed in links.allow_outside.
+
+    The owner declared these folders public, so a link there reveals nothing hidden.
+    """
+    folders = [folder.rstrip("/") for folder in access.config.links.allow_outside]
+    if not any(rel.startswith(folder + "/") for folder in folders):
+        return False
+    path = access.root / rel
+    return path.is_file() and inside_without_symlinks(access.root, path)
 
 
 def readable(access: Access, rel: str, overlay: Mapping[str, str]) -> bool:
@@ -116,17 +130,19 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
             target = unquote(parsed.path)
             if not target:
                 continue
-            path = (access.root / PurePosixPath(note.path).parent / target).resolve()
-            if not path.is_relative_to(access.root):
+            # Normalize without following symlinks: a symlink must look like any other unavailable target.
+            joined = posixpath.normpath(posixpath.join(posixpath.dirname(note.path), target))
+            if joined == ".." or joined.startswith("../") or posixpath.isabs(joined):
                 problem("link-invalid", "link_escapes", security=True)
                 continue
-            rel = path.relative_to(access.root).as_posix()
+            rel = joined
         # Anything that is not a readable note answers like a missing file: folders of hidden topics,
         # files outside the note folders, .git. Otherwise a link check would map the repository.
         target_path = access.root / rel
         if rel not in overlay:
             if not PurePosixPath(rel).parts or PurePosixPath(rel).parts[0] not in layout.roots:
-                problem("link-unavailable", "link_unavailable")
+                if not allowed_outside(access, rel):
+                    problem("link-unavailable", "link_unavailable")
                 continue
             if target_path.is_dir():
                 rel = rel + "/" + layout.topic_readme

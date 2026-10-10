@@ -152,6 +152,7 @@ class LinksOptions:
     output: str = "LINKS.md"
     entities_file: str = "entities.txt"
     min_topics: int = 2
+    allow_outside: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -322,6 +323,10 @@ def validate(config: Config) -> None:
         raise invalid("links.output", "must lie outside the note folders, or it becomes a searchable note")
     relative_path(config.links.entities_file, "links.entities_file")
     relative_path(config.curator.report_dir, "curator.report_dir", allow_dir=True, written=True)
+    for folder in config.links.allow_outside:
+        relative_path(folder, "links.allow_outside", allow_dir=True, written=True)
+        if PurePosixPath(folder.rstrip("/")).parts[0] in layout.roots:
+            raise invalid("links.allow_outside", "note folders are always allowed; list only folders outside them")
     if config.links.min_topics < 1:
         raise invalid("links.min_topics", "must be at least 1")
 
