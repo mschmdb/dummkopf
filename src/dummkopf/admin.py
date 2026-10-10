@@ -10,6 +10,8 @@ from pathlib import Path
 
 from dummkopf.config import LOCALES, Config, find_root, load_config
 from dummkopf.errors import DummkopfError
+from dummkopf.extras import curator, links
+from dummkopf.extras.common import require
 from dummkopf.hook import agent_event, pre_commit
 from dummkopf.install import install
 from dummkopf.messages import HELP
@@ -32,6 +34,15 @@ def register(adder: Callable[[str], argparse.ArgumentParser]) -> None:
     command.add_argument("--dry-run", action="store_true", help=HELP["dry_run"])
     command.add_argument("--only", action="append", default=[], metavar="PATH", help=HELP["meta_only"])
     command.add_argument("--max-age", type=int, default=None, help=HELP["meta_max_age"])
+    command = adder("links")
+    command.add_argument("--out", default=None, metavar="PATH", help=HELP["links_out"])
+    command.add_argument("--min-topics", type=int, default=None, help=HELP["links_min"])
+    command.add_argument("--json", action="store_true", help=HELP["extra_json"])
+    command = adder("curator")
+    command.add_argument("--open-days", type=int, default=None, help=HELP["curator_open"])
+    command.add_argument("--stale-days", type=int, default=None, help=HELP["curator_stale"])
+    command.add_argument("--prompt", action="store_true", help=HELP["curator_prompt"])
+    command.add_argument("--json", action="store_true", help=HELP["extra_json"])
 
 
 def run_init(args: argparse.Namespace, root: Path, tone: str) -> int:
@@ -83,4 +94,27 @@ def run_meta(args: argparse.Namespace, config: Config, tone: str) -> int:
     for path in changed:
         sys.stdout.write(path + "\n")
     sys.stderr.write(say("out_index_changed", tone, count=len(changed)) + "\n")
+    return 0
+
+
+def run_links(args: argparse.Namespace, config: Config, tone: str) -> int:
+    if args.json:
+        sys.stdout.write(json.dumps(links.build(config, args.min_topics), ensure_ascii=False, indent=2) + "\n")
+        return 0
+    path = links.write_links(config, args.out, args.min_topics)
+    sys.stdout.write(say("out_written", tone, path=path.relative_to(config.root).as_posix()) + "\n")
+    return 0
+
+
+def run_curator(args: argparse.Namespace, config: Config, tone: str) -> int:
+    del tone
+    if args.prompt:
+        require(config, "curator")
+        sys.stdout.write(curator.prompt(config))
+        return 0
+    result = curator.scan(config, args.open_days, args.stale_days)
+    if args.json:
+        sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    else:
+        sys.stdout.write(curator.render_markdown(result))
     return 0

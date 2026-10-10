@@ -148,5 +148,6 @@ def handlers() -> tuple[dict[str, Handler], dict[str, NoConfigHandler]]:
     from dummkopf import admin
 
     with_config: dict[str, Handler] = {name: run for name in ("ingest", "write", "check", "sync")}
-    with_config.update({"install": admin.run_install, "meta": admin.run_meta})
+    with_config.update({"install": admin.run_install, "meta": admin.run_meta, "links": admin.run_links,
+                        "curator": admin.run_curator})
     return with_config, {"init": admin.run_init, "hook": admin.run_hook}

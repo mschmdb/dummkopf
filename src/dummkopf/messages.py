@@ -148,6 +148,13 @@ PLAIN: dict[str, str] = {
     "report_stale_item": "- `{path}` ({key} {date})",
     "report_sensitive": "_{count} sensitive file(s) skipped._",
     "out_paths_file_updated": "{file} updated.",
+    "curator_title": "Curator scan",
+    "curator_open_loops": "Open loops",
+    "curator_stale_topics": "Topics without movement",
+    "curator_conflicts": "Conflicting dates",
+    "curator_stale_active": "Stale active notes",
+    "curator_none": "None found.",
+    "curator_skipped": "{files} sensitive files and {topics} sensitive topics skipped.",
     "out_init": (
         "New brain created in {path}. Next: set repo.remote in dummkopf.toml, then `dummkopf install`."
     ),
@@ -235,6 +242,22 @@ HELP: dict[str, str] = {
         "index: regenerate the sensitive-paths list, then the tables.\n\n"
         "Example:\n  dummkopf meta report --max-age 30"
     ),
+    "ex_links": (
+        "Build the cross-reference map: topics that share a month or an entity, and months where\n"
+        "scopes named in scopes.link_barriers collide. Sensitive notes are left out.\n\n"
+        "Example:\n  dummkopf links --min-topics 3"
+    ),
+    "ex_curator": (
+        "Deterministic curation scan: open loops, quiet topics, conflicting dates, stale notes.\n"
+        "--prompt prints the weekly LLM prompt that turns the scan into a report.\n\n"
+        "Example:\n  dummkopf curator --json"
+    ),
+    "links_out": "Output file (default: links.output).",
+    "links_min": "Minimum number of topics per link (default: links.min_topics).",
+    "curator_open": "Days after which an open loop counts (default: curator.open_days).",
+    "curator_stale": "Days without change after which a topic counts as quiet (default: curator.stale_days).",
+    "curator_prompt": "Print the weekly LLM prompt instead of the scan.",
+    "extra_json": "Print the result as JSON instead of Markdown.",
     "init_path": "Folder for the new brain (default: current folder).",
     "init_remote": "Git remote URL for repo.remote.",
     "init_locale": "Language of generated headings and text heuristics: en or de.",
