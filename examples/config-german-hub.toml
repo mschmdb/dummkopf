@@ -17,6 +17,7 @@ values = ["privat", "work"]
 all = "both"
 query_default = "both"
 mixed_label = "gemischt"
+link_barriers = ["work>privat"]
 
 [status]
 active = "aktiv"

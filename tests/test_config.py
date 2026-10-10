@@ -100,6 +100,8 @@ def test_required_keys(tmp_path: Path, text: str, key: str) -> None:
         ("[scopes]\nvalues = ['a b']\n", "scopes.values"),
         ("[scopes]\nvalues = ['both']\n", "scopes.all"),
         ("[scopes]\nquery_default = 'nope'\n", "scopes.query_default"),
+        ("[scopes]\nlink_barriers = ['work>nope']\n", "scopes.link_barriers"),
+        ("[scopes]\nvalues = ['a', 'b']\n", "scopes.link_barriers"),
         ("[sensitive]\nmarker = ''\n", "sensitive.marker"),
         ('[sensitive]\nmarker = "a\\nb"\n', "sensitive.marker"),
         ("[sensitive]\nalways = ['../x/']\n", "sensitive.always"),

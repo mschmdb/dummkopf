@@ -64,6 +64,10 @@ class Sensitivity:
             return True
         return any(rel == d or rel.startswith(d + "/") for d in self.dirs | self.always_dirs)
 
+    def is_always(self, rel: str) -> bool:
+        """Under a `sensitive.always` prefix: sensitive with or without a marker."""
+        return rel in self.always_files or any(rel.startswith(d + "/") for d in self.always_dirs)
+
     def has_marker(self, text: str) -> bool:
         return bool(self.pattern.search(text))
 

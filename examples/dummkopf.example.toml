@@ -27,6 +27,7 @@ all = "both"                           # CLI keyword: --scope both searches ever
 query_default = "both"                 # --scope when the flag is omitted
 mixed_label = "mixed"                  # shown for folders without a scope
 require_on_new_topic = true            # a new topic README must set a scope
+link_barriers = ["work>private"]       # a work note must not link to a private note
 
 [status]
 active = "active"                      # default for new notes; stale checks target it

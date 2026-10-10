@@ -61,6 +61,7 @@ class ScopesConfig:
     query_default: str = "both"
     mixed_label: str = "mixed"
     require_on_new_topic: bool = True
+    link_barriers: tuple[str, ...] = ("work>private",)
 
     @property
     def choices(self) -> tuple[str, ...]:
@@ -269,6 +270,11 @@ def validate(config: Config) -> None:
         raise invalid("scopes.query_default", "must be scopes.all or one of scopes.values")
     if not scopes.mixed_label.strip():
         raise invalid("scopes.mixed_label", "must not be empty")
+    for barrier in scopes.link_barriers:
+        source, _, target = barrier.partition(">")
+        if source not in scopes.values or target not in scopes.values or source == target:
+            raise invalid("scopes.link_barriers", "'" + barrier + "' must read <scope>><other scope>, "
+                          "using scopes.values; set link_barriers when you rename scopes")
 
     if not config.status.active.strip() or not config.status.archived.strip():
         raise invalid("status", "values must not be empty")
