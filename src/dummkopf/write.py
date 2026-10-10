@@ -134,11 +134,18 @@ def ingest(access: Access, packet: object, dry_run: bool = False, sync: bool = T
             try:
                 sync_locked(config)
                 result["sync"] = "ok"
-                refreshed = Access(config, access.scope, access.topic, access.allowed)
-                result["revisions"] = {change.note.path: refreshed.read(change.note.path).revision
-                                       for change in plan.changes}
             except SyncError:
                 result["sync"] = "failed"
+                return result
+            # The remote may have hidden a note meanwhile; the write itself still succeeded.
+            refreshed = Access(config, access.scope, access.topic, access.allowed)
+            revisions: dict[str, str] = {}
+            for change in plan.changes:
+                try:
+                    revisions[change.note.path] = refreshed.read(change.note.path).revision
+                except AccessDenied:
+                    continue
+            result["revisions"] = revisions
         return result
 
 
