@@ -99,7 +99,8 @@ notes, `--scope both` shows all. Scopes never lock anything; they keep a work an
 - its path sits under a `sensitive.always` prefix (for example `topics/health/`).
 
 Sensitive notes stay out of search results, `INDEX.md`, the file tables of open topics, the links map and
-the curator scan. `read`, `find`, `context` and link checks answer a sensitive path exactly like a missing one.
+the curator scan. `read`, `find`, `context`, link checks and new files in a topic answer a hidden path exactly like a
+missing one. A topic `README.md` lists only notes of its own scope.
 One signal stays by design: whoever may create notes learns whether a path is free, because
 `write --expected new` fails on an existing hidden file. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
 `AGENTS.md` says so. The pre-commit hook derives `.sensitive-paths` from the markers, so `rg --ignore-file`
@@ -109,7 +110,8 @@ Write rules dummkopf enforces:
 
 - `--expected <rev>` on every change. A stale revision is rejected, so two agents never overwrite each other.
 - A new topic needs a `README.md` with a scope in the same package.
-- No removing markers, no changing scopes, no edits under `sources/`.
+- No removing markers, no changing scopes, no edits under `sources/`. A new `README.md` must not change
+  the scope of notes that already sit below it.
 - No dead links, no links from a non-sensitive note to a sensitive one.
 - New files get mode `0600`.
 - Symlinks never count as notes. A cloned brain cannot pull outside files into the index or the extras.
@@ -205,6 +207,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`
   lets `context "meal plan next week"` open exactly the plan files named `plan-2026-10-05-to-11.md` that
   overlap next week, and only their matching table rows. A route never opens the rest of the folder.
+  An alias must contain a real word (three letters or more, not a filler word), because naming the alias
+  releases the plan.
 
 ## FAQ
 
