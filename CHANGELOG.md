@@ -5,6 +5,23 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-10
+
+### Added
+
+- `[links] allow_outside`: folders outside the note folders that notes may link to, e.g. `archive`.
+- `dummkopf install --replace-command TEXT` removes old hook commands before adding its own.
+- Security policy, Dependabot, CODEOWNERS, issue and PR templates.
+
+### Changed
+
+- A broken routes file names the file, the route number and the problem.
+- `init --remote` no longer asks to set the remote again. The README explains how to put `dummkopf` on PATH.
+
+### Security
+
+- Link targets are normalized without following symlinks, so a symlink answers like any unavailable target.
+
 ## [0.1.0] - 2026-10-10
 
 ### Added
