@@ -4,15 +4,19 @@ Thanks for helping. A few rules keep ˈdʊmkɔpf small and safe.
 
 ## Setup
 
+The project uses [uv](https://docs.astral.sh/uv/) for everything: environment, lock file, tools.
+
 ```bash
-uv venv && uv pip install -e '.[dev]'
+uv sync
 ```
 
 Then run the checks before every commit:
 
 ```bash
-.venv/bin/pytest && .venv/bin/mypy && .venv/bin/ruff check .
+uv run pytest && uv run mypy && uv run ruff check .
 ```
+
+Add dependencies with `uv add` (runtime) or `uv add --dev` (tooling) and commit `uv.lock`.
 
 ## Rules
 

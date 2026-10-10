@@ -14,13 +14,12 @@ notes unless the user names the topic.
 You need Python 3.11+, Git, and macOS or Linux.
 
 ```bash
-pip install "git+https://github.com/mschmdb/dummkopf.git"
+uv tool install "git+https://github.com/mschmdb/dummkopf.git"
 ```
 
-`uv tool install` or `pipx install` with the same URL work too and keep ˈdʊmkɔpf out of your project
-environments. The commands below need `dummkopf` on your `PATH`, because the hooks call it by name:
-after `uv tool install` run `uv tool update-shell`, after `pipx install` run `pipx ensurepath`, and a
-`pip install` into a virtual environment needs that environment activated.
+Then run `uv tool update-shell` once, so `dummkopf` is on your `PATH`. The hooks call it by name and also
+look in `~/.local/bin`, where `uv tool` and `pipx` install it. `pipx install` and `pip install` with the same
+URL work too; after `pip install` into a virtual environment, keep that environment activated.
 
 Create a brain with an empty private repository as its remote:
 
