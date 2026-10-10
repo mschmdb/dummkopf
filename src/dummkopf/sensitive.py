@@ -8,6 +8,7 @@ one of its folders carries it.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
@@ -18,11 +19,25 @@ from dummkopf.files import iter_note_files
 
 @lru_cache(maxsize=16)
 def marker_pattern(marker: str) -> re.Pattern[str]:
-    """`> SENSITIVE` matches `>SENSITIVE` and `>   sensitive` at a line start, never across lines."""
+    """Match one line: `> SENSITIVE`, `>SENSITIVE`, `  >  sensitive`.
+
+    Leading and inner whitespace may be any horizontal whitespace, Unicode included, because
+    a non-breaking space or an indent renders like the plain marker. Fail closed: over-hiding
+    is safe, under-hiding leaks.
+    """
     tokens = marker.split()
-    # Any horizontal whitespace, Unicode included: a non-breaking space renders like a space.
-    return re.compile("^" + r"[^\S\r\n]*".join(re.escape(token) for token in tokens),
-                      re.IGNORECASE | re.MULTILINE)
+    return re.compile(r"[^\S\r\n]*" + r"[^\S\r\n]*".join(re.escape(token) for token in tokens),
+                      re.IGNORECASE)
+
+
+def text_has_marker(text: str, pattern: re.Pattern[str]) -> bool:
+    """Check every line; splitlines() also splits on CR-only and Unicode line breaks. A BOM is ignored."""
+    return any(pattern.match(line.lstrip("\ufeff")) for line in text.splitlines())
+
+
+def path_key(rel: str) -> str:
+    """Comparison key for paths: one Unicode form, no case. Disk spelling may be NFD, config NFC."""
+    return unicodedata.normalize("NFC", rel).casefold()
 
 
 def split_entries(entries: list[str] | tuple[str, ...]) -> tuple[frozenset[str], frozenset[str]]:
@@ -63,12 +78,12 @@ class Sensitivity:
     @cached_property
     def _folded(self) -> tuple[frozenset[str], frozenset[str], frozenset[str], frozenset[str]]:
         """Case-folded entries: a case-insensitive file system opens `Health/` for `health/`."""
-        return tuple(frozenset(entry.casefold() for entry in group)  # type: ignore[return-value]
+        return tuple(frozenset(path_key(entry) for entry in group)  # type: ignore[return-value]
                      for group in (self.files, self.dirs, self.always_files, self.always_dirs))
 
     def is_listed(self, rel: str) -> bool:
         files, dirs, always_files, always_dirs = self._folded
-        key = rel.casefold()
+        key = path_key(rel)
         if key in files or key in always_files:
             return True
         return any(key == d or key.startswith(d + "/") for d in dirs | always_dirs)
@@ -76,11 +91,11 @@ class Sensitivity:
     def is_always(self, rel: str) -> bool:
         """Under a `sensitive.always` prefix: sensitive with or without a marker."""
         _, _, always_files, always_dirs = self._folded
-        key = rel.casefold()
+        key = path_key(rel)
         return key in always_files or any(key.startswith(d + "/") for d in always_dirs)
 
     def has_marker(self, text: str) -> bool:
-        return bool(self.pattern.search(text))
+        return text_has_marker(text, self.pattern)
 
     def file_marked(self, rel: str) -> bool:
         path = self.root / rel

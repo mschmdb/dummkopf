@@ -3,24 +3,28 @@ from __future__ import annotations
 from conftest import Brain
 
 from dummkopf.files import iter_note_files, topic_of
-from dummkopf.sensitive import Sensitivity, marker_pattern
+from dummkopf.sensitive import Sensitivity, marker_pattern, text_has_marker
 
 
 def test_marker_matches_at_line_start_only(brain: Brain) -> None:
     pattern = marker_pattern("> SENSITIVE")
-    assert pattern.search("# A\n\n> SENSITIVE\n")
-    assert pattern.search("# A\n\n>SENSITIVE\n")
-    assert pattern.search("# A\n\n>   sensitive\n")
-    assert not pattern.search("A word SENSITIVE mid-sentence.\n")
-    assert not pattern.search("# A\n>\nSENSITIVE\n"), "marker must not span lines"
-    assert pattern.search("# A\n>\u00a0SENSITIVE\n"), "a non-breaking space looks like a space"
-    assert pattern.search("# A\n>\u2003SENSITIVE\n")
+
+    def search(text: str) -> bool:
+        return text_has_marker(text, pattern)
+
+    assert search("# A\n\n> SENSITIVE\n")
+    assert search("# A\n\n>SENSITIVE\n")
+    assert search("# A\n\n>   sensitive\n")
+    assert not search("A word SENSITIVE mid-sentence.\n")
+    assert not search("# A\n>\nSENSITIVE\n"), "marker must not span lines"
+    assert search("# A\n>\u00a0SENSITIVE\n"), "a non-breaking space looks like a space"
+    assert search("# A\n>\u2003SENSITIVE\n")
 
 
 def test_custom_marker_is_escaped() -> None:
     pattern = marker_pattern("!! private (do not share)")
-    assert pattern.search("x\n!! private (do not share)\n")
-    assert not pattern.search("x\n!! private do not share\n")
+    assert text_has_marker("x\n!! private (do not share)\n", pattern)
+    assert not text_has_marker("x\n!! private do not share\n", pattern)
 
 
 def test_marker_in_file(brain: Brain) -> None:
