@@ -108,9 +108,16 @@ def test_init_refuses_existing_brain(tmp_path: Path) -> None:
     assert (tmp_path / "dummkopf.toml").read_text() == before
 
 
-def test_init_without_remote_leaves_a_placeholder(tmp_path: Path) -> None:
+def test_init_without_remote_leaves_a_placeholder(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["init", str(tmp_path)]) == 0
     assert "you/your-brain.git" in (tmp_path / "dummkopf.toml").read_text()
+    assert "set repo.remote" in capsys.readouterr().out
+
+
+def test_init_with_remote_does_not_ask_for_it_again(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["init", str(tmp_path), "--remote", "git@example.org:me/brain.git"]) == 0
+    output = capsys.readouterr().out
+    assert "set repo.remote" not in output and "dummkopf install" in output
 
 
 def test_agents_rules_are_rendered_for_the_config(tmp_path: Path, german: Brain) -> None:

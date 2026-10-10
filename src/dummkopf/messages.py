@@ -162,6 +162,7 @@ PLAIN: dict[str, str] = {
     "out_init": (
         "New brain created in {path}. Next: set repo.remote in dummkopf.toml, then `dummkopf install`."
     ),
+    "out_init_with_remote": "New brain created in {path}. Next: `dummkopf install`, then commit and push.",
 }
 
 # argparse help: option help, command descriptions and examples.
