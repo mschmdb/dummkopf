@@ -12,6 +12,7 @@ from typing import Any
 from dummkopf.access import Access, Note
 from dummkopf.config import Config
 from dummkopf.errors import AccessDenied, Rejected
+from dummkopf.files import is_source as files_is_source
 from dummkopf.files import iter_note_files
 from dummkopf.frontmatter import KEY_RE, Data, dump_frontmatter, parse_frontmatter, shorten
 from dummkopf.links import HINTS, Issue, issue, link_issues
@@ -44,7 +45,7 @@ def today() -> str:
 
 
 def is_source(rel: str, config: Config) -> bool:
-    return config.layout.sources in PurePosixPath(rel).parts
+    return files_is_source(rel, config.layout)
 
 
 def metadata_issues(note: Note, config: Config) -> list[Issue]:

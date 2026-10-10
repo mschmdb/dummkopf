@@ -12,20 +12,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dummkopf.config import Config
-from dummkopf.files import git_last_date, is_topic_readme, iter_note_files, skill_dirs
+from dummkopf.files import git_last_date, is_source, is_topic_readme, iter_note_files, skill_dirs, write_generated
 from dummkopf.frontmatter import Data, dump_frontmatter, parse_frontmatter, shorten
 from dummkopf.locale import get_locale
 from dummkopf.messages import text as say
-from dummkopf.scopes import effective_scope
+from dummkopf.scopes import effective_scope, read_raw
 from dummkopf.sensitive import Sensitivity
 from dummkopf.tables import drop_section, replace_table, scrape_rows, section_bounds, table
 
 
 def read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
+    """Text of a file dummkopf only reads; missing, symlinked or unreadable files count as empty."""
+    return read_raw(path) or ""
 
 
 def topic_dirs(config: Config) -> list[str]:
@@ -65,10 +63,13 @@ def migrate(config: Config, dry_run: bool = False, only: list[str] | None = None
     cache: dict[str, dict[str, tuple[str, list[str]]]] = {}
     changed: list[str] = []
     for rel in iter_note_files(config):
-        if only and rel not in only:
+        if (only and rel not in only) or is_source(rel, config.layout):
             continue
         path = config.root / rel
-        text = read_text(path)
+        raw = read_raw(path)
+        if raw is None:
+            continue  # unreadable: never rewrite what we could not read
+        text = raw
         data, body, had = parse_frontmatter(text)
         if not had:
             body = "\n" + text
@@ -92,7 +93,7 @@ def migrate(config: Config, dry_run: bool = False, only: list[str] | None = None
         if new != text:
             changed.append(rel)
             if not dry_run:
-                path.write_text(new, encoding="utf-8")
+                write_generated(path, new)
     return changed
 
 
@@ -172,21 +173,20 @@ def generate(config: Config, dry_run: bool = False) -> list[str]:
     notes = iter_note_files(config)
     sensitivity = Sensitivity.load(config)
 
-    def put(rel: str, new: str) -> None:
-        path = config.root / rel
-        if path.is_symlink():
-            return
-        if read_text(path) != new:
+    def put(rel: str, current: str, new: str) -> None:
+        if current != new:
             changed.append(rel)
             if not dry_run:
-                path.write_text(new, encoding="utf-8")
+                write_generated(config.root / rel, new)
 
     for name in topic_dirs(config):
         rel = config.layout.topics + "/" + name + "/" + config.layout.topic_readme
-        put(rel, render_readme(config, name, read_text(config.root / rel), notes, sensitivity))
-    index = config.root / config.layout.index
-    if index.is_file():
-        put(config.layout.index, render_index(config, read_text(index), notes, sensitivity))
+        text = read_raw(config.root / rel)
+        if text is not None:  # unreadable or symlinked READMEs stay untouched
+            put(rel, text, render_readme(config, name, text, notes, sensitivity))
+    index = read_raw(config.root / config.layout.index)
+    if index is not None:
+        put(config.layout.index, index, render_index(config, index, notes, sensitivity))
     return changed
 
 

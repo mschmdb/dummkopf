@@ -12,12 +12,14 @@ from dummkopf.config import LOCALES, Config, find_root, load_config
 from dummkopf.errors import DummkopfError
 from dummkopf.extras import curator, links
 from dummkopf.extras.common import require
+from dummkopf.files import write_generated
 from dummkopf.hook import agent_event, pre_commit
 from dummkopf.install import install
 from dummkopf.messages import HELP
 from dummkopf.messages import text as say
 from dummkopf.meta import generate, migrate, report
 from dummkopf.scaffold import init, render_agents
+from dummkopf.scopes import read_raw
 from dummkopf.sensitive import Sensitivity
 
 
@@ -90,9 +92,8 @@ def run_meta(args: argparse.Namespace, config: Config, tone: str) -> int:
         if args.action == "index" and not args.dry_run:
             paths_file = config.root / config.sensitive.paths_file
             fresh = Sensitivity.generate(config)
-            if not paths_file.is_file() or paths_file.read_text(encoding="utf-8") != fresh:
-                paths_file.write_text(fresh, encoding="utf-8")
-                paths_file.chmod(0o600)
+            current = read_raw(paths_file)
+            if current != fresh and write_generated(paths_file, fresh, 0o600):
                 changed.append(config.sensitive.paths_file)
         changed += generate(config, dry_run=args.dry_run)
     for path in changed:

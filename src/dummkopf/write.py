@@ -137,9 +137,13 @@ def ingest(access: Access, packet: object, dry_run: bool = False, sync: bool = T
             except SyncError:
                 result["sync"] = "failed"
                 return result
-            # The remote may have hidden a note meanwhile; the write itself still succeeded.
-            refreshed = Access(config, access.scope, access.topic, access.allowed)
+            # The remote may have hidden a note or removed the paths list meanwhile; the write still succeeded.
             revisions: dict[str, str] = {}
+            result["revisions"] = revisions
+            try:
+                refreshed = Access(config, access.scope, access.topic, access.allowed)
+            except AccessDenied:
+                return result
             for change in plan.changes:
                 try:
                     revisions[change.note.path] = refreshed.read(change.note.path).revision

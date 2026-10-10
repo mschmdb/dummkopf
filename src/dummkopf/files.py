@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from dummkopf.config import Config, LayoutConfig
 
@@ -41,6 +41,21 @@ def iter_note_files(config: Config) -> list[str]:
             found.extend(path.relative_to(config.root).as_posix() for path in directory.rglob("*.md")
                          if path.is_file() and inside_without_symlinks(config.root, path))
     return sorted(rel for rel in found if not any(rel.startswith(skill) for skill in skills))
+
+
+def is_source(rel: str, layout: LayoutConfig) -> bool:
+    """Originals under a sources folder stay byte-identical; nothing in dummkopf writes them."""
+    return layout.sources in PurePosixPath(rel).parts
+
+
+def write_generated(path: Path, text: str, mode: int | None = None) -> bool:
+    """Write a generated file unless it is a symlink. Returns True if written."""
+    if path.is_symlink():
+        return False
+    path.write_text(text, encoding="utf-8")
+    if mode is not None:
+        path.chmod(mode)
+    return True
 
 
 def topic_of(rel: str, layout: LayoutConfig) -> str:
