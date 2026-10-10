@@ -94,6 +94,7 @@ PLAIN: dict[str, str] = {
     "git_diverged": "The remote contradicts local changes. Local commits are kept.",
     "git_dirty": "The brain has uncommitted note changes. Run `dummkopf sync` first.",
     "hook_sync_failed": "dummkopf sync failed: {reason}",
+    "hook_unstaged": "{path} has unstaged edits; its regenerated table stays unstaged until you commit them.",
     "hook_index_failed": "dummkopf pre-commit step failed: {reason}. The commit continues.",
     "hook_exists": (
         "{path} exists and was not written by dummkopf. Merge it by hand: call `dummkopf hook pre-commit` "

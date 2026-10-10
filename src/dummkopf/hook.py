@@ -57,9 +57,14 @@ def git_lines(config: Config, *args: str) -> list[str]:
     return done.stdout.splitlines() if done.returncode == 0 else []
 
 
-def stage(config: Config, paths: list[str]) -> None:
-    if paths:
-        git_lines(config, "add", "--", *paths)
+def stage(config: Config, paths: list[str], unstaged: set[str]) -> None:
+    """Stage generated changes, but never a file with unstaged human edits: they would ride along."""
+    for path in paths:
+        if path in unstaged:
+            sys.stdout.write(say("hook_unstaged", "plain", path=path) + "\n")
+    ready = [path for path in paths if path not in unstaged]
+    if ready:
+        git_lines(config, "add", "--", *ready)
 
 
 def pre_commit(config: Config) -> int:
@@ -67,20 +72,22 @@ def pre_commit(config: Config) -> int:
     if not (config.root / config.layout.index).is_file():
         return 0
     try:
+        unstaged = set(git_lines(config, "diff", "--name-only"))
         paths_file = config.root / config.sensitive.paths_file
         fresh = Sensitivity.generate(config)
         current = paths_file.read_text(encoding="utf-8") if paths_file.is_file() else None
         if fresh != current and not paths_file.is_symlink():
             paths_file.write_text(fresh, encoding="utf-8")
             paths_file.chmod(0o600)
-            stage(config, [config.sensitive.paths_file])
+            stage(config, [config.sensitive.paths_file], unstaged)
             sys.stdout.write(say("out_paths_file_updated", "plain", file=config.sensitive.paths_file) + "\n")
         notes = set(iter_note_files(config))
         staged = [rel for rel in git_lines(config, "diff", "--cached", "--name-only", "--diff-filter=ACMR")
-                  if rel in notes and not (config.root / rel).read_text(encoding="utf-8").startswith("---")]
+                  if rel in notes and rel not in unstaged
+                  and not (config.root / rel).read_text(encoding="utf-8").startswith("---")]
         if staged:
-            stage(config, migrate(config, only=staged))
-        stage(config, generate(config))
+            stage(config, migrate(config, only=staged), unstaged)
+        stage(config, generate(config), unstaged)
         findings = report(config, only_findings=True)
         if findings:
             sys.stdout.write(findings + "\n")
