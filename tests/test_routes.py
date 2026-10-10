@@ -23,7 +23,7 @@ class Routed:
         brain.write(".sensitive-paths", "topics/locked/\n")
         brain.write("topics/locked/README.md", "---\nscope: privat\n---\n> SENSIBEL\n")
         self.routes([{"aliases": ["testplan"], "sources": "topics/locked/plan-*.md",
-                      "scope": "privat", "kind": "dated-plan"}])
+                      "scope": "privat", "kind": "dated-plan", "allow_sensitive": True}])
 
     def routes(self, routes: list[dict[str, object]], name: str = "routen.json") -> None:
         self.brain.write(name, json.dumps({"routes": routes}))

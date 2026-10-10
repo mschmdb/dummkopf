@@ -12,7 +12,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
 from dummkopf.config import Config
 from dummkopf.errors import AccessDenied
@@ -26,11 +26,15 @@ Period = tuple[dt.date, dt.date]
 Normalize = Callable[[str], list[str]]
 
 
+ROUTE_KEYS = {"aliases", "sources", "scope", "kind", "allow_sensitive"}
+
+
 class Route(TypedDict):
     aliases: list[str]
     sources: str
     scope: str
     kind: str
+    allow_sensitive: NotRequired[bool]
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,9 @@ def specific(alias: str, locale: Locale) -> bool:
 
 
 def _valid(route: object, config: Config) -> bool:
-    if not isinstance(route, dict):
+    if not isinstance(route, dict) or set(route) - ROUTE_KEYS:
+        return False
+    if type(route.get("allow_sensitive", False)) is not bool:
         return False
     aliases, source = route.get("aliases"), route.get("sources")
     if not isinstance(aliases, list) or not aliases or not isinstance(source, str):
@@ -112,9 +118,14 @@ def routes(config: Config) -> list[Route]:
         raise AccessDenied("routes_invalid") from error
 
 
+def opener(access: Access, route: Route, rel: str) -> Access:
+    """Sensitive plans open only for a route the owner marked with `allow_sensitive: true`."""
+    return access.with_grants([rel]) if route.get("allow_sensitive", False) else access
+
+
 def readable(access: Access, rel: str) -> bool:
     try:
-        access.with_grants([rel]).read(rel)
+        access.read(rel)
     except AccessDenied:
         return False
     return True
@@ -145,7 +156,7 @@ def select(access: Access, query: str, normalize: Normalize, today: dt.date) -> 
     if not matched:
         return None
     period = week(terms, today, locale)
-    selected: list[str] = []
+    selected: dict[str, Access] = {}
     topic_prefix = config.layout.topics + "/" + access.topic + "/" if access.topic else ""
     for route in matched:
         if access.scope not in (config.scopes.all, route["scope"]):
@@ -157,23 +168,20 @@ def select(access: Access, query: str, normalize: Normalize, today: dt.date) -> 
                 continue
             dates = file_period(rel, locale)
             # Only plans this call may read compete for "latest", so a hidden newer plan reveals nothing.
-            if dates and readable(access, rel):
+            if dates and readable(opener(access, route, rel), rel):
                 candidates.append((dates, rel))
         if period:
-            selected.extend(rel for dates, rel in candidates
-                            if dates[0] <= period[1] and dates[1] >= period[0])
-        elif candidates:
+            chosen = [rel for dates, rel in candidates if dates[0] <= period[1] and dates[1] >= period[0]]
+        else:
             current = [item for item in candidates if item[0][0] <= today <= item[0][1]]
             past = [item for item in candidates if item[0][0] <= today]
-            if current or past:
-                selected.append(max(current or past)[1])
-    chosen = sorted(set(selected))
-    # Release only the chosen files, never the whole topic folder.
-    permitted = access.with_grants(chosen)
+            chosen = [max(current or past)[1]] if current or past else []
+        # Release only the chosen files, never the whole topic folder.
+        selected.update({rel: opener(access, route, rel) for rel in chosen})
     notes: list[Note] = []
-    for rel in chosen:
+    for rel in sorted(selected):
         try:
-            notes.append(permitted.read(rel))
+            notes.append(selected[rel].read(rel))
         except AccessDenied:
             continue
     return Selection(notes, period)
