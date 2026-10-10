@@ -6,6 +6,7 @@ by pointing DUMMKOPF_BIN at its binary.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -108,6 +110,13 @@ class Brain:
         """Append TOML to dummkopf.toml; start a new section with its header inside `extra`."""
         self.toml += extra
         (self.root / "dummkopf.toml").write_text(self.toml, encoding="utf-8")
+
+    def repo_option(self, line: str, commit: bool = True) -> None:
+        """Add a key to the [repo] table; in a Git brain, commit the config so the tree stays clean."""
+        self.toml = self.toml.replace("[repo]\n", "[repo]\n" + line + "\n", 1)
+        (self.root / "dummkopf.toml").write_text(self.toml, encoding="utf-8")
+        if commit:
+            self.commit("config")
 
     def run(self, *args: str, stdin: str = "", env: Mapping[str, str] | None = None) -> Result:
         """Run the CLI inside the brain in plain tone."""
@@ -214,3 +223,39 @@ def rev_of(out: str, path: str) -> str:
         if line.startswith(path + " | rev="):
             return line.split("rev=", 1)[1].split(" ", 1)[0]
     raise AssertionError("no header for " + path + " in:\n" + out)
+
+
+@pytest.fixture
+def repo(synced: Synced) -> Brain:
+    """The working brain of `synced`: a clean Git checkout whose remote is a local bare repository."""
+    return synced.brain
+
+
+def md(body: str = "Body", fields: str = "", title: str = "T") -> str:
+    """Markdown a writer sends: only a key fact in the frontmatter, the rest is completed by dummkopf."""
+    return f"---\nkey_fact: A fact.\n{fields}---\n\n# {title}\n\n{body}\n"
+
+
+Entry = dict[str, Any]
+
+
+def package(*changes: Entry) -> str:
+    return json.dumps({"changes": list(changes)})
+
+
+def new(path: str, content: str | None = None, **extra: Any) -> Entry:
+    """A package entry that creates a file."""
+    return {"path": path, "expected": None, "content": md() if content is None else content, **extra}
+
+
+def ingest(brain: Brain, *changes: Entry, args: tuple[str, ...] = ()) -> Result:
+    return brain.run("ingest", "--input", "-", *args, stdin=package(*changes))
+
+
+def rev(brain: Brain, path: str, *args: str) -> str:
+    return rev_of(brain.run("read", path, *args).out, path)
+
+
+def topic(name: str, scope: str = "work") -> list[Entry]:
+    """The README entry that opens a new topic with a scope."""
+    return [new(f"topics/{name}/README.md", md(fields=f"scope: {scope}\n", title=name))]
