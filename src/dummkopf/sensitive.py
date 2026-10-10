@@ -20,7 +20,8 @@ from dummkopf.files import iter_note_files
 def marker_pattern(marker: str) -> re.Pattern[str]:
     """`> SENSITIVE` matches `>SENSITIVE` and `>   sensitive` at a line start, never across lines."""
     tokens = marker.split()
-    return re.compile("^" + r"[ \t]*".join(re.escape(token) for token in tokens),
+    # Any horizontal whitespace, Unicode included: a non-breaking space renders like a space.
+    return re.compile("^" + r"[^\S\r\n]*".join(re.escape(token) for token in tokens),
                       re.IGNORECASE | re.MULTILINE)
 
 

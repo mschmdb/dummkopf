@@ -13,6 +13,8 @@ def test_marker_matches_at_line_start_only(brain: Brain) -> None:
     assert pattern.search("# A\n\n>   sensitive\n")
     assert not pattern.search("A word SENSITIVE mid-sentence.\n")
     assert not pattern.search("# A\n>\nSENSITIVE\n"), "marker must not span lines"
+    assert pattern.search("# A\n>\u00a0SENSITIVE\n"), "a non-breaking space looks like a space"
+    assert pattern.search("# A\n>\u2003SENSITIVE\n")
 
 
 def test_custom_marker_is_escaped() -> None:
