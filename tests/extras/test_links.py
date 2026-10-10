@@ -123,7 +123,7 @@ def test_entity_case_insensitive_prefix_and_default(repo: Brain) -> None:
 
 
 def test_entity_frontmatter_list_counts(hub: Brain) -> None:
-    hub.write("scripts/entitaeten.txt", "Acme\n")
+    hub.write("entitaeten.txt", "Acme\n")
     hub.write("topics/a/note.md", "---\nentitaeten: [Acme]\n---\n\nKein Textmatch.\n")
     hub.write("topics/b/note.md", "Acme im Text.\n")
     assert entities(links(hub, 2))["Acme"]["topic_count"] == 2

@@ -55,11 +55,11 @@ def test_german_hub_mapping_needs_no_note_migration(tmp_path: Path) -> None:
     assert config.scopes.mixed_label == "gemischt"
     assert config.status.active == "aktiv"
     assert config.sensitive.marker == "> SENSIBEL"
-    assert config.sensitive.always == ("topics/gesundheit/",)
+    assert config.sensitive.always == ("topics/vertraulich/",)
     assert config.layout.sources == "quellen"
     assert config.ui.locale == "de"
     assert config.links.output == "KANTEN.md"
-    assert config.repo.sync_exclude == ("scripts", "hub", ".codex", ".claude")
+    assert config.repo.sync_exclude == ("scripts",)
 
 
 def test_missing_config_is_reported(tmp_path: Path) -> None:

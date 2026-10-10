@@ -25,7 +25,7 @@ class Routed:
         self.routes([{"aliases": ["testplan"], "sources": "topics/locked/plan-*.md",
                       "scope": "privat", "kind": "dated-plan"}])
 
-    def routes(self, routes: list[dict[str, object]], name: str = "hub-routes.json") -> None:
+    def routes(self, routes: list[dict[str, object]], name: str = "routen.json") -> None:
         self.brain.write(name, json.dumps({"routes": routes}))
 
     def request(self, query: str, scope: str = "privat", date: dt.date = TODAY) -> Packet:
@@ -136,7 +136,7 @@ def test_physical_line_numbers_remain_exact(hub: Routed) -> None:
 
 
 def test_missing_configuration_keeps_normal_protection(hub: Routed) -> None:
-    (hub.brain.root / "hub-routes.json").unlink()
+    (hub.brain.root / "routen.json").unlink()
     hub.plan("2026-10-02-09", "SECRET")
     assert hub.request("Testplan nächste Woche")["hits"] == []
 

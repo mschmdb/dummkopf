@@ -81,10 +81,10 @@ def test_grant_needs_topic_folder_or_md_file(brain: Brain) -> None:
 
 
 def test_always_sensitive_topic_is_blocked_without_marker(german: Brain) -> None:
-    german.write("topics/gesundheit/a.md", "---\nstand: 2026-01-01\n---\n\n# A\n\nSECRET\n")
+    german.write("topics/vertraulich/a.md", "---\nstand: 2026-01-01\n---\n\n# A\n\nSECRET\n")
     assert find(Access(german.config), "SECRET")["hits"] == []
-    granted = Access(german.config, allow_sensitive=["topics/gesundheit"])
-    assert granted.read("topics/gesundheit/a.md").sensitive
+    granted = Access(german.config, allow_sensitive=["topics/vertraulich"])
+    assert granted.read("topics/vertraulich/a.md").sensitive
 
 
 def test_missing_protection_file_fails_closed(brain: Brain) -> None:

@@ -142,7 +142,7 @@ def test_markdown_has_closing_count_line(repo: Brain) -> None:
 
 def test_prompt_uses_config_values(hub: Brain) -> None:
     text = prompt(hub.config)
-    assert "topics/hub/kurator/" in text
+    assert "topics/kurator/" in text
     assert "kernfakt" in text and "KANTEN.md" in text
     assert "> SENSIBEL" in text
 

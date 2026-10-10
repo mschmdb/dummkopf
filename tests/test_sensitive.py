@@ -57,10 +57,10 @@ def test_paths_file_lists_files_and_folders(brain: Brain) -> None:
 
 
 def test_always_sensitive_prefix_needs_no_marker(german: Brain) -> None:
-    german.write("topics/gesundheit/a.md", "# A\n")
+    german.write("topics/vertraulich/a.md", "# A\n")
     sensitivity = Sensitivity.load(german.config)
-    assert sensitivity.is_listed("topics/gesundheit/a.md")
-    assert sensitivity.is_sensitive("topics/gesundheit/a.md")
+    assert sensitivity.is_listed("topics/vertraulich/a.md")
+    assert sensitivity.is_sensitive("topics/vertraulich/a.md")
     assert not sensitivity.is_sensitive("topics/ernaehrung/a.md")
 
 

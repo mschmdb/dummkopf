@@ -166,10 +166,10 @@ def test_sensitive_marker_cannot_be_removed(brain: Brain) -> None:
 def test_always_sensitive_file_automatically_carries_marker(german: Brain) -> None:
     german_doc = ("---\nstand: 2026-10-04\nstatus: aktiv\nkernfakt: Fakt.\nkurz: Fakt.\n"
                   "aliase: []\nzeitraum: []\nentitaeten: []\n{scope}---\n\n# Titel\n\n{body}\n")
-    german.write("topics/gesundheit/README.md", german_doc.format(scope="scope: privat\n", body="> SENSIBEL"))
-    ingest(Access(german.config, "privat", None, ("topics/gesundheit/a.md",)),
-           packet(change("topics/gesundheit/a.md", german_doc.format(scope="", body="Text"))), sync=False)
-    assert "> SENSIBEL" in german.read("topics/gesundheit/a.md")
+    german.write("topics/vertraulich/README.md", german_doc.format(scope="scope: privat\n", body="> SENSIBEL"))
+    ingest(Access(german.config, "privat", None, ("topics/vertraulich/a.md",)),
+           packet(change("topics/vertraulich/a.md", german_doc.format(scope="", body="Text"))), sync=False)
+    assert "> SENSIBEL" in german.read("topics/vertraulich/a.md")
 
 
 def test_scope_change_on_existing_readme_is_rejected(brain: Brain) -> None:

@@ -123,5 +123,5 @@ def test_agents_rules_are_rendered_for_the_config(tmp_path: Path, german: Brain)
     assert not re.search(r"\{[a-z_]+\}", text), "unfilled placeholder"
     code, output, _ = invoke(german, "meta", "agents")
     assert code == 0
-    assert "> SENSIBEL" in output and "`topics/gesundheit/`" in output and "kernfakt" in output
+    assert "> SENSIBEL" in output and "`topics/vertraulich/`" in output and "kernfakt" in output
     assert "quellen/" in output and "Optional: Claude desktop app" in output
