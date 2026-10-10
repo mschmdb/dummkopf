@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -30,6 +31,22 @@ class Note:
     aliases: tuple[str, ...]
     revision: str
     sensitive: bool
+
+
+def exact_spelling(root: Path, rel: str) -> bool:
+    """On case-insensitive file systems `Topics/X.md` opens `topics/x.md`; insist on the on-disk spelling."""
+    current = root
+    for part in PurePosixPath(rel).parts:
+        candidate = current / part
+        if not candidate.exists():
+            return True
+        try:
+            if part not in os.listdir(current):
+                return False
+        except OSError:
+            return False
+        current = candidate
+    return True
 
 
 def denied() -> AccessDenied:
@@ -90,6 +107,8 @@ class Access:
     def resolve(self, rel: str, allow_new: bool = False) -> Path:
         """Absolute path for a relative note path; rejects symlinks, skill folders and escapes."""
         path = self.root / rel
+        if not exact_spelling(self.root, rel):
+            raise denied()
         if path.suffix != ".md" or (not allow_new and not path.is_file()) or path.is_dir():
             raise denied()
         for candidate in (path, *path.parents):

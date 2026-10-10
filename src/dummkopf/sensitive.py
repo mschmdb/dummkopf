@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
 
 from dummkopf.config import Config
@@ -60,14 +60,24 @@ class Sensitivity:
         return cls(config.root, marker_pattern(config.sensitive.marker), config.layout.topic_readme,
                    files, dirs, always_files, always_dirs)
 
+    @cached_property
+    def _folded(self) -> tuple[frozenset[str], frozenset[str], frozenset[str], frozenset[str]]:
+        """Case-folded entries: a case-insensitive file system opens `Health/` for `health/`."""
+        return tuple(frozenset(entry.casefold() for entry in group)  # type: ignore[return-value]
+                     for group in (self.files, self.dirs, self.always_files, self.always_dirs))
+
     def is_listed(self, rel: str) -> bool:
-        if rel in self.files or rel in self.always_files:
+        files, dirs, always_files, always_dirs = self._folded
+        key = rel.casefold()
+        if key in files or key in always_files:
             return True
-        return any(rel == d or rel.startswith(d + "/") for d in self.dirs | self.always_dirs)
+        return any(key == d or key.startswith(d + "/") for d in dirs | always_dirs)
 
     def is_always(self, rel: str) -> bool:
         """Under a `sensitive.always` prefix: sensitive with or without a marker."""
-        return rel in self.always_files or any(rel.startswith(d + "/") for d in self.always_dirs)
+        _, _, always_files, always_dirs = self._folded
+        key = rel.casefold()
+        return key in always_files or any(key.startswith(d + "/") for d in always_dirs)
 
     def has_marker(self, text: str) -> bool:
         return bool(self.pattern.search(text))
