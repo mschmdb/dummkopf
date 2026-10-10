@@ -16,6 +16,7 @@ from dummkopf.files import git_last_date, is_topic_readme, iter_note_files, skil
 from dummkopf.frontmatter import Data, dump_frontmatter, parse_frontmatter, shorten
 from dummkopf.locale import get_locale
 from dummkopf.messages import text as say
+from dummkopf.scopes import effective_scope
 from dummkopf.sensitive import Sensitivity
 from dummkopf.tables import drop_section, replace_table, scrape_rows, section_bounds, table
 
@@ -126,8 +127,11 @@ def render_readme(config: Config, topic: str, text: str, notes: list[str], sensi
     # A protected topic may list its own files. In an open topic every individually
     # sensitive file stays out, so a glance at the README reveals nothing.
     protected = sensitivity.is_sensitive(readme)
+    # The README is readable in its own scope only; listing other scopes there would leak them.
+    scope = effective_scope(config, readme)
     entries = [entry(config, rel) for rel in notes
-               if rel.startswith(prefix) and rel != readme and (protected or not sensitivity.is_sensitive(rel))]
+               if rel.startswith(prefix) and rel != readme and (protected or not sensitivity.is_sensitive(rel))
+               and effective_scope(config, rel) == scope]
     rows = [("`" + item.rel + "`", item.key_fact, item.aliases) for item in newest_first(entries)]
     files_table = table(locale.file_columns, rows)
     lines = drop_section(text.split("\n"), locale.stub_heading)

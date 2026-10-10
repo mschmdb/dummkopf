@@ -12,10 +12,12 @@ from typing import Any
 from dummkopf.access import Access, Note
 from dummkopf.config import Config
 from dummkopf.errors import AccessDenied, Rejected
+from dummkopf.files import iter_note_files
 from dummkopf.frontmatter import KEY_RE, Data, dump_frontmatter, parse_frontmatter, shorten
 from dummkopf.links import HINTS, Issue, issue, link_issues
 from dummkopf.locale import get_locale
 from dummkopf.messages import text as say
+from dummkopf.scopes import effective_scope
 from dummkopf.tables import authored_text
 
 EXPECTED_RE = re.compile(r"[a-f0-9]{12,64}")
@@ -238,6 +240,7 @@ def validate_packet(access: Access, packet: object) -> Plan:
             raise Rejected("expected_missing")
         overlay[rel] = content
         staged.append((rel, previous, expected))
+    check_scope_shifts(access, overlay)
     changes: list[Change] = []
     problems: list[Issue] = []
     for rel, previous, expected in staged:
@@ -251,6 +254,23 @@ def validate_packet(access: Access, packet: object) -> Plan:
     if any(problem["severity"] == "error" for problem in problems):
         raise rules_error(problems)
     return Plan(changes, problems)
+
+
+def check_scope_shifts(access: Access, overlay: Mapping[str, str]) -> None:
+    """A new or changed README must not change the effective scope of any existing note below it.
+
+    Otherwise a work-scope writer could pull private notes into work with one sub-folder README.
+    """
+    config = access.config
+    readmes = [rel for rel in overlay if PurePosixPath(rel).name == config.layout.topic_readme]
+    if not readmes:
+        return
+    existing = iter_note_files(config)
+    for readme in readmes:
+        folder = str(PurePosixPath(readme).parent) + "/"
+        for rel in existing:
+            if rel.startswith(folder) and effective_scope(config, rel) != effective_scope(config, rel, overlay):
+                raise Rejected("scope_change")
 
 
 def check_new_topic(access: Access, rel: str, overlay: Mapping[str, str]) -> None:
