@@ -107,7 +107,7 @@ def topic_scope(config: Config, topic: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
-def build(config: Config, min_topics: int | None = None) -> LinksReport:
+def build(config: Config, min_topics: int | None = None, scope: str | None = None) -> LinksReport:
     require(config, "links")
     locale = get_locale(config.ui.locale)
     fm = config.frontmatter
@@ -115,7 +115,7 @@ def build(config: Config, min_topics: int | None = None) -> LinksReport:
     entities = load_entities(config.root / config.links.entities_file)
     by_month: dict[str, Counter[str]] = defaultdict(Counter)
     by_entity: dict[str, Counter[str]] = defaultdict(Counter)
-    scan = open_notes(config)
+    scan = open_notes(config, scope)
     for rel in scan.files:
         topic = topic_of(rel, config.layout)
         data, _, text = read_note(config, rel)
@@ -192,7 +192,8 @@ def output_path(config: Config, out: str | None) -> Path:
     return path
 
 
-def write_links(config: Config, out: str | None = None, min_topics: int | None = None) -> Path:
+def write_links(config: Config, out: str | None = None, min_topics: int | None = None,
+                scope: str | None = None) -> Path:
     path = output_path(config, out)
-    path.write_text(render_markdown(build(config, min_topics), config), encoding="utf-8")
+    path.write_text(render_markdown(build(config, min_topics, scope), config), encoding="utf-8")
     return path

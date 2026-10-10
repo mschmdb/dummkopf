@@ -37,14 +37,17 @@ def register(adder: Callable[[str], argparse.ArgumentParser]) -> None:
     command.add_argument("--dry-run", action="store_true", help=HELP["dry_run"])
     command.add_argument("--only", action="append", default=[], metavar="PATH", help=HELP["meta_only"])
     command.add_argument("--max-age", type=int, default=None, help=HELP["meta_max_age"])
+    command.add_argument("--scope", metavar="SCOPE", help=HELP["scope"])
     command = adder("links")
     command.add_argument("--out", default=None, metavar="PATH", help=HELP["links_out"])
     command.add_argument("--min-topics", type=int, default=None, help=HELP["links_min"])
+    command.add_argument("--scope", metavar="SCOPE", help=HELP["scope"])
     command.add_argument("--json", action="store_true", help=HELP["extra_json"])
     command = adder("curator")
     command.add_argument("--open-days", type=int, default=None, help=HELP["curator_open"])
     command.add_argument("--stale-days", type=int, default=None, help=HELP["curator_stale"])
     command.add_argument("--prompt", action="store_true", help=HELP["curator_prompt"])
+    command.add_argument("--scope", metavar="SCOPE", help=HELP["scope"])
     command.add_argument("--json", action="store_true", help=HELP["extra_json"])
 
 
@@ -80,7 +83,7 @@ def run_install(args: argparse.Namespace, config: Config, tone: str) -> int:
 
 def run_meta(args: argparse.Namespace, config: Config, tone: str) -> int:
     if args.action == "report":
-        sys.stdout.write(report(config, args.max_age) + "\n")
+        sys.stdout.write(report(config, args.max_age, scope=args.scope) + "\n")
         return 0
     if args.action == "agents":
         sys.stdout.write(render_agents(config))
@@ -104,9 +107,10 @@ def run_meta(args: argparse.Namespace, config: Config, tone: str) -> int:
 
 def run_links(args: argparse.Namespace, config: Config, tone: str) -> int:
     if args.json:
-        sys.stdout.write(json.dumps(links.build(config, args.min_topics), ensure_ascii=False, indent=2) + "\n")
+        report_data = links.build(config, args.min_topics, args.scope)
+        sys.stdout.write(json.dumps(report_data, ensure_ascii=False, indent=2) + "\n")
         return 0
-    path = links.write_links(config, args.out, args.min_topics)
+    path = links.write_links(config, args.out, args.min_topics, args.scope)
     sys.stdout.write(say("out_written", tone, path=path.relative_to(config.root).as_posix()) + "\n")
     return 0
 
@@ -117,7 +121,7 @@ def run_curator(args: argparse.Namespace, config: Config, tone: str) -> int:
         require(config, "curator")
         sys.stdout.write(curator.prompt(config))
         return 0
-    result = curator.scan(config, args.open_days, args.stale_days)
+    result = curator.scan(config, args.open_days, args.stale_days, args.scope)
     if args.json:
         sys.stdout.write(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     else:

@@ -6,12 +6,12 @@ import datetime as dt
 from collections.abc import Iterator
 from dataclasses import dataclass
 
+from dummkopf.access import Access
 from dummkopf.config import Config
-from dummkopf.errors import Rejected
+from dummkopf.errors import AccessDenied, Rejected
 from dummkopf.files import git_last_date, iter_note_files
 from dummkopf.frontmatter import Data, parse_frontmatter
 from dummkopf.locale import get_locale
-from dummkopf.sensitive import Sensitivity
 
 
 def require(config: Config, name: str) -> None:
@@ -26,16 +26,21 @@ class Scan:
     sensitive_topics: int
 
 
-def open_notes(config: Config) -> Scan:
-    """Non-sensitive notes, plus counts of what was left out."""
-    sensitivity = Sensitivity.load(config)
+def open_notes(config: Config, scope: str | None = None) -> Scan:
+    """Notes the read gate releases for this scope (default: scopes.query_default), plus sensitive counts."""
+    access = Access(config, scope)
+    sensitivity = access.sensitivity
     visible: list[str] = []
     hidden = 0
     for rel in iter_note_files(config):
         if sensitivity.is_sensitive(rel):
             hidden += 1
-        else:
-            visible.append(rel)
+            continue
+        try:
+            access.read(rel)
+        except AccessDenied:
+            continue
+        visible.append(rel)
     return Scan(visible, hidden, sum(1 for topic in topic_folders(config)
                                      if sensitivity.is_sensitive(topic + "/" + config.layout.topic_readme)))
 

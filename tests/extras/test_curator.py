@@ -25,9 +25,10 @@ def hub(german: Brain) -> Brain:
     return german
 
 
-def run(brain: Brain, days_ago: int = 0, **options: int) -> dict[str, Any]:
+def run(brain: Brain, days_ago: int = 0, open_days: int | None = None,
+        stale_days: int | None = None) -> dict[str, Any]:
     brain.commit("init", date=ago(days_ago) + "T12:00:00")
-    return dict(scan(brain.config, **options))
+    return dict(scan(brain.config, open_days, stale_days))
 
 
 def paths(data: dict[str, Any], key: str) -> list[str]:

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dummkopf.config import Config
+from dummkopf.extras.common import open_notes
 from dummkopf.files import git_last_date, is_source, is_topic_readme, iter_note_files, skill_dirs, write_generated
 from dummkopf.frontmatter import Data, dump_frontmatter, parse_frontmatter, shorten
 from dummkopf.locale import get_locale
@@ -190,19 +191,17 @@ def generate(config: Config, dry_run: bool = False) -> list[str]:
     return changed
 
 
-def report(config: Config, max_age: int | None = None, only_findings: bool = False) -> str:
+def report(config: Config, max_age: int | None = None, only_findings: bool = False,
+           scope: str | None = None) -> str:
     fm = config.frontmatter
     days = config.limits.stale_after_days if max_age is None else max_age
     limit = dt.date.today() - dt.timedelta(days=days)
-    sensitivity = Sensitivity.load(config)
+    notes = open_notes(config, scope)
     missing: list[str] = []
     stale: list[tuple[str, str]] = []
     todo: list[str] = []
-    skipped = 0
-    for rel in iter_note_files(config):
-        if sensitivity.is_sensitive(rel):
-            skipped += 1
-            continue
+    skipped = notes.sensitive_files
+    for rel in notes.files:
         item = entry(config, rel)
         try:
             updated: dt.date | None = dt.date.fromisoformat(item.updated)

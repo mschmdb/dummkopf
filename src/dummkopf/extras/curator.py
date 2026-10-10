@@ -50,14 +50,15 @@ def open_pattern(config: Config) -> re.Pattern[str]:
     return re.compile(r"\b(?:" + "|".join(re.escape(word) for word in words) + r")\b", re.IGNORECASE)
 
 
-def scan(config: Config, open_days: int | None = None, stale_days: int | None = None) -> CuratorScan:
+def scan(config: Config, open_days: int | None = None, stale_days: int | None = None,
+         scope: str | None = None) -> CuratorScan:
     require(config, "curator")
     today = dt.date.today()
     open_limit = today - dt.timedelta(days=config.curator.open_days if open_days is None else open_days)
     stale_limit = today - dt.timedelta(days=config.curator.stale_days if stale_days is None else stale_days)
     pattern = open_pattern(config)
     label = get_locale(config.ui.locale).updated_label
-    notes = open_notes(config)
+    notes = open_notes(config, scope)
     loops: list[OpenLoop] = []
     conflicts: list[Conflict] = []
     stale_active: list[Dated] = []
