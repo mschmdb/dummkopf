@@ -99,9 +99,9 @@ notes, `--scope both` shows all. Scopes never lock anything; they keep a work an
 - its path sits under a `sensitive.always` prefix (for example `topics/health/`).
 
 Sensitive notes stay out of search results, `INDEX.md`, the file tables of open topics, the links map and
-the curator scan.
-`read` refuses them with the same message it uses for missing files, so an agent cannot even confirm they
-exist. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
+the curator scan. `read`, `find`, `context` and link checks answer a sensitive path exactly like a missing one.
+One signal stays by design: whoever may create notes learns whether a path is free, because
+`write --expected new` fails on an existing hidden file. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
 `AGENTS.md` says so. The pre-commit hook derives `.sensitive-paths` from the markers, so `rg --ignore-file`
 works as a fallback without the CLI.
 
@@ -112,6 +112,9 @@ Write rules dummkopf enforces:
 - No removing markers, no changing scopes, no edits under `sources/`.
 - No dead links, no links from a non-sensitive note to a sensitive one.
 - New files get mode `0600`.
+- Symlinks never count as notes. A cloned brain cannot pull outside files into the index or the extras.
+- Paths must match the on-disk spelling, so `Topics/Health/x.md` never opens `topics/health/x.md` on a
+  case-insensitive file system.
 
 ## Commands
 
@@ -191,7 +194,7 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 
 ## Extras
 
-- **links**: writes `LINKS.md` with topics that share a month or an entity, and months where topics on both
+- **links**: writes `LINKS.md` (never inside a note folder, so it never turns into a searchable note) with topics that share a month or an entity, and months where topics on both
   sides of a scope barrier are busy. Entities come from `entities.txt`: one per line, `Name|alias|alias`,
   prefix `i:` for case-insensitive matching.
 - **curator**: `dummkopf curator` lists open loops, quiet topics, conflicting "as of" dates and stale active
