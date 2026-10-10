@@ -84,38 +84,55 @@ def specific(alias: str, locale: Locale) -> bool:
     return any(len(token) >= MIN_ALIAS_WORD and token not in locale.stopwords for token in words(alias))
 
 
-def _valid(route: object, config: Config) -> bool:
-    if not isinstance(route, dict) or set(route) - ROUTE_KEYS:
-        return False
+def route_problem(route: object, config: Config) -> str | None:
+    """What is wrong with one route entry, or None. Routes fail closed, so the message must be precise."""
+    if not isinstance(route, dict):
+        return "must be an object"
+    unknown = sorted(set(route) - ROUTE_KEYS)
+    if unknown:
+        return f"unknown key '{unknown[0]}'"
     if type(route.get("allow_sensitive", False)) is not bool:
-        return False
+        return "allow_sensitive must be true or false"
     aliases, source = route.get("aliases"), route.get("sources")
-    if not isinstance(aliases, list) or not aliases or not isinstance(source, str):
-        return False
+    if not isinstance(aliases, list) or not aliases or any(not isinstance(alias, str) for alias in aliases):
+        return "aliases must be a non-empty list of strings"
     locale = get_locale(config.ui.locale)
-    if any(not isinstance(alias, str) or not specific(alias, locale) for alias in aliases):
-        return False
+    for alias in aliases:
+        if not specific(alias, locale):
+            return f"alias '{alias}' needs a real word (3+ letters, not a filler word)"
+    if not isinstance(source, str):
+        return "sources must be a string"
     parts = PurePosixPath(source).parts
-    return not (PurePosixPath(source).is_absolute() or ".." in parts or "\\" in source
-                or len(parts) < 3 or parts[0] not in config.layout.roots
-                or any(char in "/".join(parts[:-1]) for char in "*?[")
-                or not source.endswith(".md") or "**" in source
-                or route.get("scope") not in config.scopes.values or route.get("kind") != "dated-plan")
+    if (PurePosixPath(source).is_absolute() or ".." in parts or "\\" in source or len(parts) < 3
+            or parts[0] not in config.layout.roots or any(char in "/".join(parts[:-1]) for char in "*?[")
+            or not source.endswith(".md") or "**" in source):
+        return "sources must look like <note folder>/<folder>/<name>-*.md, wildcards only in the file name"
+    if route.get("scope") not in config.scopes.values:
+        return "scope must be one of " + ", ".join(config.scopes.values)
+    if route.get("kind") != "dated-plan":
+        return "kind must be dated-plan"
+    return None
 
 
 def routes(config: Config) -> list[Route]:
-    path = config.root / config.context.routes_file
+    name = config.context.routes_file
+    path = config.root / name
     if not path.exists() and not path.is_symlink():
         return []
+    if path.is_symlink():
+        raise AccessDenied("routes_invalid", file=name, problem="must not be a symlink")
     try:
-        if path.is_symlink():
-            raise ValueError
-        result = json.loads(path.read_text(encoding="utf-8"))["routes"]
-        if not isinstance(result, list) or not all(_valid(route, config) for route in result):
-            raise ValueError
-        return result
-    except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
-        raise AccessDenied("routes_invalid") from error
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as error:
+        raise AccessDenied("routes_invalid", file=name, problem="not readable as JSON") from error
+    result = data.get("routes") if isinstance(data, dict) else None
+    if not isinstance(result, list):
+        raise AccessDenied("routes_invalid", file=name, problem="needs a top-level \"routes\" list")
+    for index, route in enumerate(result, 1):
+        problem = route_problem(route, config)
+        if problem:
+            raise AccessDenied("routes_invalid", file=name, problem=f"route {index}: {problem}")
+    return result
 
 
 def opener(access: Access, route: Route, rel: str) -> Access:

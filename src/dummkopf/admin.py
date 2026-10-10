@@ -28,7 +28,9 @@ def register(adder: Callable[[str], argparse.ArgumentParser]) -> None:
     command.add_argument("path", nargs="?", default=None, help=HELP["init_path"])
     command.add_argument("--remote", help=HELP["init_remote"])
     command.add_argument("--locale", choices=LOCALES, default="en", help=HELP["init_locale"])
-    adder("install")
+    command = adder("install")
+    command.add_argument("--replace-command", action="append", default=[], metavar="TEXT",
+                         help=HELP["install_replace"])
     command = adder("hook")
     command.add_argument("kind", choices=("pre-commit", "agent"), help=HELP["hook_kind"])
     command = adder("meta")
@@ -76,8 +78,10 @@ def run_hook(args: argparse.Namespace, root: Path, tone: str) -> int:
 
 
 def run_install(args: argparse.Namespace, config: Config, tone: str) -> int:
-    del args
-    for path in install(config):
+    written, removed = install(config, tuple(args.replace_command))
+    if args.replace_command:
+        sys.stdout.write(say("out_removed_hooks", tone, count=removed) + "\n")
+    for path in written:
         sys.stdout.write(say("out_installed", tone, what=path) + "\n")
     return 0
 

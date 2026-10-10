@@ -29,7 +29,7 @@ PLAIN: dict[str, str] = {
         "Run `dummkopf meta index` to regenerate it."
     ),
     "busy": "The brain is busy. Retry the call.",
-    "routes_invalid": "The routes file is invalid or unavailable.",
+    "routes_invalid": "{file}: {problem}. All routes stay closed until this is fixed.",
     # validation
     "missing_frontmatter": "Frontmatter is missing.",
     "bad_updated": "{key} needs a valid ISO date (YYYY-MM-DD).",
@@ -146,6 +146,7 @@ PLAIN: dict[str, str] = {
     "out_written": "{path} written.",
     "out_index_changed": "{count} file(s) updated.",
     "out_installed": "Installed: {what}",
+    "out_removed_hooks": "Removed {count} old hook command(s).",
     "report_missing": "### Missing `{key}` ({count})",
     "report_stale": "### Stale (status {status}, older than {days} days) ({count})",
     "report_todo": "### No key fact (`{todo}`) ({count})",
@@ -264,6 +265,7 @@ HELP: dict[str, str] = {
     "curator_stale": "Days without change after which a topic counts as quiet (default: curator.stale_days).",
     "curator_prompt": "Print the weekly LLM prompt instead of the scan.",
     "extra_json": "Print the result as JSON instead of Markdown.",
+    "install_replace": "Remove existing hook commands containing TEXT first (repeatable), e.g. an old sync script.",
     "init_path": "Folder for the new brain (default: current folder).",
     "init_remote": "Git remote URL for repo.remote.",
     "init_locale": "Language of generated headings and text heuristics: en or de.",
