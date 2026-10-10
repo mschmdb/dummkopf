@@ -352,3 +352,50 @@ def test_allow_outside_rejects_dangerous_or_pointless_entries(brain: Brain, valu
 
     with pytest.raises(ConfigError, match=r"links\.allow_outside"):
         brain.configure("[links]\nallow_outside = " + value + "\n")
+
+
+# --- review round 4 ----------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("route, expected", [
+    ({"aliases": ["meal plan"], "sources": "topics/meals/plan-*.md", "scope": "private", "kind": "dated-plan",
+      "allow_sensitve": True}, "route 1: unknown key 'allow_sensitve'"),
+    ({"aliases": ["meal plan"], "sources": "topics/meals/plan-*.md", "scope": "private", "kind": "dated-plan",
+      "allow_sensitive": "yes"}, "route 1: allow_sensitive must be true or false"),
+    ({"aliases": ["what"], "sources": "topics/meals/plan-*.md", "scope": "private", "kind": "dated-plan"},
+     "route 1: alias 'what' needs a real word"),
+    ({"aliases": ["meal plan"], "sources": "../x/*.md", "scope": "private", "kind": "dated-plan"},
+     "route 1: sources"),
+    ({"aliases": ["meal plan"], "sources": "topics/meals/plan-*.md", "scope": "nope", "kind": "dated-plan"},
+     "route 1: scope"),
+])
+def test_invalid_route_names_route_and_key(brain: Brain, route: dict[str, object], expected: str) -> None:
+    brain.write("routes.json", json.dumps({"routes": [route]}))
+    code, _, error = invoke(brain, "context", "meal plan", "--serious")
+    assert code == 2
+    assert "routes.json" in error and expected in error
+
+
+def test_broken_routes_json_is_named(brain: Brain) -> None:
+    brain.write("routes.json", "{not json")
+    error = invoke(brain, "context", "meal plan", "--serious")[2]
+    assert "routes.json" in error and "JSON" in error
+
+
+def test_install_replace_command_removes_old_hooks(brain: Brain) -> None:
+    brain.git_init()
+    brain.write(".claude/settings.json", json.dumps({"hooks": {
+        "PostToolUse": [{"matcher": "Write|Edit|MultiEdit|Bash",
+                         "hooks": [{"type": "command", "command": "python3 \"$X/scripts/old_hook.py\""}]},
+                        {"matcher": "Read", "hooks": [{"type": "command", "command": "keep-me"}]}],
+        "SessionEnd": [{"hooks": [{"type": "command", "command": "python3 \"$X/scripts/old_hook.py\""}]}]}}))
+    brain.write(".codex/hooks.json", json.dumps({"hooks": {"PostToolUse": [
+        {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 scripts/old_codex.py"}]}]}}))
+    code, output, _ = invoke(brain, "install", "--replace-command", "scripts/old_hook.py",
+                             "--replace-command", "scripts/old_codex.py")
+    assert code == 0
+    claude = brain.read(".claude/settings.json")
+    codex = brain.read(".codex/hooks.json")
+    assert "old_hook" not in claude and "old_codex" not in codex
+    assert "keep-me" in claude and "hook agent" in claude and "hook agent" in codex
+    assert "Removed" in output

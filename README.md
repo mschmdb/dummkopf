@@ -158,7 +158,9 @@ Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex
   version has hooks enabled.
 
-Existing settings stay; `install` only adds its own entries and can run again safely.
+Existing settings stay; `install` only adds its own entries and can run again safely. Moving from an older
+sync setup? `dummkopf install --replace-command old_sync.py` removes hook commands containing that text first,
+so two sync paths never run side by side.
 
 **From other projects.** Point your global agent instructions at the brain, for example in
 `~/.claude/CLAUDE.md` or `~/.codex/AGENTS.md`:
@@ -199,7 +201,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 ## Extras
 
 - `links`, `curator` and `meta report` take `--scope` (default `scopes.query_default`) and show only notes
-  the read gate releases for that scope.
+  the read gate releases for that scope. With `query_default = "both"`, the default, they cover every scope
+  unless you pass `--scope`.
 - **links**: writes `LINKS.md` (never inside a note folder, so it never turns into a searchable note) with topics that share a month or an entity, and months where topics on both
   sides of a scope barrier are busy. Entities come from `entities.txt`: one per line, `Name|alias|alias`,
   prefix `i:` for case-insensitive matching.

@@ -72,35 +72,67 @@ def add_hook(settings: dict[str, Any], event: str, command: dict[str, Any], matc
     entries.append(entry)
 
 
+def remove_hooks(settings: dict[str, Any], patterns: tuple[str, ...]) -> int:
+    """Drop hook commands containing any pattern, and entries left empty. Returns the number removed."""
+    removed = 0
+    hooks = settings.get("hooks")
+    if not patterns or not isinstance(hooks, dict):
+        return 0
+    for event, entries in list(hooks.items()):
+        if not isinstance(entries, list):
+            continue
+        kept_entries = []
+        for entry in entries:
+            commands = entry.get("hooks", []) if isinstance(entry, dict) else []
+            kept = [hook for hook in commands
+                    if not any(pattern in str(hook.get("command", "")) for pattern in patterns)]
+            removed += len(commands) - len(kept)
+            if kept or not commands:
+                kept_entries.append({**entry, "hooks": kept} if commands else entry)
+        hooks[event] = kept_entries
+        if not kept_entries:
+            del hooks[event]
+    return removed
+
+
 def write_json(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def install_claude(config: Config) -> Path:
+def install_claude(config: Config, replace: tuple[str, ...] = ()) -> tuple[Path, int]:
     path = config.root / ".claude" / "settings.json"
     settings = load_json(path)
+    removed = remove_hooks(settings, replace)
     settings.setdefault("$schema", "https://json.schemastore.org/claude-code-settings.json")
     command = {"type": "command", "command": CLAUDE_COMMAND}
     add_hook(settings, "PostToolUse", command, CLAUDE_MATCHER)
     add_hook(settings, "SessionEnd", command, None)
     write_json(path, settings)
-    return path
+    return path, removed
 
 
-def install_codex(config: Config) -> Path:
+def install_codex(config: Config, replace: tuple[str, ...] = ()) -> tuple[Path, int]:
     path = config.root / ".codex" / "hooks.json"
     settings = load_json(path)
+    removed = remove_hooks(settings, replace)
     command = {"type": "command", "command": CODEX_COMMAND, "timeout": config.limits.git_timeout_s,
                "statusMessage": "Syncing notes"}
     add_hook(settings, "PostToolUse", command, CODEX_MATCHER)
     write_json(path, settings)
-    return path
+    return path, removed
 
 
-def install(config: Config) -> list[str]:
-    """Return the relative paths written."""
-    written = [install_git_hook(config), install_claude(config)]
+def install(config: Config, replace: tuple[str, ...] = ()) -> tuple[list[str], int]:
+    """Return the relative paths written and the number of old hook commands removed.
+
+    `replace` lists substrings of old hook commands to remove first, so a brain never runs two
+    sync paths side by side.
+    """
+    claude, removed = install_claude(config, replace)
+    written = [install_git_hook(config), claude]
     if config.extras.codex_sync:
-        written.append(install_codex(config))
-    return [path.relative_to(config.root).as_posix() for path in written]
+        codex, removed_codex = install_codex(config, replace)
+        written.append(codex)
+        removed += removed_codex
+    return [path.relative_to(config.root).as_posix() for path in written], removed
