@@ -249,6 +249,8 @@ def test_allow_sensitive_rejects_paths_outside_the_note_folders(open_brain: Brai
 # --- path spelling and escapes ----------------------------------------------------------------------------------
 
 
+# On a case-insensitive file system (macOS default) these names reach the real file, so the tool must
+# refuse them itself; on a case-sensitive one the file is simply absent. Both end in the same denial.
 @pytest.mark.parametrize("path", ["Notes/open.md", "notes/Open.md", "NOTES/OPEN.MD"])
 def test_wrong_case_spelling_is_denied(open_brain: Brain, path: str) -> None:
     result = open_brain.run("read", path)
