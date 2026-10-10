@@ -18,7 +18,9 @@ pip install "git+https://github.com/mschmdb/dummkopf.git"
 ```
 
 `uv tool install` or `pipx install` with the same URL work too and keep ˈdʊmkɔpf out of your project
-environments. The commands below need `dummkopf` on your `PATH`; the hooks call it by name.
+environments. The commands below need `dummkopf` on your `PATH`, because the hooks call it by name:
+after `uv tool install` run `uv tool update-shell`, after `pipx install` run `pipx ensurepath`, and a
+`pip install` into a virtual environment needs that environment activated.
 
 Create a brain with an empty private repository as its remote:
 

@@ -54,7 +54,8 @@ def register(adder: Callable[[str], argparse.ArgumentParser]) -> None:
 def run_init(args: argparse.Namespace, root: Path, tone: str) -> int:
     target = Path(args.path) if args.path else root
     created = init(target, args.remote, args.locale)
-    sys.stdout.write(say("out_init", tone, path=str(created)) + "\n")
+    key = "out_init_with_remote" if args.remote else "out_init"
+    sys.stdout.write(say(key, tone, path=str(created)) + "\n")
     return 0
 
 
