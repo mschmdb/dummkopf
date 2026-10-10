@@ -70,7 +70,7 @@ def pre_commit(config: Config) -> int:
         paths_file = config.root / config.sensitive.paths_file
         fresh = Sensitivity.generate(config)
         current = paths_file.read_text(encoding="utf-8") if paths_file.is_file() else None
-        if fresh != current:
+        if fresh != current and not paths_file.is_symlink():
             paths_file.write_text(fresh, encoding="utf-8")
             paths_file.chmod(0o600)
             stage(config, [config.sensitive.paths_file])

@@ -15,20 +15,31 @@ def skill_dirs(config: Config) -> frozenset[str]:
     found: set[str] = set()
     for base in config.layout.roots:
         directory = config.root / base
-        if directory.is_dir():
+        if directory.is_dir() and not directory.is_symlink():
             found.update(skill.parent.relative_to(config.root).as_posix() + "/"
                          for skill in directory.rglob(SKILL_FILE))
     return frozenset(found)
 
 
+def inside_without_symlinks(root: Path, path: Path) -> bool:
+    """True if neither the path nor a folder between it and root is a symlink."""
+    current = path
+    while current != root:
+        if current.is_symlink():
+            return False
+        current = current.parent
+    return True
+
+
 def iter_note_files(config: Config) -> list[str]:
+    """Note files under the note folders. Symlinks never count: a cloned brain may point anywhere."""
     skills = skill_dirs(config)
     found: list[str] = []
     for base in config.layout.roots:
         directory = config.root / base
-        if directory.is_dir():
-            found.extend(sorted(path.relative_to(config.root).as_posix()
-                                for path in directory.rglob("*.md") if path.is_file()))
+        if directory.is_dir() and not directory.is_symlink():
+            found.extend(path.relative_to(config.root).as_posix() for path in directory.rglob("*.md")
+                         if path.is_file() and inside_without_symlinks(config.root, path))
     return sorted(rel for rel in found if not any(rel.startswith(skill) for skill in skills))
 
 

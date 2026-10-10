@@ -42,9 +42,9 @@ def open_notes(config: Config) -> Scan:
 
 def topic_folders(config: Config) -> Iterator[str]:
     base = config.root / config.layout.topics
-    if base.is_dir():
+    if base.is_dir() and not base.is_symlink():
         for path in sorted(base.iterdir()):
-            if path.is_dir():
+            if path.is_dir() and not path.is_symlink():
                 yield config.layout.topics + "/" + path.name
 
 

@@ -32,8 +32,11 @@ def topic_dirs(config: Config) -> list[str]:
     if not base.is_dir():
         return []
     skills = skill_dirs(config)
+    if base.is_symlink():
+        return []
     return sorted(path.name for path in base.iterdir()
-                  if path.is_dir() and (path / config.layout.topic_readme).is_file()
+                  if path.is_dir() and not path.is_symlink() and (path / config.layout.topic_readme).is_file()
+                  and not (path / config.layout.topic_readme).is_symlink()
                   and config.layout.topics + "/" + path.name + "/" not in skills)
 
 
@@ -167,6 +170,8 @@ def generate(config: Config, dry_run: bool = False) -> list[str]:
 
     def put(rel: str, new: str) -> None:
         path = config.root / rel
+        if path.is_symlink():
+            return
         if read_text(path) != new:
             changed.append(rel)
             if not dry_run:
