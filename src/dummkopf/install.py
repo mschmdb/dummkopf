@@ -11,9 +11,15 @@ from dummkopf.config import Config
 from dummkopf.errors import Rejected
 
 MANAGED = "# managed-by: dummkopf"
+# `uv tool install` and `pipx` put executables in ~/.local/bin. Hooks often run with a narrower PATH than
+# a terminal (the Claude desktop app, for one), so every hook adds that folder in front. $HOME keeps the
+# committed files free of machine-specific paths.
+USER_BIN = 'PATH="$HOME/.local/bin:$PATH"'
 PRE_COMMIT = f"""#!/bin/sh
 {MANAGED}
 # Regenerates the sensitive-paths list and the indexes. Never blocks a commit.
+{USER_BIN}
+export PATH
 if command -v dummkopf >/dev/null 2>&1; then
   dummkopf hook pre-commit || true
 else
@@ -21,8 +27,8 @@ else
 fi
 exit 0
 """
-CLAUDE_COMMAND = 'dummkopf --root "$CLAUDE_PROJECT_DIR" hook agent'
-CODEX_COMMAND = 'dummkopf --root "$(git rev-parse --show-toplevel)" hook agent'
+CLAUDE_COMMAND = USER_BIN + ' dummkopf --root "$CLAUDE_PROJECT_DIR" hook agent'
+CODEX_COMMAND = USER_BIN + ' dummkopf --root "$(git rev-parse --show-toplevel)" hook agent'
 CLAUDE_MATCHER = "Write|Edit|MultiEdit|Bash"
 CODEX_MATCHER = "Bash|apply_patch|Edit|Write"
 
@@ -60,10 +66,23 @@ def load_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def is_ours(command: object) -> bool:
+    """Any dummkopf agent hook, including the format of older releases."""
+    return isinstance(command, str) and "dummkopf" in command and "hook agent" in command
+
+
 def add_hook(settings: dict[str, Any], event: str, command: dict[str, Any], matcher: str | None) -> None:
-    """Append our hook unless an entry already runs the same command."""
+    """Add our hook once. Older dummkopf hook commands are replaced, never duplicated."""
     hooks = settings.setdefault("hooks", {})
     entries = hooks.setdefault(event, [])
+    emptied: list[dict[str, Any]] = []
+    for existing in entries:
+        if isinstance(existing, dict) and isinstance(existing.get("hooks"), list) and existing["hooks"]:
+            existing["hooks"] = [hook for hook in existing["hooks"]
+                                 if hook.get("command") == command["command"] or not is_ours(hook.get("command"))]
+            if not existing["hooks"]:
+                emptied.append(existing)
+    entries[:] = [existing for existing in entries if not any(existing is gone for gone in emptied)]
     for existing in entries:
         if any(hook.get("command") == command["command"] for hook in existing.get("hooks", [])):
             return

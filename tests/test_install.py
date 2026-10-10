@@ -132,3 +132,26 @@ def test_agents_rules_are_rendered_for_the_config(tmp_path: Path, german: Brain)
     assert code == 0
     assert "> SENSIBEL" in output and "`topics/vertraulich/`" in output and "kernfakt" in output
     assert "quellen/" in output and "Optional: Claude desktop app" in output
+
+
+def test_hook_commands_find_uv_tool_installs_without_fixed_paths(repo: Brain) -> None:
+    assert invoke(repo, "install")[0] == 0
+    hook = hook_path(repo).read_text()
+    claude = (repo.root / ".claude/settings.json").read_text()
+    codex = (repo.root / ".codex/hooks.json").read_text()
+    for text in (hook, claude, codex):
+        assert "$HOME/.local/bin" in text
+        assert "/Users/" not in text and str(repo.root) not in text
+
+
+def test_reinstall_upgrades_older_dummkopf_hook_commands(repo: Brain) -> None:
+    old = 'dummkopf --root "$CLAUDE_PROJECT_DIR" hook agent'
+    repo.write(".claude/settings.json", json.dumps({"hooks": {
+        "PostToolUse": [{"matcher": "Write|Edit|MultiEdit|Bash", "hooks": [{"type": "command", "command": old}]}],
+        "SessionEnd": [{"hooks": [{"type": "command", "command": old}]}]}}))
+    assert invoke(repo, "install")[0] == 0
+    settings = json.loads((repo.root / ".claude/settings.json").read_text())
+    commands = [hook["command"] for entries in settings["hooks"].values() for entry in entries
+                for hook in entry["hooks"]]
+    assert len(commands) == 2
+    assert all("$HOME/.local/bin" in command for command in commands)
