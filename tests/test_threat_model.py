@@ -186,7 +186,8 @@ def test_broken_url_is_an_issue_not_a_crash(brain: Brain) -> None:
 def route_brain(brain: Brain, alias: str) -> None:
     brain.write("topics/meals/README.md", "---\nscope: private\n---\n> SENSITIVE\n# Meals\n")
     brain.write("routes.json", json.dumps({"routes": [{"aliases": [alias], "sources": "topics/meals/plan-*.md",
-                                                         "scope": "private", "kind": "dated-plan"}]}))
+                                                         "scope": "private", "kind": "dated-plan",
+                                                         "allow_sensitive": True}]}))
 
 
 @pytest.mark.parametrize("alias", ["what", "the", "a", "is it"])
@@ -248,3 +249,69 @@ def test_saved_write_survives_a_deleted_paths_file_upstream(brain: Brain) -> Non
         result = ingest(Access(brain.config), {"changes": [
             {"path": "notes/a.md", "expected": revision(brain, "notes/a.md"), "append": "More."}]})
     assert result["saved"] and result["sync"] == "ok" and result["revisions"] == {}
+
+
+# --- review round 3 ----------------------------------------------------------------------------
+
+
+def plan_brain(brain: Brain, allow: bool | None) -> None:
+    brain.write("topics/meals/README.md", "---\nscope: private\n---\n> SENSITIVE\n# Meals\n")
+    route: dict[str, object] = {"aliases": ["meal plan"], "sources": "topics/meals/plan-*.md",
+                                "scope": "private", "kind": "dated-plan"}
+    if allow is not None:
+        route["allow_sensitive"] = allow
+    brain.write("routes.json", json.dumps({"routes": [route]}))
+    brain.write("topics/meals/plan-2020-01-06-to-12.md", "# Plan\n| Mon 01-06 | SOUP |\n")
+
+
+@pytest.mark.parametrize("allow", [None, False])
+def test_route_without_opt_in_never_opens_sensitive_plans(brain: Brain, allow: bool | None) -> None:
+    import datetime as dt
+
+    plan_brain(brain, allow)
+    packet = context_packet(Access(brain.config, scope="private"), "meal plan", today=dt.date(2020, 1, 7))
+    assert packet["hits"] == []
+
+
+def test_route_with_opt_in_opens_sensitive_plans(brain: Brain) -> None:
+    import datetime as dt
+
+    plan_brain(brain, True)
+    packet = context_packet(Access(brain.config, scope="private"), "meal plan", today=dt.date(2020, 1, 7))
+    assert [hit["path"] for hit in packet["hits"]] == ["topics/meals/plan-2020-01-06-to-12.md"]
+
+
+@pytest.mark.parametrize("value", ["yes", 1])
+def test_route_opt_in_must_be_a_boolean(brain: Brain, value: object) -> None:
+    plan_brain(brain, True)
+    data = json.loads(brain.read("routes.json"))
+    data["routes"][0]["allow_sensitive"] = value
+    brain.write("routes.json", json.dumps(data))
+    with pytest.raises(AccessDenied):
+        context_packet(Access(brain.config, scope="private"), "meal plan")
+
+
+def scoped_topics(brain: Brain) -> None:
+    brain.git_init()
+    brain.write("topics/job/README.md", document(scope="work", body="August 2026, TODO ship it"))
+    brain.write("topics/diary/README.md",
+                document(scope="private", body="August 2026, TODO call the divorce lawyer"))
+    brain.commit("seed", date="2020-01-01T12:00:00")
+
+
+def test_extras_and_report_respect_the_scope(brain: Brain) -> None:
+    scoped_topics(brain)
+    for args in (("links", "--json", "--min-topics", "1"), ("curator", "--json", "--open-days", "1"),
+                 ("meta", "report")):
+        code, output, _ = invoke(brain, *args, "--scope", "work")
+        assert code == 0, args
+        assert "diary" not in output and "divorce" not in output, args
+    code, output, _ = invoke(brain, "links", "--json", "--min-topics", "1", "--scope", "private")
+    assert "diary" in output and "job" not in output
+
+
+def test_extras_default_to_query_default(brain: Brain) -> None:
+    brain.configure("[scopes]\nquery_default = 'work'\n")
+    scoped_topics(brain)
+    code, output, _ = invoke(brain, "curator", "--json", "--open-days", "1")
+    assert code == 0 and "divorce" not in output
