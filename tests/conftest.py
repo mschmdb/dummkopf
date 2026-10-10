@@ -80,3 +80,34 @@ def brain(tmp_path: Path) -> Brain:
 @pytest.fixture
 def german(tmp_path: Path) -> Brain:
     return make_brain(tmp_path / "hub", GERMAN_CONFIG.read_text(encoding="utf-8"))
+
+
+def document(title: str = "Test", body: str = "Proven content.") -> str:
+    """A complete English note; its body heading sits on line 11."""
+    return ("---\nupdated: 2026-10-01\nstatus: active\nkey_fact: Proven content.\n"
+            "summary: Proven content.\naliases: [test]\nperiod: []\nentities: []\n"
+            "---\n\n# " + title + "\n\n" + body + "\n")
+
+
+def invoke(brain: Brain, *args: str, stdin: str = "") -> tuple[int, str, str]:
+    import contextlib
+    import io
+    import sys
+
+    from dummkopf.cli import main
+
+    output, error = io.StringIO(), io.StringIO()
+    old_stdin = sys.stdin
+    sys.stdin = io.StringIO(stdin)
+    try:
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(error):
+            code = main(list(args), root=brain.root)
+    finally:
+        sys.stdin = old_stdin
+    return code, output.getvalue(), error.getvalue()
+
+
+def revision(brain: Brain, rel: str) -> str:
+    import hashlib
+
+    return hashlib.sha256((brain.root / rel).read_bytes()).hexdigest()

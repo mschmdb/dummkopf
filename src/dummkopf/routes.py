@@ -1,0 +1,207 @@
+"""Routes: a named query ("meal plan") opens exactly the matching dated-plan files.
+
+A route releases only the files it selects, never the whole folder, so a sensitive
+plan folder stays closed for every other question.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import json
+import re
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import PurePosixPath
+from typing import TYPE_CHECKING, TypedDict
+
+from dummkopf.config import Config
+from dummkopf.errors import AccessDenied
+from dummkopf.locale import Locale, get_locale
+
+if TYPE_CHECKING:
+    from dummkopf.access import Access, Note
+
+Period = tuple[dt.date, dt.date]
+Normalize = Callable[[str], list[str]]
+
+
+class Route(TypedDict):
+    aliases: list[str]
+    sources: str
+    scope: str
+    kind: str
+
+
+@dataclass(frozen=True)
+class Selection:
+    notes: list[Note]
+    period: Period | None
+
+
+def week(terms: list[str], today: dt.date, locale: Locale) -> Period | None:
+    text = " ".join(terms)
+    monday = today - dt.timedelta(days=today.weekday())
+    if locale.next_week.search(text):
+        monday += dt.timedelta(days=7)
+    elif not locale.this_week.search(text):
+        return None
+    return monday, monday + dt.timedelta(days=6)
+
+
+def file_period(path: str, locale: Locale) -> Period | None:
+    """`plan-2026-10-02-to-09.md` or `plan-2026-10-02-to-2026-10-09.md` -> both dates."""
+    pattern = (r"-(\d{4}-\d{2}-\d{2})-" + re.escape(locale.period_connector)
+               + r"-(\d{4}-\d{2}-\d{2}|\d{2})\.md$")
+    match = re.search(pattern, path)
+    if not match:
+        return None
+    try:
+        start = dt.date.fromisoformat(match[1])
+        if len(match[2]) == 10:
+            end = dt.date.fromisoformat(match[2])
+        else:
+            day = int(match[2])
+            if day >= start.day:
+                end = start.replace(day=day)
+            else:
+                next_month = (start.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+                end = next_month.replace(day=day)
+        return (start, end) if end >= start else None
+    except ValueError:
+        return None
+
+
+def _valid(route: object, config: Config) -> bool:
+    if not isinstance(route, dict):
+        return False
+    aliases, source = route.get("aliases"), route.get("sources")
+    if not isinstance(aliases, list) or not aliases or not isinstance(source, str):
+        return False
+    if any(not isinstance(alias, str) or not alias.strip() for alias in aliases):
+        return False
+    parts = PurePosixPath(source).parts
+    return not (PurePosixPath(source).is_absolute() or ".." in parts or "\\" in source
+                or len(parts) < 3 or parts[0] not in config.layout.roots
+                or any(char in "/".join(parts[:-1]) for char in "*?[")
+                or not source.endswith(".md") or "**" in source
+                or route.get("scope") not in config.scopes.values or route.get("kind") != "dated-plan")
+
+
+def routes(config: Config) -> list[Route]:
+    path = config.root / config.context.routes_file
+    if not path.exists() and not path.is_symlink():
+        return []
+    try:
+        if path.is_symlink():
+            raise ValueError
+        result = json.loads(path.read_text(encoding="utf-8"))["routes"]
+        if not isinstance(result, list) or not all(_valid(route, config) for route in result):
+            raise ValueError
+        return result
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
+        raise AccessDenied("routes_invalid") from error
+
+
+def select(access: Access, query: str, normalize: Normalize, today: dt.date) -> Selection | None:
+    config = access.config
+    locale = get_locale(config.ui.locale)
+    terms = normalize(query)
+
+    def requested(alias: str) -> bool:
+        tokens = normalize(alias)
+        if not tokens:
+            return False
+        # Exclusions apply within one sentence, not to the user's other instructions.
+        for clause in re.split(r"[.!?;\n]", query):
+            clause_terms = normalize(clause)
+            for index in range(len(clause_terms) - len(tokens) + 1):
+                if clause_terms[index:index + len(tokens)] != tokens:
+                    continue
+                excluded = set(clause_terms).intersection(locale.negations)
+                prefix = set(clause_terms[max(0, index - 3):index])
+                if not excluded and not prefix.intersection(locale.without):
+                    return True
+        return False
+
+    matched = [route for route in routes(config) if any(requested(alias) for alias in route["aliases"])]
+    if not matched:
+        return None
+    period = week(terms, today, locale)
+    selected: list[str] = []
+    topic_prefix = config.layout.topics + "/" + access.topic + "/" if access.topic else ""
+    for route in matched:
+        if access.scope not in (config.scopes.all, route["scope"]):
+            continue
+        candidates: list[tuple[Period, str]] = []
+        for path in access.root.glob(route["sources"]):
+            rel = path.relative_to(access.root).as_posix()
+            if not rel.startswith(topic_prefix):
+                continue
+            dates = file_period(rel, locale)
+            if dates:
+                candidates.append((dates, rel))
+        if period:
+            selected.extend(rel for dates, rel in candidates
+                            if dates[0] <= period[1] and dates[1] >= period[0])
+        elif candidates:
+            current = [item for item in candidates if item[0][0] <= today <= item[0][1]]
+            past = [item for item in candidates if item[0][0] <= today]
+            if current or past:
+                selected.append(max(current or past)[1])
+    chosen = sorted(set(selected))
+    # Release only the chosen files, never the whole topic folder.
+    permitted = access.with_grants(chosen)
+    notes: list[Note] = []
+    for rel in chosen:
+        try:
+            notes.append(permitted.read(rel))
+        except AccessDenied:
+            continue
+    return Selection(notes, period)
+
+
+def row_date(line: str, period: Period, locale: Locale) -> dt.date | None:
+    if not line.lstrip().startswith("|"):
+        return None
+    match = locale.row_date.search(line.split("|")[1])
+    if not match:
+        return None
+    year = match.group("year")
+    years = [int(year)] if year else list(range(period[0].year, period[1].year + 1))
+    for candidate in years:
+        try:
+            date = dt.date(candidate, int(match.group("month")), int(match.group("day")))
+        except ValueError:
+            continue
+        if period[0] <= date <= period[1]:
+            return date
+    return None
+
+
+def plan_lines(note: Note, requested: Period, config: Config) -> tuple[list[int], list[dt.date]]:
+    """Line numbers of the H1, matching table rows and their header; plus the dates covered."""
+    locale = get_locale(config.ui.locale)
+    source_period = file_period(note.path, locale)
+    if not source_period:
+        return [], []
+    kept: list[int] = []
+    covered: list[dt.date] = []
+    header: list[int] = []
+    header_emitted = False
+    for number, line in enumerate(note.text.splitlines(), 1):
+        if line.startswith("# "):
+            kept.append(number)
+        if not line.lstrip().startswith("|"):
+            header_emitted, header = False, []
+            continue
+        date = row_date(line, source_period, locale)
+        if date:
+            if requested[0] <= date <= requested[1]:
+                if not header_emitted:
+                    kept.extend(header)
+                    header_emitted = True
+                kept.append(number)
+                covered.append(date)
+        elif not locale.row_date.search(line.split("|")[1]):
+            header.append(number)
+    return kept, covered

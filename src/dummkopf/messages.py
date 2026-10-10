@@ -139,6 +139,71 @@ PLAIN: dict[str, str] = {
     ),
 }
 
+# argparse help: option help, command descriptions and examples.
+HELP: dict[str, str] = {
+    "prog": "Long-term memory for coding agents, kept in a Git repo of Markdown notes.",
+    "epilog": (
+        "Read: context, find, read. Write: write (one file), ingest (package). "
+        "Details: dummkopf <command> --help"
+    ),
+    "root": "Brain root. Default: $DUMMKOPF_ROOT, else the nearest folder with dummkopf.toml.",
+    "serious": "Neutral messages, whatever ui.tone says.",
+    "scope": "A scope from dummkopf.toml, or the all-scopes keyword (default: scopes.query_default).",
+    "topic": "Limit access to this topic folder.",
+    "allow_sensitive": "Release a sensitive path. Only when the user named it in the current prompt.",
+    "json": "Print the result as compact JSON.",
+    "max_chars": "Maximum output length in characters (500 to 20000, default: limits.max_chars).",
+    "dry_run": "Validate and show changes; save nothing.",
+    "query": "The user question or keywords.",
+    "path": "Path relative to the brain, e.g. notes/topic.md.",
+    "limit": "Maximum number of hits (1 to 10, default: limits.find_limit).",
+    "start": "First line (physical line number).",
+    "end": "Last line (inclusive).",
+    "section": "Read an original section by its unique heading.",
+    "expected": "new for new files, otherwise rev from read/context.",
+    "append": "Append stdin to the end of the file.",
+    "input_md": "Markdown file; - or no value reads stdin.",
+    "input_json": "JSON write package; - or no value reads stdin.",
+    "check_paths": "Files to check; default: all released files.",
+    "ex_context": (
+        "Best entry point for a user question. Filler words are dropped; the output names them.\n"
+        "Header per hit: path | rev=<12 chars> | updated | status | scope. Use rev as --expected.\n\n"
+        'Example:\n  dummkopf context "How does the deploy work?" --scope work'
+    ),
+    "ex_find": (
+        "Keyword search over title, aliases, key fact, path and text.\n\n"
+        'Example:\n  dummkopf find "pnpm esbuild" --limit 5'
+    ),
+    "ex_read": (
+        "Read a file. Without --start, output begins after the frontmatter;\n"
+        "its key fields appear in the header line. --start 1 shows the whole frontmatter.\n"
+        "If --end lies before the first body line, output starts at line 1.\n\n"
+        "Examples:\n  dummkopf read notes/topic.md\n  dummkopf read notes/topic.md --end 3\n"
+        '  dummkopf read notes/topic.md --section "Open questions" --json'
+    ),
+    "ex_ingest": (
+        "Write several files atomically. Index, commit and push run automatically.\n"
+        "Per entry exactly one of: content (whole file), replace (text pairs) or append (text at the end).\n"
+        "expected: null for new files, otherwise rev from read/context (12 characters are enough).\n\n"
+        "Example:\n"
+        "  dummkopf ingest --scope work --input - <<'EOF'\n"
+        '  {"changes":[{"path":"notes/topic.md","expected":"9f4a55b37576",\n'
+        '    "append":"## New\\n- Fact","metadata":{"key_fact":"Proven statement"}}]}\n'
+        "  EOF"
+    ),
+    "ex_write": (
+        "Write one file from Markdown on stdin, no JSON. Metadata comes from the frontmatter.\n"
+        "A new topic needs a README in the same package: use ingest for that.\n\n"
+        "Examples:\n"
+        "  dummkopf write notes/topic.md --scope work --expected new <<'EOF'\n"
+        "  ---\n  key_fact: Proven statement\n  aliases: [topic]\n  ---\n\n  # Topic\n\n  Content\n  EOF\n"
+        "  dummkopf write bookmarks/ai.md --expected 9f4a55b37576 --append <<'EOF'\n"
+        "  ## Title\n  - URL: https://example.org\n  EOF"
+    ),
+    "ex_check": "Check frontmatter and links.\n\nExample:\n  dummkopf check notes/topic.md",
+    "ex_sync": "Commit open note changes, rebase onto the remote and push.\n\nExample:\n  dummkopf sync",
+}
+
 CHEEKY: dict[str, str] = {
     "path_denied": "Dummkopf! {plain}",
     "busy": "Easy, Dummkopf. {plain}",
