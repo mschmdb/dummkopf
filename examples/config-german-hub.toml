@@ -1,0 +1,54 @@
+# Runs an existing German-language brain on dummkopf without migrating a single note.
+# Copy to <your-brain>/dummkopf.toml and set repo.remote.
+
+schema_version = 1
+
+[repo]
+remote = "git@github.com:you/your-brain.git"
+branch = "main"
+commit_message = "Update hub notes"
+sync_exclude = ["scripts", "hub", ".codex", ".claude"]
+
+[layout]
+sources = "quellen"
+
+[scopes]
+values = ["privat", "work"]
+all = "both"
+query_default = "both"
+mixed_label = "gemischt"
+
+[status]
+active = "aktiv"
+archived = "archiv"
+
+[sensitive]
+marker = "> SENSIBEL"
+always = ["topics/gesundheit/"]
+
+[frontmatter]
+key_fact = "kernfakt"
+summary = "kurz"
+aliases = "aliase"
+updated = "stand"
+status = "status"
+period = "zeitraum"
+entities = "entitaeten"
+scope = "scope"
+
+[ui]
+locale = "de"
+tone = "plain"
+
+[context]
+routes_file = "hub-routes.json"
+
+[extras]
+codex_sync = true
+
+[links]                                # options for the links extra
+output = "KANTEN.md"
+entities_file = "scripts/entitaeten.txt"
+
+[curator]                              # options for the curator extra
+report_dir = "topics/hub/kurator"

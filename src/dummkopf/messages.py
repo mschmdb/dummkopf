@@ -1,0 +1,169 @@
+"""Every user-facing message lives here, so translating means editing one file.
+
+PLAIN holds the precise text. CHEEKY overrides a few keys; error overrides must
+embed `{plain}` so the joke never hides what failed or what to do next.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from dummkopf.errors import DummkopfError
+
+PLAIN: dict[str, str] = {
+    # config
+    "config_missing": (
+        "No dummkopf.toml found in {start} or its parents. "
+        "Run `dummkopf init` to create a brain, or pass --root."
+    ),
+    "config_unreadable": "dummkopf.toml is not readable: {detail}",
+    "config_invalid": "dummkopf.toml: {key}: {problem}",
+    # access
+    "path_denied": "Path unavailable or access excluded.",
+    "invalid_scope": "Invalid scope. Use one of: {choices}.",
+    "invalid_topic": "Invalid topic name. Use letters, digits and hyphens.",
+    "grant_needs_path": "--allow-sensitive needs a topic folder or a concrete .md file.",
+    "sensitive_list_missing": (
+        "The sensitive-paths list {file} is missing or unreadable. "
+        "Run `dummkopf meta index` to regenerate it."
+    ),
+    "busy": "The brain is busy. Retry the call.",
+    "routes_invalid": "The routes file is invalid or unavailable.",
+    # validation
+    "missing_frontmatter": "Frontmatter is missing.",
+    "bad_updated": "{key} needs a valid ISO date (YYYY-MM-DD).",
+    "missing_text": "{key} is missing or has no valid text.",
+    "needs_list": "{key} needs a list of strings.",
+    "missing_body": "Content and an H1 heading are missing.",
+    "bad_metadata": "Metadata needs valid keys and string or string-list values.",
+    "version_conflict": "A file changed since you read it (current rev={rev}). Read it again, then retry.",
+    "append_needs": "append needs an existing file and non-empty text.",
+    "replace_needs": "replace needs an existing file and 1 to {max} text pairs.",
+    "replace_pair": "Each text pair needs a non-empty old text and a new text.",
+    "replace_ambiguous": "The old text is missing or ambiguous. Read the original passage again.",
+    "flat_path": "Notes and bookmarks need a flat target path, e.g. {root}/<name>.md.",
+    "topic_path": "Topic files need a topic folder, e.g. {root}/<topic>/<file>.md.",
+    "kebab_case": "Target paths need kebab-case names and .md files.",
+    "link_wiki_missing": "A wiki link is missing or ambiguous.",
+    "link_scheme": "This link scheme is not allowed.",
+    "link_escapes": "A local link leaves the brain.",
+    "link_missing": "A local link target is missing.",
+    "link_scope": "A link crosses a sensitivity or scope boundary.",
+    "link_denied": "A link target is not released.",
+    "hint_link_denied": (
+        "The target is sensitive or outside the scope. "
+        "Check --allow-sensitive and --scope, or remove the link."
+    ),
+    "hint_link_scope": "A non-sensitive or work note must not link to sensitive or private targets.",
+    "hint_link_missing": "Check the target path relative to the note.",
+    "packet_shape": "A write package must contain only `changes`.",
+    "changes_count": "changes needs 1 to {max} file entries.",
+    "entry_shape": (
+        "Each entry needs path, expected and exactly one of content, replace or append; "
+        "metadata is optional."
+    ),
+    "duplicate_path": "A target path may appear only once per package.",
+    "expected_format": (
+        "expected must be null for new files or a revision (at least 12 hex characters of rev)."
+    ),
+    "new_sensitive": (
+        "New sensitive note. Release it with --allow-sensitive {path}, "
+        "but only after the user named the topic in the current prompt."
+    ),
+    "sources_readonly": "Originals under {sources}/ stay unchanged.",
+    "marker_removal": "A write package must not remove a sensitivity marker.",
+    "expected_missing": "An expected file is missing. Check the current state.",
+    "scope_change": "Changing a scope needs a separate review.",
+    "topic_needs_readme": "A new topic needs a {readme} in the same package.",
+    "topic_needs_scope": "A new topic needs an explicit scope: {choices}.",
+    "packet_rules": "The write package breaks the rules: {codes}.\n{details}",
+    "issue_line": "line {line}",
+    # writing
+    "write_race": "A file changed while writing.",
+    "rollback_failed": "Write failed. A foreign change blocks a full rollback.",
+    "not_saved": "The write package was not saved. Check the current state.",
+    "sync_failed_after_save": "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.",
+    # sync
+    "git_unavailable": "Git is not available or does not answer.",
+    "git_failed": "Git step failed: {step}. Local data is kept.",
+    "git_root": "The Git root does not match the brain root.",
+    "git_branch": "Sync needs branch {branch}.",
+    "git_remote": "Remote {name} does not match repo.remote in dummkopf.toml.",
+    "git_open_operation": "A Git operation is in progress. Resolve it first.",
+    "git_conflicts": "Git has unresolved conflicts.",
+    "git_diverged": "The remote contradicts local changes. Local commits are kept.",
+    "git_dirty": "The brain has uncommitted note changes. Run `dummkopf sync` first.",
+    "hook_sync_failed": "dummkopf sync failed: {reason}",
+    "sync_ok": "Synced.",
+    # cli input
+    "max_chars_range": "--max-chars must be between {low} and {high}.",
+    "limit_range": "--limit must be between {low} and {high}.",
+    "bad_line_range": "Invalid line range.",
+    "section_with_range": "Do not combine --section with a line range.",
+    "section_needs_heading": "A section needs a heading.",
+    "section_ambiguous": "The section is missing or ambiguous. Give a more precise heading.",
+    "query_needs_word": "The query needs at least one word.",
+    "search_needs_term": "The search needs at least one keyword.",
+    "input_unreadable": "The input is not readable.",
+    "input_too_large": "The write package is too large.",
+    "json_unreadable": (
+        "The JSON write package is not readable: {msg} (line {line}, column {col}). "
+        "For Markdown content, `dummkopf write` or a quoted heredoc (<<'EOF') is safer."
+    ),
+    "check_paths_or_input": "check takes file paths or --input, not both.",
+    "extra_disabled": "The extra `{name}` is disabled in dummkopf.toml ([extras] {name} = false).",
+    # rendered output
+    "out_period": "Requested period: {start} to {end}",
+    "no_results": "Nothing found in released sources.",
+    "out_partial": "Partial match: not all keywords match.",
+    "out_ignored": "Ignored: {terms}",
+    "out_not_found": "Not found: {terms}",
+    "out_key_fact": "Key fact: {text}",
+    "out_more": "More hits available; narrow the search or raise --limit.",
+    "out_truncated": "Output truncated; read specific lines or raise --max-chars.",
+    "out_missing_dates": "No dated plan rows for: {dates}",
+    "out_write_status": "Write status: {status}; sync: {sync}",
+    "out_saved": "saved",
+    "out_preview": "preview",
+    "out_changed": "Changed: {path}",
+    "out_unchanged": "Unchanged: {path}",
+    "out_checked": "Checked files: {count}; status: {status}",
+    "out_issue": "{path}: {message} ({severity})",
+    "out_write_truncated": "Output truncated. Raise --max-chars for more details.",
+    "out_written": "{path} written.",
+    "out_index_changed": "{count} file(s) updated.",
+    "out_installed": "Installed: {what}",
+    "out_init": (
+        "New brain created in {path}. Next: set repo.remote in dummkopf.toml, then `dummkopf install`."
+    ),
+}
+
+CHEEKY: dict[str, str] = {
+    "path_denied": "Dummkopf! {plain}",
+    "busy": "Easy, Dummkopf. {plain}",
+    "version_conflict": "Someone else touched this note. Read it again, Dummkopf. {plain}",
+    "new_sensitive": "Dummkopf! {plain}",
+    "marker_removal": "Dummkopf! {plain}",
+    "config_missing": "No brain here, Dummkopf. {plain}",
+    "git_dirty": "Dummkopf, clean up first. {plain}",
+    "sync_failed_after_save": "Half a brain is better than none. {plain}",
+    "no_results": "{plain} Even a Dummkopf knows when it doesn't know.",
+    "sync_ok": "Brain synced.",
+}
+
+# Status lines that report success; their cheeky version may replace the plain text.
+INFO_KEYS = frozenset({"sync_ok"})
+
+TONES = ("cheeky", "plain")
+
+
+def text(key: str, tone: str, /, **params: object) -> str:
+    plain = PLAIN[key].format(**params)
+    if tone != "cheeky" or key not in CHEEKY:
+        return plain
+    return CHEEKY[key].format(plain=plain, **params)
+
+
+def error_text(error: DummkopfError, tone: str) -> str:
+    return text(error.key, tone, **error.params)
