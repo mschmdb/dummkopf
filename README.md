@@ -1,15 +1,15 @@
-# dummkopf
+# ˈdʊmkɔpf
 
 Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.
 
-dummkopf turns a folder of Markdown notes into a memory that Claude Code, Codex and other agents can query and
+ˈdʊmkɔpf turns a folder of Markdown notes into a memory that Claude Code, Codex and other agents can query and
 write through one CLI. Hooks commit and push every change, so the memory follows you to every machine.
 Notes carry a scope (`private`, `work`, or your own) and can be marked sensitive. Agents never see sensitive
 notes unless the user names the topic.
 
 ## Why the name
 
-Linus Torvalds named Git after British slang for an unpleasant person. dummkopf continues that tradition.
+Linus Torvalds named Git after British slang for an unpleasant person. ˈdʊmkɔpf continues that tradition.
 Without memory, every agent is a Dummkopf. This tool fixes that, one note at a time.
 
 ## Quickstart (5 minutes)
@@ -20,7 +20,7 @@ You need Python 3.11+, Git, and macOS or Linux.
 pip install "git+https://github.com/mschmdb/dummkopf.git"
 ```
 
-`uv tool install` or `pipx install` with the same URL work too and keep dummkopf out of your project
+`uv tool install` or `pipx install` with the same URL work too and keep ˈdʊmkɔpf out of your project
 environments. The commands below need `dummkopf` on your `PATH`; the hooks call it by name.
 
 Create a brain with an empty private repository as its remote:
@@ -68,7 +68,7 @@ brain/
 
 [examples/demo-brain](examples/demo-brain) shows a hobby topic, a work topic and one sensitive note.
 
-Every note starts with frontmatter. dummkopf fills gaps when it writes:
+Every note starts with frontmatter. ˈdʊmkɔpf fills gaps when it writes:
 
 ```markdown
 ---
@@ -106,7 +106,7 @@ One signal stays by design: whoever may create notes learns whether a path is fr
 `AGENTS.md` says so. The pre-commit hook derives `.sensitive-paths` from the markers, so `rg --ignore-file`
 works as a fallback without the CLI.
 
-Write rules dummkopf enforces:
+Write rules ˈdʊmkɔpf enforces:
 
 - `--expected <rev>` on every change. A stale revision is rejected, so two agents never overwrite each other.
 - A new topic needs a `README.md` with a scope in the same package.
@@ -190,7 +190,7 @@ are an error, so a typo never switches a rule off silently. The full file with e
 | `[links]` | `output`, `entities_file`, `min_topics` | Options of the links extra. |
 | `[curator]` | `open_days`, `stale_days`, `report_dir` | Options of the curator extra. |
 
-**An existing brain in another language** runs on dummkopf through configuration alone.
+**An existing brain in another language** runs on ˈdʊmkɔpf through configuration alone.
 [examples/config-german-hub.toml](examples/config-german-hub.toml) maps German keys (`kernfakt`, `stand`, …),
 scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without touching a note.
 
@@ -215,13 +215,13 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 **Can I use it at work?** Yes. Set `tone = "plain"` in `[ui]` and every message stays neutral. `--serious`
 does the same for a single call. Error messages are equally precise in both tones.
 
-**Does it send my notes anywhere?** Only to your own Git remote, by `git push`. dummkopf has no network code
+**Does it send my notes anywhere?** Only to your own Git remote, by `git push`. ˈdʊmkɔpf has no network code
 and no dependencies beyond the Python standard library.
 
 **Windows?** Not yet. The process lock uses `fcntl`.
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
-the note folders. dummkopf gives the same answer in all three cases, on purpose.
+the note folders. ˈdʊmkɔpf gives the same answer in all three cases, on purpose.
 
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
 change based on an old revision.

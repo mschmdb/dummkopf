@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. A few rules keep dummkopf small and safe.
+Thanks for helping. A few rules keep ˈdʊmkɔpf small and safe.
 
 ## Setup
 
@@ -19,7 +19,7 @@ Then run the checks before every commit:
 - Write the test first, then the code. Bug fixes start with a failing test.
 - Type hints everywhere; `mypy --strict` must pass.
 - Keep files under 500 lines. Split a module before it grows past that.
-- No new runtime dependencies. dummkopf uses the Python standard library only.
+- No new runtime dependencies. ˈdʊmkɔpf uses the Python standard library only.
 - Every user-facing message goes into `src/dummkopf/messages.py`. A cheeky variant must embed `{plain}`,
   so the joke never hides what failed or what to do.
 - Generated headings and text heuristics for a language go into `src/dummkopf/locale.py`.

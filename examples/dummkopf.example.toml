@@ -18,7 +18,7 @@ topic_readme = "README.md"
 notes = "notes"                        # flat, no subfolders
 bookmarks = "bookmarks"                # flat, no subfolders
 archive = "archive"                    # notes here get status = archived
-sources = "sources"                    # originals, never edited by dummkopf
+sources = "sources"                    # originals, never edited by ˈdʊmkɔpf
 index = "INDEX.md"
 
 [scopes]
