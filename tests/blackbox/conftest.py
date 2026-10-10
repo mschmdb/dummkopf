@@ -158,6 +158,9 @@ class Synced:
     def remote_log(self) -> list[str]:
         return git(self.remote, "log", "--format=%s", "main").splitlines()
 
+    def remote_files(self) -> list[str]:
+        return git(self.remote, "ls-tree", "-r", "--name-only", "main").splitlines()
+
     def remote_file(self, rel: str) -> str:
         return git(self.remote, "show", "main:" + rel)
 
