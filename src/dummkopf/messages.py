@@ -95,6 +95,14 @@ PLAIN: dict[str, str] = {
     "git_diverged": "The remote contradicts local changes. Local commits are kept.",
     "git_dirty": "The brain has uncommitted note changes. Run `dummkopf sync` first.",
     "hook_sync_failed": "dummkopf sync failed: {reason}",
+    "hook_index_failed": "dummkopf pre-commit step failed: {reason}. The commit continues.",
+    "hook_exists": (
+        "{path} exists and was not written by dummkopf. Merge it by hand: call `dummkopf hook pre-commit` "
+        "from your hook, or move it away and run `dummkopf install` again."
+    ),
+    "not_a_git_repo": "{path} is not a Git repository. Run `git init -b main` first.",
+    "settings_unreadable": "{path} is not valid JSON. Fix or remove it, then run `dummkopf install` again.",
+    "brain_exists": "{path} already holds a dummkopf.toml. Nothing changed.",
     "sync_ok": "Synced.",
     # cli input
     "max_chars_range": "--max-chars must be between {low} and {high}.",
@@ -134,6 +142,12 @@ PLAIN: dict[str, str] = {
     "out_written": "{path} written.",
     "out_index_changed": "{count} file(s) updated.",
     "out_installed": "Installed: {what}",
+    "report_missing": "### Missing `{key}` ({count})",
+    "report_stale": "### Stale (status {status}, older than {days} days) ({count})",
+    "report_todo": "### No key fact (`{todo}`) ({count})",
+    "report_stale_item": "- `{path}` ({key} {date})",
+    "report_sensitive": "_{count} sensitive file(s) skipped._",
+    "out_paths_file_updated": "{file} updated.",
     "out_init": (
         "New brain created in {path}. Next: set repo.remote in dummkopf.toml, then `dummkopf install`."
     ),
@@ -200,6 +214,34 @@ HELP: dict[str, str] = {
         "  dummkopf write bookmarks/ai.md --expected 9f4a55b37576 --append <<'EOF'\n"
         "  ## Title\n  - URL: https://example.org\n  EOF"
     ),
+    "ex_init": (
+        "Create a new brain: dummkopf.toml, AGENTS.md, CLAUDE.md, .gitignore, INDEX.md and folders.\n\n"
+        "Example:\n  dummkopf init ~/brain --remote git@github.com:you/your-brain.git"
+    ),
+    "ex_install": (
+        "Install the Git pre-commit hook, the Claude Code hooks (.claude/settings.json)\n"
+        "and, with extras.codex_sync, the Codex hook (.codex/hooks.json).\n\nExample:\n  dummkopf install"
+    ),
+    "ex_hook": (
+        "Entry point for hooks; `dummkopf install` wires these up. Never blocks.\n"
+        "pre-commit: regenerate the sensitive-paths list and indexes.\n"
+        "agent: read a Claude Code or Codex hook event on stdin and sync.\n\n"
+        "Example:\n  dummkopf hook pre-commit"
+    ),
+    "ex_meta": (
+        "Maintain frontmatter and generated indexes.\n"
+        "migrate: add missing frontmatter. generate: rebuild INDEX.md and README file tables.\n"
+        "report: list notes without date, stale notes and missing key facts.\n"
+        "index: regenerate the sensitive-paths list, then the tables.\n\n"
+        "Example:\n  dummkopf meta report --max-age 30"
+    ),
+    "init_path": "Folder for the new brain (default: current folder).",
+    "init_remote": "Git remote URL for repo.remote.",
+    "init_locale": "Language of generated headings and text heuristics: en or de.",
+    "hook_kind": "pre-commit or agent.",
+    "meta_action": "migrate, generate, report or index.",
+    "meta_only": "migrate only these paths (repeatable).",
+    "meta_max_age": "Days after which an active note counts as stale (default: limits.stale_after_days).",
     "ex_check": "Check frontmatter and links.\n\nExample:\n  dummkopf check notes/topic.md",
     "ex_sync": "Commit open note changes, rebase onto the remote and push.\n\nExample:\n  dummkopf sync",
 }

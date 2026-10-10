@@ -21,7 +21,6 @@ from dummkopf.search import Packet, body_start, context_packet, find, heading_ra
 
 MAX_CHARS_RANGE = (500, 20000)
 LIMIT_RANGE = (1, 10)
-NO_CONFIG_COMMANDS = ("init",)
 
 Handler = Callable[[argparse.Namespace, Config, str], int]
 
@@ -73,6 +72,7 @@ def parser() -> argparse.ArgumentParser:
             action.add_argument("--section", help=HELP["section"])
     commands.register(sub, lambda name: add_command(sub, name, HELP["ex_" + name]),
                       access_options, output_options)
+    commands.register_admin(lambda name: add_command(sub, name, HELP["ex_" + name]))
     return command
 
 
@@ -110,10 +110,10 @@ def run_read(args: argparse.Namespace, config: Config, tone: str) -> int:
     return 0
 
 
-def handlers() -> dict[str, Handler]:
-    table: dict[str, Handler] = {"context": run_read, "find": run_read, "read": run_read}
-    table.update(commands.HANDLERS)
-    return table
+def handlers() -> tuple[dict[str, Handler], dict[str, commands.NoConfigHandler]]:
+    with_config, without_config = commands.handlers()
+    with_config.update({"context": run_read, "find": run_read, "read": run_read})
+    return with_config, without_config
 
 
 def main(argv: Sequence[str] | None = None, root: Path | None = None) -> int:
@@ -121,8 +121,9 @@ def main(argv: Sequence[str] | None = None, root: Path | None = None) -> int:
     tone = "plain" if args.serious else "cheeky"
     try:
         explicit = root or (Path(args.root) if args.root else None)
-        if args.command in NO_CONFIG_COMMANDS:
-            return commands.HANDLERS_WITHOUT_CONFIG[args.command](args, explicit or Path.cwd(), tone)
+        with_config, without_config = handlers()
+        if args.command in without_config:
+            return without_config[args.command](args, explicit or Path.cwd(), tone)
         config = load_config(find_root(Path.cwd(), explicit))
         if not args.serious:
             tone = config.ui.tone
@@ -130,7 +131,7 @@ def main(argv: Sequence[str] | None = None, root: Path | None = None) -> int:
             args.max_chars = config.limits.max_chars
         if hasattr(args, "max_chars"):
             check_range(args.max_chars, MAX_CHARS_RANGE, "max_chars_range")
-        return handlers()[args.command](args, config, tone)
+        return with_config[args.command](args, config, tone)
     except DummkopfError as error:
         sys.stderr.write(error_text(error, tone) + "\n")
         return error.exit_code

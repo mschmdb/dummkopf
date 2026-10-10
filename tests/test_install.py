@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+import pytest
+from conftest import Brain, invoke, run_git
+
+from dummkopf.cli import main
+from dummkopf.config import load_config
+
+
+@pytest.fixture
+def repo(brain: Brain) -> Brain:
+    brain.git_init()
+    return brain
+
+
+def hook_path(brain: Brain) -> Path:
+    return brain.root / run_git(brain.root, "rev-parse", "--git-path", "hooks").stdout.strip() / "pre-commit"
+
+
+def test_install_writes_git_hook_and_agent_hooks(repo: Brain) -> None:
+    code, output, error = invoke(repo, "install")
+    assert (code, error) == (0, "")
+    hook = hook_path(repo)
+    assert hook.is_file() and os.access(hook, os.X_OK)
+    script = hook.read_text()
+    assert "dummkopf hook pre-commit" in script
+    assert "/Users/" not in script and str(repo.root) not in script
+    settings = json.loads((repo.root / ".claude/settings.json").read_text())
+    post = settings["hooks"]["PostToolUse"][0]
+    assert post["matcher"] == "Write|Edit|MultiEdit|Bash"
+    assert "hook agent" in post["hooks"][0]["command"]
+    assert "$CLAUDE_PROJECT_DIR" in post["hooks"][0]["command"]
+    assert "hook agent" in settings["hooks"]["SessionEnd"][0]["hooks"][0]["command"]
+    codex = json.loads((repo.root / ".codex/hooks.json").read_text())
+    assert codex["hooks"]["PostToolUse"][0]["matcher"] == "Bash|apply_patch|Edit|Write"
+    assert "Installed" in output
+
+
+def test_install_is_idempotent_and_keeps_foreign_settings(repo: Brain) -> None:
+    repo.write(".claude/settings.json", json.dumps({"permissions": {"allow": ["Bash(ls)"]},
+                                                    "hooks": {"PostToolUse": [{"matcher": "Read", "hooks": []}]}}))
+    assert invoke(repo, "install")[0] == 0
+    first = (repo.root / ".claude/settings.json").read_text()
+    assert invoke(repo, "install")[0] == 0
+    assert (repo.root / ".claude/settings.json").read_text() == first
+    settings = json.loads(first)
+    assert settings["permissions"] == {"allow": ["Bash(ls)"]}
+    assert len(settings["hooks"]["PostToolUse"]) == 2
+
+
+def test_install_skips_codex_when_disabled(repo: Brain) -> None:
+    repo.configure("[extras]\ncodex_sync = false\n")
+    assert invoke(repo, "install")[0] == 0
+    assert not (repo.root / ".codex/hooks.json").exists()
+
+
+def test_install_never_overwrites_a_foreign_git_hook(repo: Brain) -> None:
+    hook = hook_path(repo)
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text("#!/bin/sh\necho mine\n")
+    code, _, error = invoke(repo, "install", "--serious")
+    assert code == 2
+    assert "pre-commit" in error
+    assert hook.read_text() == "#!/bin/sh\necho mine\n"
+
+
+def test_install_respects_core_hooks_path(repo: Brain) -> None:
+    run_git(repo.root, "config", "core.hooksPath", "githooks")
+    assert invoke(repo, "install")[0] == 0
+    assert (repo.root / "githooks/pre-commit").is_file()
+
+
+def test_install_outside_git_repo_fails(brain: Brain) -> None:
+    assert invoke(brain, "install")[0] == 2
+
+
+def test_init_scaffolds_a_brain(tmp_path: Path) -> None:
+    target = tmp_path / "my-brain"
+    assert main(["init", str(target), "--remote", "git@example.org:me/brain.git"]) == 0
+    config = load_config(target)
+    assert config.repo.remote == "git@example.org:me/brain.git"
+    for rel in ("AGENTS.md", "CLAUDE.md", ".gitignore", "INDEX.md", ".sensitive-paths", "topics", "notes",
+                "bookmarks", "sources", "archive"):
+        assert (target / rel).exists(), rel
+    assert "AGENTS.md" in (target / "CLAUDE.md").read_text()
+    assert (target / ".git").is_dir()
+    assert run_git(target, "symbolic-ref", "--short", "HEAD").stdout.strip() == "main"
+    index = (target / "INDEX.md").read_text()
+    for heading in ("## Topics", "## Notes (flat)", "## Bookmarks"):
+        assert heading in index
+
+
+def test_init_german_locale_uses_german_headings(tmp_path: Path) -> None:
+    target = tmp_path / "hub"
+    assert main(["init", str(target), "--locale", "de"]) == 0
+    assert "## Notes (flach)" in (target / "INDEX.md").read_text()
+    assert load_config(target).ui.locale == "de"
+
+
+def test_init_refuses_existing_brain(tmp_path: Path) -> None:
+    assert main(["init", str(tmp_path)]) == 0
+    before = (tmp_path / "dummkopf.toml").read_text()
+    assert main(["init", str(tmp_path)]) == 2
+    assert (tmp_path / "dummkopf.toml").read_text() == before
+
+
+def test_init_without_remote_leaves_a_placeholder(tmp_path: Path) -> None:
+    assert main(["init", str(tmp_path)]) == 0
+    assert "you/your-brain.git" in (tmp_path / "dummkopf.toml").read_text()

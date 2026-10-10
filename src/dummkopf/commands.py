@@ -138,5 +138,15 @@ def run(args: argparse.Namespace, config: Config, tone: str) -> int:
     return code
 
 
-HANDLERS: dict[str, Handler] = {name: run for name in ("ingest", "write", "check", "sync")}
-HANDLERS_WITHOUT_CONFIG: dict[str, NoConfigHandler] = {}
+def register_admin(add: Adder) -> None:
+    from dummkopf import admin
+
+    admin.register(add)
+
+
+def handlers() -> tuple[dict[str, Handler], dict[str, NoConfigHandler]]:
+    from dummkopf import admin
+
+    with_config: dict[str, Handler] = {name: run for name in ("ingest", "write", "check", "sync")}
+    with_config.update({"install": admin.run_install, "meta": admin.run_meta})
+    return with_config, {"init": admin.run_init, "hook": admin.run_hook}
