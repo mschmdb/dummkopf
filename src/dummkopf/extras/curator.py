@@ -75,7 +75,8 @@ def scan(config: Config, open_days: int | None = None, stale_days: int | None = 
                 if len(lines) >= MAX_LINES:
                     break
             loops.append(OpenLoop(path=rel, updated=resolved[1], lines=lines))
-        dates = list(dict.fromkeys(match.group(1) for match in label.finditer(text)))
+        # Only the body: the frontmatter date field would otherwise count as a second "as of" date.
+        dates = list(dict.fromkeys(match.group(1) for match in label.finditer(body)))
         if len(dates) >= 2:
             conflicts.append(Conflict(path=rel, dates=dates))
         updated = data.get(config.frontmatter.updated)
@@ -123,6 +124,7 @@ def prompt(config: Config) -> str:
         "aliases": fm.aliases, "period": fm.period, "entities": fm.entities,
         "active": config.status.active, "marker": config.sensitive.marker,
         "paths_file": config.sensitive.paths_file,
+        "readme": config.layout.topic_readme, "scope_key": fm.scope,
     }
     for key, value in values.items():
         template = template.replace("{" + key + "}", value)

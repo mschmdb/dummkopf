@@ -155,3 +155,27 @@ def test_reinstall_upgrades_older_dummkopf_hook_commands(repo: Brain) -> None:
                 for hook in entry["hooks"]]
     assert len(commands) == 2
     assert all("$HOME/.local/bin" in command for command in commands)
+
+
+def test_failed_install_changes_nothing(repo: Brain) -> None:
+    hook = hook_path(repo)
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text("#!/bin/sh\necho mine\n")
+    assert invoke(repo, "install", "--serious")[0] == 2
+    assert not (repo.root / ".claude/settings.json").exists()
+    assert not (repo.root / ".codex/hooks.json").exists()
+
+
+def test_failed_install_on_broken_settings_changes_nothing(repo: Brain) -> None:
+    repo.write(".codex/hooks.json", "{broken")
+    assert invoke(repo, "install", "--serious")[0] == 2
+    assert not (repo.root / ".claude/settings.json").exists()
+    assert not hook_path(repo).exists()
+
+
+def test_init_remote_in_existing_git_repo_adds_the_git_remote(tmp_path: Path) -> None:
+    target = tmp_path / "existing"
+    target.mkdir()
+    run_git(target, "init", "-q", "-b", "main")
+    assert main(["init", str(target), "--remote", "git@example.org:me/brain.git"]) == 0
+    assert run_git(target, "remote", "get-url", "origin").stdout.strip() == "git@example.org:me/brain.git"

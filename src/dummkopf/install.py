@@ -44,10 +44,16 @@ def hooks_dir(config: Config) -> Path:
     return config.root / done.stdout.strip()
 
 
-def install_git_hook(config: Config) -> Path:
+def git_hook_path(config: Config) -> Path:
+    """The pre-commit hook path, after checking it is free or ours."""
     hook = hooks_dir(config) / "pre-commit"
     if hook.exists() and MANAGED not in hook.read_text(encoding="utf-8", errors="ignore"):
         raise Rejected("hook_exists", path=str(hook.relative_to(config.root)))
+    return hook
+
+
+def install_git_hook(config: Config) -> Path:
+    hook = git_hook_path(config)
     hook.parent.mkdir(parents=True, exist_ok=True)
     hook.write_text(PRE_COMMIT, encoding="utf-8")
     hook.chmod(0o755)
@@ -146,8 +152,13 @@ def install(config: Config, replace: tuple[str, ...] = ()) -> tuple[list[str], i
     """Return the relative paths written and the number of old hook commands removed.
 
     `replace` lists substrings of old hook commands to remove first, so a brain never runs two
-    sync paths side by side.
+    sync paths side by side. Everything is checked before the first write, so a rejected install
+    (exit 2) changes nothing.
     """
+    git_hook_path(config)
+    load_json(config.root / ".claude" / "settings.json")
+    if config.extras.codex_sync:
+        load_json(config.root / ".codex" / "hooks.json")
     claude, removed = install_claude(config, replace)
     written = [install_git_hook(config), claude]
     if config.extras.codex_sync:

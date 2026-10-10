@@ -56,6 +56,11 @@ def inside_git_repo(path: Path) -> bool:
     return done.returncode == 0
 
 
+def has_remote(path: Path, name: str) -> bool:
+    done = subprocess.run(["git", "remote", "get-url", name], cwd=path, capture_output=True, text=True, check=False)
+    return done.returncode == 0
+
+
 def init(target: Path, remote: str | None, locale: str) -> Path:
     target = target.resolve()
     if (target / CONFIG_NAME).exists():
@@ -85,6 +90,6 @@ def init(target: Path, remote: str | None, locale: str) -> Path:
     paths_file.chmod(0o600)
     if not inside_git_repo(target):
         subprocess.run(["git", "init", "-q", "-b", config.repo.branch], cwd=target, check=True)
-        if remote:
-            subprocess.run(["git", "remote", "add", config.repo.remote_name, remote], cwd=target, check=True)
+    if remote and not has_remote(target, config.repo.remote_name):
+        subprocess.run(["git", "remote", "add", config.repo.remote_name, remote], cwd=target, check=True)
     return target

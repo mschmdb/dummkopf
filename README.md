@@ -169,7 +169,8 @@ Long-term memory lives in ~/brain. Before answering questions about earlier deci
 `dummkopf --root ~/brain context "<the question>"`. Follow ~/brain/AGENTS.md for scope, sensitivity and writing.
 ```
 
-`DUMMKOPF_ROOT=~/brain` in your shell profile saves the `--root`.
+`DUMMKOPF_ROOT=~/brain` in your shell profile saves the `--root`. The hooks ignore it: they always get
+`--root` from the hook command, so they never act on a brain you did not install them into.
 
 ## Configuration reference
 
