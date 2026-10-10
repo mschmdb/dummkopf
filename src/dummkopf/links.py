@@ -13,6 +13,8 @@ from dummkopf.errors import AccessDenied
 from dummkopf.messages import text as say
 
 ALLOWED_SCHEMES = ("http", "https", "mailto")
+# Longer lines are skipped: link regexes are cheap per line, but a line of 80 000 `[` would make them crawl.
+MAX_LINK_LINE = 10_000
 
 
 class Issue(TypedDict):
@@ -30,12 +32,16 @@ def issue(path: str, code: str, message: str, severity: str = "error", line: int
     return result
 
 
+MARKDOWN_LINK = re.compile(r'!?\[[^\]\n]{0,500}\]\((<[^>\n]{1,1000}>|[^\s)]{1,2000})(?:\s+["\'][^)\n]{0,500})?\)')
+WIKI_LINK = re.compile(r"\[\[([^\]\n]{1,500})\]\]")
+
+
 def references(text: str) -> list[str]:
     # Code samples are not links of the note.
     text = re.sub(r"(?ms)^```.*?^```[^\n]*", "", text)
-    text = re.sub(r"`[^`\n]*`", "", text)
-    markdown = re.findall(r'!?\[[^\]\n]*\]\((<[^>]+>|[^\s)]+)(?:\s+["\'][^)]*)?\)', text)
-    wiki = ["wiki:" + value.split("|")[0] for value in re.findall(r"\[\[([^\]\n]+)\]\]", text)]
+    lines = [re.sub(r"`[^`\n]*`", "", line) for line in text.split("\n") if len(line) <= MAX_LINK_LINE]
+    markdown = [value for line in lines for value in MARKDOWN_LINK.findall(line)]
+    wiki = ["wiki:" + value.split("|")[0] for line in lines for value in WIKI_LINK.findall(line)]
     return [value.strip("<>") for value in markdown] + wiki
 
 
@@ -97,7 +103,11 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
                 continue
             rel = next(iter(candidates))
         else:
-            parsed = urlsplit(reference)
+            try:
+                parsed = urlsplit(reference)
+            except ValueError:
+                problem("link-invalid", "link_scheme", security=True)
+                continue
             if parsed.scheme in ALLOWED_SCHEMES:
                 continue
             if parsed.scheme or parsed.netloc:
@@ -111,12 +121,19 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
                 problem("link-invalid", "link_escapes", security=True)
                 continue
             rel = path.relative_to(access.root).as_posix()
+        # Anything that is not a readable note answers like a missing file: folders of hidden topics,
+        # files outside the note folders, .git. Otherwise a link check would map the repository.
         target_path = access.root / rel
-        if rel not in overlay and not target_path.exists():
-            problem("link-unavailable", "link_unavailable")
-            continue
-        if PurePosixPath(rel).parts[0] not in layout.roots:
-            continue
+        if rel not in overlay:
+            if not PurePosixPath(rel).parts or PurePosixPath(rel).parts[0] not in layout.roots:
+                problem("link-unavailable", "link_unavailable")
+                continue
+            if target_path.is_dir():
+                rel = rel + "/" + layout.topic_readme
+                target_path = access.root / rel
+            if rel not in overlay and not target_path.is_file():
+                problem("link-unavailable", "link_unavailable")
+                continue
         try:
             if rel in overlay:
                 source = access.preview(rel, overlay[rel], overlay)

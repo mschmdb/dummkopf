@@ -71,7 +71,10 @@ PLAIN: dict[str, str] = {
     "marker_removal": "A write package must not remove a sensitivity marker.",
     "expected_missing": "An expected file is missing. Check the current state.",
     "scope_change": "Changing a scope needs a separate review.",
-    "topic_needs_readme": "A new topic needs a {readme} in the same package.",
+    "topic_unavailable": (
+        "This topic is unavailable to this call, or it is new and needs a {readme} with a scope "
+        "in the same package."
+    ),
     "topic_needs_scope": "A new topic needs an explicit scope: {choices}.",
     "packet_rules": "The write package breaks the rules: {codes}.\n{details}",
     "issue_line": "line {line}",

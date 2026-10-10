@@ -244,7 +244,13 @@ def validate_packet(access: Access, packet: object) -> Plan:
     changes: list[Change] = []
     problems: list[Issue] = []
     for rel, previous, expected in staged:
-        note = access.preview(rel, overlay[rel], overlay)
+        try:
+            note = access.preview(rel, overlay[rel], overlay)
+        except AccessDenied:
+            # A new file in a hidden topic must look like a new file in a missing topic.
+            if previous is None and PurePosixPath(rel).parts[0] == config.layout.topics:
+                raise AccessDenied("topic_unavailable", readme=config.layout.topic_readme) from None
+            raise
         if previous and previous.scope != note.scope:
             raise Rejected("scope_change")
         check_new_topic(access, rel, overlay)
@@ -282,7 +288,7 @@ def check_new_topic(access: Access, rel: str, overlay: Mapping[str, str]) -> Non
     if (access.root / readme).exists():
         return
     if readme not in overlay:
-        raise Rejected("topic_needs_readme", readme=config.layout.topic_readme)
+        raise AccessDenied("topic_unavailable", readme=config.layout.topic_readme)
     scope = parse_frontmatter(overlay[readme])[0].get(config.frontmatter.scope)
     if config.scopes.require_on_new_topic and scope not in config.scopes.values:
         raise Rejected("topic_needs_scope", choices=", ".join(config.scopes.values))

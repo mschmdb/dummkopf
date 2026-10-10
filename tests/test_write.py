@@ -103,7 +103,7 @@ def test_all_changes_validate_before_any_write(brain: Brain) -> None:
 def test_new_topic_requires_scoped_readme_in_same_batch(brain: Brain) -> None:
     with pytest.raises(DummkopfError) as caught:
         write(brain, packet(change("topics/new/a.md", document())))
-    assert caught.value.key == "topic_needs_readme"
+    assert caught.value.key == "topic_unavailable"
     write(brain, packet(change("topics/new/a.md", document()),
                         change("topics/new/README.md", document(scope="work"))), scope="work")
     assert Access(brain.config, scope="work").read("topics/new/a.md").scope == "work"
