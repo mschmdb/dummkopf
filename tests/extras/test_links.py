@@ -186,3 +186,12 @@ def test_cli_json_and_disabled_extra(repo: Brain) -> None:
     repo.configure("[extras]\nlinks = false\n")
     code, _, error = invoke(repo, "links", "--serious")
     assert code == 2 and "extras" in error
+
+
+@pytest.mark.parametrize("out", ["/tmp/outside.md", "../up.md", ".git/hooks/pre-commit", "notes.txt"])
+def test_links_output_stays_inside_the_brain(repo: Brain, out: str) -> None:
+    repo.write("topics/a/note.md", "x\n")
+    repo.commit()
+    code, _, error = invoke(repo, "links", "--out", out, "--serious")
+    assert code == 2
+    assert "inside the brain" in error

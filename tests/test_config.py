@@ -105,6 +105,9 @@ def test_required_keys(tmp_path: Path, text: str, key: str) -> None:
         ("[sensitive]\nmarker = ''\n", "sensitive.marker"),
         ('[sensitive]\nmarker = "a\\nb"\n', "sensitive.marker"),
         ("[sensitive]\nalways = ['../x/']\n", "sensitive.always"),
+        ("[sensitive]\nalways = ['./topics/health/']\n", "sensitive.always"),
+        ("[sensitive]\nalways = ['notes//secret.md']\n", "sensitive.always"),
+        ("[links]\noutput = 'dummkopf.toml'\n", "links.output"),
         ("[layout]\ntopics = 'a/b'\n", "layout.topics"),
         ("[layout]\nnotes = 'topics'\n", "layout"),
         ("[frontmatter]\nkey_fact = 'has space'\n", "frontmatter.key_fact"),
@@ -169,4 +172,10 @@ def test_config_symlink_is_rejected(tmp_path: Path) -> None:
     real.write_text(MINIMAL, encoding="utf-8")
     (tmp_path / CONFIG_NAME).symlink_to(real)
     with pytest.raises(ConfigError):
+        load_config(tmp_path)
+
+
+def test_branch_must_not_look_like_an_option(tmp_path: Path) -> None:
+    write(tmp_path, MINIMAL + "branch = '-x'\n")
+    with pytest.raises(ConfigError, match=r"repo\.branch"):
         load_config(tmp_path)

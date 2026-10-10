@@ -120,6 +120,7 @@ PLAIN: dict[str, str] = {
         "For Markdown content, `dummkopf write` or a quoted heredoc (<<'EOF') is safer."
     ),
     "check_paths_or_input": "check takes file paths or --input, not both.",
+    "links_output": "{path}: the links file must be a .md file inside the brain, outside .git.",
     "extra_disabled": "The extra `{name}` is disabled in dummkopf.toml ([extras] {name} = false).",
     # rendered output
     "out_period": "Requested period: {start} to {end}",

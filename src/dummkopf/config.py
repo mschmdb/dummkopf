@@ -19,7 +19,7 @@ ROOT_ENV = "DUMMKOPF_ROOT"
 LOCALES = ("en", "de")
 TONES = ("cheeky", "plain")
 
-NAME_RE = re.compile(r"[\w.-]+")
+NAME_RE = re.compile(r"[\w.][\w.-]*")
 SCOPE_RE = re.compile(r"[\w-]+")
 FRONTMATTER_KEY_RE = re.compile(r"[A-Za-z0-9_.\-]+")
 
@@ -232,10 +232,13 @@ def coerce(kind: Any, raw: Any, key: str) -> Any:
 
 
 def relative_path(value: str, key: str, allow_dir: bool = False) -> None:
-    path = PurePosixPath(value.rstrip("/") if allow_dir else value)
-    if (not value or path.is_absolute() or ".." in path.parts or "\\" in value
-            or not path.parts or value.startswith("~")):
-        raise invalid(key, "must be a relative path inside the brain")
+    """Relative, normalized (no `./`, no `//`), inside the brain. Prefix matching relies on the exact form."""
+    plain = value.rstrip("/") if allow_dir else value
+    path = PurePosixPath(plain)
+    if (not plain or path.is_absolute() or ".." in path.parts or "\\" in value
+            or not path.parts or value.startswith("~") or path.as_posix() != plain
+            or path.parts[0] in (".git", CONFIG_NAME)):
+        raise invalid(key, "must be a normalized relative path inside the brain")
 
 
 def validate(config: Config) -> None:
@@ -313,6 +316,8 @@ def validate(config: Config) -> None:
 
     relative_path(config.context.routes_file, "context.routes_file")
     relative_path(config.links.output, "links.output")
+    if not config.links.output.endswith(".md"):
+        raise invalid("links.output", "must be a .md file")
     relative_path(config.links.entities_file, "links.entities_file")
     relative_path(config.curator.report_dir, "curator.report_dir", allow_dir=True)
     if config.links.min_topics < 1:

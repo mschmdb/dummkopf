@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from dummkopf.config import Config
+from dummkopf.errors import Rejected
 from dummkopf.extras.common import open_notes, read_note, require
 from dummkopf.files import topic_of
 from dummkopf.frontmatter import parse_frontmatter
@@ -177,7 +178,16 @@ def render_markdown(report: LinksReport, config: Config) -> str:
     return "\n".join(lines) + "\n"
 
 
+def output_path(config: Config, out: str | None) -> Path:
+    """The links file must be a .md file inside the brain, outside .git, and not a symlink."""
+    path = (config.root / (out or config.links.output)).resolve()
+    if (not path.is_relative_to(config.root) or path.suffix != ".md" or path.is_symlink()
+            or path.relative_to(config.root).parts[0] == ".git"):
+        raise Rejected("links_output", path=out or config.links.output)
+    return path
+
+
 def write_links(config: Config, out: str | None = None, min_topics: int | None = None) -> Path:
-    path = config.root / (out or config.links.output)
+    path = output_path(config, out)
     path.write_text(render_markdown(build(config, min_topics), config), encoding="utf-8")
     return path
