@@ -81,7 +81,9 @@ def pre_commit(config: Config) -> int:
         if staged:
             stage(config, migrate(config, only=staged))
         stage(config, generate(config))
-        sys.stdout.write(report(config) + "\n")
+        findings = report(config, only_findings=True)
+        if findings:
+            sys.stdout.write(findings + "\n")
     except (OSError, UnicodeError, ValueError, DummkopfError, subprocess.SubprocessError) as error:
         sys.stderr.write(say("hook_index_failed", "plain", reason=str(error)) + "\n")
     return 0

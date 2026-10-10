@@ -181,7 +181,7 @@ def generate(config: Config, dry_run: bool = False) -> list[str]:
     return changed
 
 
-def report(config: Config, max_age: int | None = None) -> str:
+def report(config: Config, max_age: int | None = None, only_findings: bool = False) -> str:
     fm = config.frontmatter
     days = config.limits.stale_after_days if max_age is None else max_age
     limit = dt.date.today() - dt.timedelta(days=days)
@@ -205,6 +205,8 @@ def report(config: Config, max_age: int | None = None) -> str:
             stale.append((rel, item.updated))
         if item.key_fact == fm.todo_placeholder:
             todo.append(rel)
+    if only_findings and not (missing or stale or todo):
+        return ""
     out = [say("report_missing", "plain", key=fm.updated, count=len(missing))]
     out += ["- `" + rel + "`" for rel in missing] + [""]
     out.append(say("report_stale", "plain", status=config.status.active, days=days, count=len(stale)))

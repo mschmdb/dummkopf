@@ -334,3 +334,10 @@ def test_german_hub_generates_identical_german_tables(german: Brain) -> None:
     snapshot = german.read("INDEX.md"), readme
     assert meta.generate(german.config) == []
     assert (german.read("INDEX.md"), german.read("topics/t/README.md")) == snapshot
+
+
+def test_report_can_stay_silent_without_findings(repo: Brain) -> None:
+    repo.write("notes/ok.md", full(TODAY, "Good"))
+    assert meta.report(repo.config, only_findings=True) == ""
+    repo.write("notes/todo.md", full(TODAY, "TODO"))
+    assert "notes/todo.md" in meta.report(repo.config, only_findings=True)
