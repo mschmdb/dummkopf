@@ -22,3 +22,14 @@ All notable changes to this project are listed here. The format follows
 - Locales `en` and `de` for generated headings and text heuristics; `cheeky` and `plain` tones.
 - Extras: links map, curator scan with weekly LLM prompt, Codex hook.
 - English agent rules (`AGENTS.md`) rendered from the brain configuration.
+- `--scope` for `links`, `curator` and `meta report`; routes open sensitive plans only with `allow_sensitive`.
+
+### Security
+
+- Hidden notes answer like missing ones in `read`, `find`, `context`, link checks and new files in a topic.
+- Paths must match the on-disk spelling; listed paths compare case-insensitively and in one Unicode form.
+- Symlinks never count as notes, and generated files are never read or written through symlinks.
+- Markers count with BOM, indentation, tabs and CR-only line breaks.
+- A README may not shift the scope of notes below it; README tables list only notes of their own scope.
+- Link regexes are bounded; malformed URLs are reported instead of crashing.
+- The pre-commit hook never stages files with unstaged edits and never rewrites `sources/` or unreadable notes.
