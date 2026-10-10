@@ -83,6 +83,7 @@ codex_sync = true                      # Codex PostToolUse hook
 output = "LINKS.md"
 entities_file = "entities.txt"
 min_topics = 2
+allow_outside = []                     # folders outside the note folders that links may point to, e.g. ["archive"]
 
 [curator]                              # options for the curator extra
 open_days = 28
