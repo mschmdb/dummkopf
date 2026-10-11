@@ -49,18 +49,13 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.13"
       - name: Configure Git for test repositories
         run: |
           git config --global user.name "CI"
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
       - name: Install
-        run: |
-          pnpm install --frozen-lockfile
-          uv sync --locked
+        run: pnpm install --frozen-lockfile
       - name: Type check
         run: pnpm typecheck
       - name: Unit tests
