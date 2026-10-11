@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ingest, md, newEntry, packet, rev, Sandbox, topic } from "./harness.ts";
+import { fullNote, ingest, md, newEntry, packet, rev, Sandbox, topic } from "./harness.ts";
 import type { Brain } from "./harness.ts";
 
 const LINK_UNAVAILABLE = "link-unavailable";
@@ -356,6 +356,15 @@ test("check exits 2 when a note has errors", () => {
   assert.equal(result.code, 2);
   assert.ok(result.out.startsWith("Checked files: 2; status: error\n"));
   assert.ok(result.out.includes("notes/bare.md: Frontmatter is missing. (error)"));
+});
+
+test("check text names the line of an issue, but not the link target", () => {
+  const brain = repo();
+  brain.write("notes/linker.md", fullNote({ body: "[gone](secret-target.md)" }));
+  const result = brain.run(["check"]);
+  const issue = splitlines(result.out).find((line) => line.startsWith("notes/linker.md"));
+  assert.equal(issue, "notes/linker.md:13: A link target is missing or not released. (warning)");
+  assert.ok(!result.out.includes("secret-target"), result.out);
 });
 
 test("check json issue keys", () => {
