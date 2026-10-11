@@ -166,8 +166,8 @@ Write rules ˈdʊmkɔpf enforces:
 | `context "<question>"` | Best entry point for a user question. Drops filler words and follows routes. |
 | `find "<keywords>"` | Keyword search over title, aliases, key fact, path and text. |
 | `read <path>` | Read a note, a line range (`--start`, `--end`) or a section (`--section`). |
-| `write <path> --expected new\|<rev>` | Write one file from Markdown on stdin. `--append` appends. |
-| `ingest --input -` | Write a JSON package of several files atomically. |
+| `write <path> --expected new\|<rev>` | Write one file from Markdown on stdin. `--append` appends. `--message TEXT` sets the commit subject. |
+| `ingest --input -` | Write a JSON package of several files atomically. `--message TEXT` sets the commit subject. |
 | `check [paths]` | Validate frontmatter and links. |
 | `sync` | Commit note changes; in a synced brain also rebase onto the remote and push. |
 | `init [path]` | Create a new brain; `--remote URL` makes it synced. |
@@ -175,6 +175,14 @@ Write rules ˈdʊmkɔpf enforces:
 | `meta migrate\|generate\|report\|index\|agents` | Maintain frontmatter and indexes; print rendered `AGENTS.md`. |
 | `links` | Build the links map (extra). |
 | `curator` | Run the curation scan or print its weekly LLM prompt (extra). |
+
+**What gets committed.** `write`, `ingest`, `sync` and the agent hooks commit only what dummkopf manages: the
+note folders (`topics/`, `notes/`, `bookmarks/`), `sources/`, `archive/`, `INDEX.md`, `.sensitive-paths`, the
+links map (`links.output`) and the curator reports (`curator.report_dir`). Everything else, such as
+`dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` or your scripts, stays uncommitted for you to
+commit by hand, and an uncommitted change there never blocks a write. `repo.sync_exclude` keeps further paths
+inside those folders out. The commit subject is `repo.commit_message`; `write` and `ingest` take
+`--message "Add pnpm build fix"` (one line, at most 200 characters) for a subject of their own.
 
 Read commands share `--scope`, `--topic`, `--allow-sensitive`, `--json` and `--max-chars`. Every command
 accepts `--root PATH` and `--serious`. `dummkopf <command> --help` shows the purpose and examples first, then
@@ -222,7 +230,7 @@ typo never switches a rule off silently. The full file with every default is in
 
 | Section | Keys | Purpose |
 |---|---|---|
-| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. `sync_exclude` lists paths humans commit themselves. |
+| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. dummkopf commits only note folders and generated files (see [Commands](#commands)); `sync_exclude` lists further paths inside them that humans commit themselves. |
 | `[layout]` | `topics`, `topic_readme`, `notes`, `bookmarks`, `archive`, `sources`, `index` | Folder and file names. |
 | `[scopes]` | `values`, `all`, `query_default`, `mixed_label`, `require_on_new_topic`, `link_barriers` | Your scopes, the keyword for "all scopes", the default for `--scope`, the label for unscoped notes, and forbidden link directions such as `work>private`. |
 | `[status]` | `active`, `archived` | Status values; stale checks look at `active` notes. |

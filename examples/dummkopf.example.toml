@@ -11,7 +11,7 @@ remote_name = "origin"
 branch = "main"
 auto_push = true                       # false: commit locally, never push
 commit_message = "Update notes"
-sync_exclude = []                      # paths auto-sync never stages (e.g. tooling dirs)
+sync_exclude = []                      # paths inside the committed folders that sync never stages
 
 [layout]
 topics = "topics"                      # topics/<topic>/README.md carries the topic scope

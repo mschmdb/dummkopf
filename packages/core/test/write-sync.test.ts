@@ -10,7 +10,8 @@ import { describe, test } from "node:test";
 import { Access } from "../src/access.ts";
 import { DummkopfError, SyncError } from "../src/errors.ts";
 import { withRepositoryLock } from "../src/lock.ts";
-import { prepareRepository, syncRepository } from "../src/sync.ts";
+import { defaultConfig } from "../src/config.ts";
+import { checkCommitMessage, committedPaths, notePathspec, prepareRepository, syncRepository } from "../src/sync.ts";
 import { atomicWrite, ingest, seams } from "../src/write.ts";
 import { documentText as document, invoke, REPO, revision, type Synced, synced, tempDir } from "./helpers.ts";
 
@@ -170,6 +171,7 @@ describe("sync", () => {
   test("auto push false commits locally only", () => {
     const s = synced();
     repoOption(s, "auto_push = false");
+    s.brain.commit("Configure"); // dummkopf.toml is never part of a dummkopf commit
     const remoteHead = s.git(["rev-parse", "refs/heads/main"], s.remote);
     s.brain.write("notes/first.md", "updated\n");
     syncRepository(s.brain.config);
@@ -312,5 +314,38 @@ describe("sync", () => {
       { encoding: "utf-8", timeout: 10_000 }));
     assert.notEqual(result.status, 0);
     assert.ok(result.stderr.includes("busy"), result.stderr);
+  });
+});
+
+describe("commit scope and message", () => {
+  test("committed paths are the note folders, content folders and generated files", () => {
+    const config = defaultConfig("/brain", { links: { output: "maps/LINKS.md" } });
+    assert.deepEqual(committedPaths(config), ["topics", "notes", "bookmarks", "sources", "archive", "INDEX.md",
+      ".sensitive-paths", "maps/LINKS.md", "topics/curator"]);
+  });
+
+  test("the pathspec never widens to the whole tree", () => {
+    const pathspec = notePathspec(defaultConfig("/brain", { repo: { sync_exclude: ["notes/drafts/"] } }));
+    assert.ok(!pathspec.includes("."));
+    assert.equal(pathspec.at(-1), ":(exclude)notes/drafts/");
+  });
+
+  for (const bad of ["", " ", "a\nb", "a\rb", "a\tb", "a\u2028b", "x".repeat(201)]) {
+    test("commit message " + JSON.stringify(bad.slice(0, 12)) + " is rejected", () => {
+      assert.equal(caught(() => checkCommitMessage(bad)).key, "commit_message_invalid");
+    });
+  }
+
+  test("a one-line message and no message pass", () => {
+    checkCommitMessage("Add a note about Docker");
+    checkCommitMessage("ä".repeat(200));
+    checkCommitMessage(null);
+  });
+
+  test("ingest checks the message before it writes anything", () => {
+    const s = synced();
+    const error = caught(() => ingest(new Access(s.brain.config), packet(s), false, true, "two\nlines"));
+    assert.equal(error.key, "commit_message_invalid");
+    assert.equal(s.git(["status", "--porcelain"]), "");
   });
 });

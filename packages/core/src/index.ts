@@ -14,7 +14,7 @@ export { withRepositoryLock } from "./lock.ts";
 export { HELP, PLAIN, CHEEKY, text as message } from "./messages.ts";
 export { loads as loadsJson, JsonDecodeError, type Json, type JsonObject } from "./pyjson.ts";
 export { Sensitivity } from "./sensitive.ts";
-export { syncRepository } from "./sync.ts";
+export { checkCommitMessage, committedPaths, MAX_COMMIT_MESSAGE, syncRepository } from "./sync.ts";
 export { words } from "./text.ts";
 
 // Read path: search, routes, render.
