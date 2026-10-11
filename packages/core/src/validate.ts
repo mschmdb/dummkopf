@@ -134,6 +134,29 @@ export function normalize(content: string, metadata: Metadata, previous: Note | 
   return dumpFrontmatter(data) + body;
 }
 
+/**
+ * Maps a line of the stored note back to the caller's `content`. normalize() and the sensitive marker only
+ * rewrite what stands above the body, so body lines shift by a fixed amount. A line above the body has no
+ * counterpart in the caller's text and maps to null. Unchanged text, or a stored body that differs, keeps
+ * its own lines.
+ */
+export function contentLine(given: string, stored: string): (line: number) => number | null {
+  const body = parseFrontmatter(given).body;
+  if (stored === given || !stored.endsWith(body)) return (line) => line;
+  const lineCount = (text: string): number => text.split("\n").length;
+  const bodyStart = lineCount(stored) - lineCount(body);
+  const shift = lineCount(stored) - lineCount(given);
+  return (line) => (line > bodyStart ? line - shift : null);
+}
+
+/** The issue with its line counted in the caller's content; dropped when the line has no counterpart there. */
+function withContentLine(problem: Issue, toContent: (line: number) => number | null): Issue {
+  if (problem.line === undefined) return problem;
+  const { line, ...rest } = problem;
+  const mapped = toContent(line);
+  return mapped === null ? rest : { ...rest, line: mapped };
+}
+
 export function sameRevision(previous: Note, expected: string | null): boolean {
   return expected !== null && previous.revision.startsWith(expected);
 }
@@ -238,7 +261,7 @@ export function validatePacket(access: Access, packet: unknown): Plan {
   if (!Array.isArray(items) || !(1 <= items.length && items.length <= limit)) {
     throw new Rejected("changes_count", { max: limit });
   }
-  const staged: [string, Note | null, string | null][] = [];
+  const staged: [string, Note | null, string | null, (line: number) => number | null][] = [];
   const overlay = new Map<string, string>();
   const sensitivity = access.sensitivity;
   const filesHeading = getLocale(config.ui.locale).filesHeading;
@@ -275,12 +298,14 @@ export function validatePacket(access: Access, packet: unknown): Plan {
       throw new Rejected("expected_missing");
     }
     overlay.set(rel, content);
-    staged.push([rel, previous, expected]);
+    // Lines in a rejection count in what the caller sent; append and replace send no whole note.
+    const toContent = has(item, "content") ? contentLine(rawContent, content) : (line: number) => line;
+    staged.push([rel, previous, expected, toContent]);
   }
   checkScopeShifts(access, overlay);
   const changes: Change[] = [];
   const problems: Issue[] = [];
-  for (const [rel, previous, expected] of staged) {
+  for (const [rel, previous, expected, toContent] of staged) {
     let note: Note;
     try {
       note = access.preview(rel, overlay.get(rel)!, overlay);
@@ -293,8 +318,8 @@ export function validatePacket(access: Access, packet: unknown): Plan {
     }
     if (previous && previous.scope !== note.scope) throw new Rejected("scope_change");
     checkNewTopic(access, rel, overlay);
-    problems.push(...metadataIssues(note, config));
-    problems.push(...linkIssues(access, note, overlay, previous));
+    problems.push(...[...metadataIssues(note, config), ...linkIssues(access, note, overlay, previous)]
+      .map((problem) => withContentLine(problem, toContent)));
     changes.push({ note, previous, expected });
   }
   if (problems.some((problem) => problem.severity === "error")) throw rulesError(problems);

@@ -9,6 +9,12 @@ All notable changes to this project are listed here. The format follows
 
 - `dummkopf --version` prints the version and exits 0. Before, it failed with `missing <command>`.
 
+### Fixed
+
+- A rejected `write` or `ingest` names the line in the content the agent sent. Before, it counted in the note
+  after `dummkopf` had added missing frontmatter keys and the sensitive marker.
+  Lines in `append` and `replace` still count in the stored note.
+
 ### Documentation
 
 - The README FAQ states the speed, measured with `pnpm bench` on an Apple M5 Pro.
