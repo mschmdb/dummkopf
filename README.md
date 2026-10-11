@@ -102,8 +102,10 @@ becomes sensitive too. That is on purpose: hiding one note too many is the cheap
 Sensitive notes stay out of search results, `INDEX.md`, the file tables of open topics, the links map and
 the curator scan. `read`, `find`, `context`, link checks and new files in a topic answer a hidden path exactly like a
 missing one. A topic `README.md` lists only notes of its own scope.
-One signal stays by design: whoever may create notes learns whether a path is free, because
-`write --expected new` fails on an existing hidden file. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
+One signal stays by design: whoever may write packets learns whether a path is taken. A new file on an
+existing hidden file fails with `path_denied`, also inside a hidden topic. A free path in a hidden topic fails with
+`topic_unavailable`, like a path in a missing topic. A new `README.md` in a hidden folder answers like a missing topic,
+whether notes sit below it or not. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
 `AGENTS.md` says so. The pre-commit hook derives `.sensitive-paths` from the markers, so `rg --ignore-file`
 works as a fallback without the CLI.
 
