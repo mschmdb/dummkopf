@@ -12,15 +12,27 @@ export function err(text: string): void {
   writeAll(2, text);
 }
 
-/** Write synchronously, so output is complete when the exit code is set, even on a pipe. */
+/** File descriptors whose reader is gone, like `| head -1` after its first line. */
+const closed = new Set<number>();
+
+/**
+ * Write synchronously, so output is complete when the exit code is set, even on a pipe.
+ * A closed pipe (EPIPE) drops the rest of the output quietly; the command still finishes and keeps its exit code.
+ */
 function writeAll(fd: number, text: string): void {
+  if (closed.has(fd)) return;
   const data = Buffer.from(text, "utf-8");
   let offset = 0;
   while (offset < data.length) {
     try {
       offset += fs.writeSync(fd, data, offset);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EAGAIN") throw error;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPIPE") {
+        closed.add(fd);
+        return;
+      }
+      if (code !== "EAGAIN") throw error;
     }
   }
 }

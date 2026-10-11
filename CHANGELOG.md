@@ -5,6 +5,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf
+  crashed with an EPIPE stack trace. The command keeps its exit code.
+
 ### Documentation
 
 - The README installs dummkopf with `npm install -g dummkopf` and links both commands into `~/.local/bin`.
