@@ -26,7 +26,7 @@ export {
   filePeriod, planLines, routeProblem, routes, rowDate, select, specific, week,
   type Period, type Route, type Selection,
 } from "./routes.ts";
-export { bounded, render, SEARCH_LINE_BUDGET } from "./render.ts";
+export { bounded, render, type RenderOptions, SEARCH_LINE_BUDGET } from "./render.ts";
 
 // Write path: links, validate, write.
 export { HINTS, type Issue, issue, linkIssues, referenceLine, references } from "./links.ts";

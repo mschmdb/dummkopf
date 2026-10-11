@@ -13,6 +13,11 @@ All notable changes to this project are listed here. The format follows
   `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
 - The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
 
+### Changed
+
+- `context` no longer prints "Partial match": a whole question almost never matches every word. `find` keeps
+  the line, and the JSON `match` value stays the same.
+
 ### Removed
 
 - The Python release (`src/`, `pyproject.toml`, `uv.lock`) and its pytest suite. Install with Node instead; see
