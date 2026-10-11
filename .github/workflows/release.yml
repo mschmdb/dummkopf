@@ -27,7 +27,7 @@ jobs:
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
       - run: pnpm install --frozen-lockfile
-      - name: Tag matches both package versions
+      - name: Tag matches both package versions and VERSION
         run: |
           tag="${GITHUB_REF_NAME#v}"
           for package in core cli; do
@@ -37,6 +37,10 @@ jobs:
               exit 1
             fi
           done
+          if ! grep -q "export const VERSION = \"$tag\";" packages/core/src/index.ts; then
+            echo "VERSION in packages/core/src/index.ts does not say $tag" >&2
+            exit 1
+          fi
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm test:blackbox:dist

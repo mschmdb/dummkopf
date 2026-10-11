@@ -1,6 +1,6 @@
 {
   "name": "@dummkopf/core",
-  "version": "0.3.0-dev",
+  "version": "0.3.0",
   "description": "Core of dummkopf: notes, scopes, the sensitivity gate, search and Git sync.",
   "license": "MIT",
   "repository": {

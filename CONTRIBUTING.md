@@ -64,8 +64,8 @@ A release goes out from GitHub Actions (`.github/workflows/release.yml`), never 
 
 1. Once: create the npm organization `dummkopf` and store an npm automation token as the repository secret
    `NPM_TOKEN`.
-2. Set the same version in `packages/core/package.json` and `packages/cli/package.json`, and move the
-   changelog entries from "Unreleased" to that version.
+2. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
+   `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.
 3. Merge, then tag the commit: `git tag v0.3.0 && git push origin v0.3.0`.
 
 The workflow checks that the tag matches both versions, runs all checks and publishes with npm provenance.

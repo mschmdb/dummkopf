@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-11
+
 ### Added
 
 - dummkopf is written in TypeScript now: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+.
