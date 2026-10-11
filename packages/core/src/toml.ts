@@ -4,6 +4,8 @@
  * `1` from `1.0` the way Python's tomllib does.
  */
 
+import { dateTimeProblem } from "./tomldate.ts";
+
 export class TomlError extends Error {}
 
 export class TomlFloat {
@@ -248,6 +250,8 @@ class Parser {
     const rest = this.text.slice(this.pos);
     const dateTime = DATE_TIME.exec(rest);
     if (dateTime) {
+      const problem = dateTimeProblem(dateTime[0]);
+      if (problem) this.fail(problem);
       this.pos += dateTime[0].length;
       return new TomlDateTime(dateTime[0]);
     }
@@ -264,13 +268,19 @@ class Parser {
     const radix = /^0(x[0-9A-Fa-f](?:_?[0-9A-Fa-f])*|o[0-7](?:_?[0-7])*|b[01](?:_?[01])*)(?![A-Za-z0-9_.])/.exec(rest);
     if (radix) {
       this.pos += radix[0].length;
-      return Number(radix[0].replace(/_/g, ""));
+      return this.integer(Number(radix[0].replace(/_/g, "")));
     }
     const decimal = /^[+-]?(?:0|[1-9](?:_?\d)*)(?:\.\d(?:_?\d)*)?(?:[eE][+-]?\d(?:_?\d)*)?(?![A-Za-z0-9_.:-])/.exec(rest);
     if (!decimal) this.fail("Invalid value");
     this.pos += decimal[0].length;
     const clean = decimal[0].replace(/_/g, "");
-    return /[.eE]/.test(clean) ? new TomlFloat(Number(clean)) : Number(clean);
+    return /[.eE]/.test(clean) ? new TomlFloat(Number(clean)) : this.integer(Number(clean));
+  }
+
+  /** JavaScript numbers hold integers exactly only up to 2^53; larger ones are refused, not rounded. */
+  private integer(value: number): number {
+    if (!Number.isSafeInteger(value)) this.fail("Integer out of range");
+    return value;
   }
 
   private escape(): string {
