@@ -1,0 +1,92 @@
+/**
+ * Command line entry point: `dummkopf` and its alias `dk`.
+ *
+ * Exit codes: 0 ok, 2 rejected call (nothing changed), 3 saved but Git sync failed.
+ */
+
+import { type Config, DummkopfError, findRoot, HELP, loadConfig } from "@dummkopf/core";
+
+import { register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta } from "./admin.ts";
+import { HelpRequested, type Namespace, Parser, UsageError } from "./argparse.ts";
+import { register as registerCommands, run as runCommand } from "./commands.ts";
+import { err, out } from "./io.ts";
+import { accessOptions, checkRange, commonOptions, MAX_CHARS_RANGE, outputOptions } from "./options.ts";
+import { runRead } from "./read.ts";
+
+export type Handler = (args: Namespace, config: Config, tone: string) => number;
+export type NoConfigHandler = (args: Namespace, root: string, tone: string) => number;
+
+export function parser(): Parser {
+  const command = new Parser("dummkopf", HELP.prog!, HELP.epilog!);
+  commonOptions(command, true);
+  command.commandsDest("command");
+  const add = (name: string): Parser => {
+    const sub = command.command(name, HELP["ex_" + name]!);
+    commonOptions(sub, false);
+    return sub;
+  };
+  for (const name of ["context", "find", "read"]) {
+    const action = add(name);
+    if (name === "read") action.positional("path", HELP.path!);
+    else action.positional("query", HELP.query!);
+    accessOptions(action);
+    outputOptions(action);
+    if (name === "find") {
+      action.option("--limit", { type: "int", help: HELP.limit! });
+    } else if (name === "read") {
+      action.option("--start", { type: "int", help: HELP.start! });
+      action.option("--end", { type: "int", help: HELP.end! });
+      action.option("--section", { help: HELP.section! });
+    }
+  }
+  registerCommands(add);
+  registerAdmin(add);
+  return command;
+}
+
+function handlers(): [Record<string, Handler>, Record<string, NoConfigHandler>] {
+  const withConfig: Record<string, Handler> = {
+    context: runRead, find: runRead, read: runRead,
+    ingest: runCommand, write: runCommand, check: runCommand, sync: runCommand,
+    install: runInstall, meta: runMeta, links: runLinks, curator: runCurator,
+  };
+  return [withConfig, { init: runInit, hook: runHook }];
+}
+
+export function main(argv: readonly string[]): number {
+  let args: Namespace;
+  try {
+    args = parser().parse(argv);
+  } catch (error) {
+    if (error instanceof HelpRequested) {
+      out(error.text);
+      return 0;
+    }
+    if (error instanceof UsageError) {
+      err(error.parser.usage() + "\n" + error.parser.prog + ": error: " + error.message + "\n");
+      return 2;
+    }
+    throw error;
+  }
+  let tone = args.serious ? "plain" : "cheeky";
+  try {
+    const explicit = typeof args.root === "string" ? args.root : null;
+    const [withConfig, withoutConfig] = handlers();
+    const command = args.command as string;
+    const noConfig = withoutConfig[command];
+    if (noConfig) return noConfig(args, explicit ?? process.cwd(), tone);
+    const config = loadConfig(findRoot(process.cwd(), explicit));
+    if (!args.serious) tone = config.ui.tone;
+    if ("maxChars" in args) {
+      if (args.maxChars === null) args.maxChars = config.limits.maxChars;
+      checkRange(args.maxChars as number, MAX_CHARS_RANGE, "max_chars_range");
+    }
+    return withConfig[command]!(args, config, tone);
+  } catch (error) {
+    if (error instanceof DummkopfError) {
+      err(error.render(tone) + "\n");
+      return error.exitCode;
+    }
+    throw error;
+  }
+}

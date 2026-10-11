@@ -1,0 +1,19 @@
+{
+  "name": "dummkopf-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -b packages/core packages/cli",
+    "typecheck": "tsc -b packages/core packages/cli --noEmit",
+    "test": "pnpm build && node --test packages/core/test/*.test.ts packages/cli/test/*.test.ts",
+    "test:blackbox": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" uv run pytest tests/blackbox"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "typescript": "7.0.2"
+  }
+}

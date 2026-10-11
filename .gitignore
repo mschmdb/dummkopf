@@ -9,3 +9,5 @@ build/
 *.egg-info/
 .DS_Store
 .claude/worktrees/
+node_modules/
+*.tsbuildinfo
