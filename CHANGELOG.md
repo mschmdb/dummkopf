@@ -5,6 +5,13 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- TypeScript port in `packages/`: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+. It passes
+  the full black-box suite and is not released yet; the Python package stays the release until the switch.
+- `scripts/compare-brain.ts` runs the Python release and the port on copies of a real brain and reports every
+  difference.
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

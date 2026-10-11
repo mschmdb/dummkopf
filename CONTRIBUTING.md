@@ -18,6 +18,28 @@ uv run pytest && uv run mypy && uv run ruff check .
 
 Add dependencies with `uv add` (runtime) or `uv add --dev` (tooling) and commit `uv.lock`.
 
+## TypeScript port
+
+`packages/core` (library) and `packages/cli` (CLI) hold the TypeScript port. It needs Node 22.18+ and pnpm.
+
+```bash
+pnpm install
+pnpm typecheck && pnpm test && pnpm test:blackbox
+```
+
+`pnpm test:blackbox` runs `tests/blackbox` against the TypeScript sources through `packages/cli/dev/dummkopf`;
+`pnpm test:blackbox:dist` builds first and tests the built CLI. The Python code stays the reference until the
+switch: a change in behavior lands in both, and the black-box suite proves they agree.
+
+To compare both on a real brain without touching it:
+
+```bash
+node scripts/compare-brain.ts ~/brain
+```
+
+The script works on two copies in a temporary folder and prints where the report lives. The report contains note
+text; delete it when done.
+
 ## Rules
 
 - Write the test first, then the code. Bug fixes start with a failing test.
