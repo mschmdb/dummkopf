@@ -10,7 +10,7 @@ import { Rejected } from "../errors.ts";
 import { topicOf } from "../files.ts";
 import { parseFrontmatter } from "../frontmatter.ts";
 import { getLocale, type Locale } from "../locale.ts";
-import { BOUNDARY, compare, compareTuples, escapeRegExp, format, len, splitlines, strip } from "../py.ts";
+import { BOUNDARY, compare, compareTuples, escapeRegExp, format, len, splitlines, strip, WS } from "../py.ts";
 import { PyDate } from "../pydate.ts";
 import { isDir, isFile, isRelativeTo, isSymlink, join, parent, parts, readText, relativeTo, resolve, suffix, writeText } from "../pyos.ts";
 import { openNotes, readNote, require } from "./common.ts";
@@ -19,7 +19,8 @@ import { openNotes, readNote, require } from "./common.ts";
 const D = "\\p{Nd}";
 const ISO_RE = new RegExp(BOUNDARY + "(" + D + "{4})-(" + D + "{2})(?:-" + D + "{2})?" + BOUNDARY, "gu");
 const MONTH_YEAR_RE = new RegExp(BOUNDARY + "(" + D + "{1,2})/(" + D + "{4})" + BOUNDARY, "gu");
-const PERIOD_RE = new RegExp("^" + D + "{4}-" + D + "{2}$", "u");
+// re.match with `$`: a trailing newline still matches, like Python.
+const PERIOD_RE = new RegExp("^" + D + "{4}-" + D + "{2}\\n?$", "u");
 export const TOP_TOPICS = 10;
 export const MAX_PER_SIDE = 8;
 
@@ -80,11 +81,8 @@ function month(year: string, value: number): string {
 
 export function monthNameRe(locale: Locale): RegExp {
   const names = Object.keys(locale.months).sort((a, b) => len(b) - len(a));
-  return new RegExp(BOUNDARY + "(" + names.map(escapeRegExp).join("|") + ")\\.?[" + WS_CLASS + "]+(" + D + "{4})"
-    + BOUNDARY, "giu");
+  return new RegExp(BOUNDARY + "(" + names.map(escapeRegExp).join("|") + ")\\.?" + WS + "+(" + D + "{4})" + BOUNDARY, "giu");
 }
-
-const WS_CLASS = "\\t\\n\\x0b\\f\\r\\x1c-\\x1f \\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
 
 function global(pattern: RegExp): RegExp {
   return pattern.flags.includes("g") ? pattern : new RegExp(pattern.source, pattern.flags + "g");
@@ -103,7 +101,9 @@ export function extractMonths(text: string, locale: Locale): string[] {
     if (value >= 1 && value <= 12) found.push(month(match[1]!, value));
   }
   for (const match of text.matchAll(monthNameRe(locale))) {
-    found.push(month(match[2]!, locale.months[match[1]!.toLowerCase()]!));
+    const value = locale.months[match[1]!.toLowerCase()];
+    if (value === undefined) throw new Error("KeyError: " + match[1]!.toLowerCase());
+    found.push(month(match[2]!, value));
   }
   for (const match of text.matchAll(MONTH_YEAR_RE)) {
     const value = int(match[1]!);
