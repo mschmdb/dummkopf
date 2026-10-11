@@ -5,6 +5,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- The README installs dummkopf with `npm install -g dummkopf` and links both commands into `~/.local/bin`.
+
 ## [0.3.0] - 2026-10-11
 
 ### Added
@@ -18,7 +22,7 @@ All notable changes to this project are listed here. The format follows
 - `pnpm test:toml` checks the TOML parser against the official toml-test suite (TOML 1.0 cases, pinned
   release, fetched into `.cache/`). CI runs it once per push.
 - Release setup for npm: package metadata, `prepublishOnly` builds, `pnpm pack:check` (pack, install and run
-  the tarballs, also in CI) and a tag-triggered publish workflow with provenance. Nothing is published yet.
+  the tarballs, also in CI) and a tag-triggered publish workflow with provenance. 0.3.0 is the first release on npm.
 
 ### Changed
 
