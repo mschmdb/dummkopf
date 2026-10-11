@@ -1,5 +1,7 @@
 /**
  * TOML 1.0 reader for dummkopf.toml. Node has no TOML parser, and dummkopf has no dependencies.
+ * Strict 1.0: TOML 1.1 additions (`\e` and `\xHH` escapes, times without seconds, newlines and
+ * trailing commas in inline tables, Unicode bare keys) are syntax errors.
  * Floats come back as TomlFloat and date-times as TomlDateTime, so the config check can tell
  * `1` from `1.0` the way Python's tomllib does.
  */
@@ -286,7 +288,7 @@ class Parser {
   private escape(): string {
     const char = this.peek();
     this.pos++;
-    const simple: Record<string, string> = { b: "\b", t: "\t", n: "\n", f: "\f", r: "\r", '"': '"', "\\": "\\", e: "\x1b" };
+    const simple: Record<string, string> = { b: "\b", t: "\t", n: "\n", f: "\f", r: "\r", '"': '"', "\\": "\\" };
     if (char in simple) return simple[char]!;
     if (char === "u" || char === "U") {
       const size = char === "u" ? 4 : 8;

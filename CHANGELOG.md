@@ -28,6 +28,8 @@ All notable changes to this project are listed here. The format follows
   which is not in the tarball.
 - `dummkopf.toml` reaches the TOML parser as read, without newline normalisation. CRLF files load as before;
   a bare carriage return, which TOML 1.0 forbids, now fails with `config_unreadable`.
+- The TOML parser no longer accepts the `\e` escape, which only TOML 1.1 has. dummkopf reads strict
+  TOML 1.0; write `\u001B` instead.
 
 ## [0.3.1] - 2026-10-11
 
