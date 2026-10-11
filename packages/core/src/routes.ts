@@ -9,7 +9,7 @@ import type { Access, Note } from "./access.ts";
 import type { Config } from "./config.ts";
 import { AccessDenied } from "./errors.ts";
 import { getLocale, type Locale } from "./locale.ts";
-import { compareTuples, escapeRegExp, len, lstrip, sorted, splitlines } from "./py.ts";
+import { compareTuples, DIGIT, escapeRegExp, len, lstrip, pyInt, sorted, splitlines } from "./py.ts";
 import { isObject, type Json, loads } from "./pyjson.ts";
 import { PyDate } from "./pydate.ts";
 import { asPosix, exists, glob, isAbsolute, isSymlink, join, parts, readText, relativeTo } from "./pyos.ts";
@@ -35,24 +35,6 @@ export interface Selection {
   readonly period: Period | null;
 }
 
-/** `\d` of a Python str pattern: any decimal digit. */
-const DIGIT = "\\p{Nd}";
-
-const DIGIT_RE = new RegExp("^" + DIGIT + "$", "u");
-
-/** int() of a string of decimal digits, which may be non-ASCII like in Python. */
-function digitsValue(value: string): number {
-  let result = 0;
-  for (const char of value) {
-    // Unicode decimal digits come in runs of ten: count back to the run's zero.
-    const code = char.codePointAt(0)!;
-    let zero = code;
-    while (zero > code - 9 && DIGIT_RE.test(String.fromCodePoint(zero - 1))) zero--;
-    result = result * 10 + (code - zero);
-  }
-  return result;
-}
-
 export function week(terms: readonly string[], today: PyDate, locale: Locale): Period | null {
   const text = terms.join(" ");
   let monday = today.addDays(-today.weekday());
@@ -75,7 +57,7 @@ export function filePeriod(path: string, locale: Locale): Period | null {
     if (len(match[2]!) === 10) {
       end = PyDate.fromIso(match[2]!);
     } else {
-      const day = digitsValue(match[2]!);
+      const day = pyInt(match[2]!);
       if (day >= start.day) {
         end = start.withDay(day);
       } else {
@@ -250,12 +232,12 @@ export function rowDate(line: string, period: Period, locale: Locale): PyDate | 
   if (!match?.groups) return null;
   const year = match.groups.year;
   const years: number[] = [];
-  if (year) years.push(Number(year));
+  if (year) years.push(pyInt(year));
   else for (let value = period[0].year; value <= period[1].year; value++) years.push(value);
   for (const candidate of years) {
     let date: PyDate;
     try {
-      date = new PyDate(candidate, Number(match.groups.month), Number(match.groups.day));
+      date = new PyDate(candidate, pyInt(match.groups.month!), pyInt(match.groups.day!));
     } catch (error) {
       if (error instanceof RangeError) continue;
       throw error;

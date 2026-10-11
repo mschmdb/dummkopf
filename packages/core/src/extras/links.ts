@@ -10,13 +10,13 @@ import { Rejected } from "../errors.ts";
 import { topicOf } from "../files.ts";
 import { parseFrontmatter } from "../frontmatter.ts";
 import { getLocale, type Locale } from "../locale.ts";
-import { BOUNDARY, compare, compareTuples, escapeRegExp, format, len, splitlines, strip, WS } from "../py.ts";
+import { BOUNDARY, DIGIT, compare, compareTuples, escapeRegExp, format, ignoreCase, len, pyInt, splitlines, strip, WS } from "../py.ts";
 import { PyDate } from "../pydate.ts";
 import { isDir, isFile, isRelativeTo, isSymlink, join, parent, parts, readText, relativeTo, resolve, suffix, writeText } from "../pyos.ts";
 import { openNotes, readNote, require } from "./common.ts";
 
-/** `\d` of a Python str pattern: any Unicode decimal digit. */
-const D = "\\p{Nd}";
+/** `\\d` of a Python str pattern. */
+const D = DIGIT;
 const ISO_RE = new RegExp(BOUNDARY + "(" + D + "{4})-(" + D + "{2})(?:-" + D + "{2})?" + BOUNDARY, "gu");
 const MONTH_YEAR_RE = new RegExp(BOUNDARY + "(" + D + "{1,2})/(" + D + "{4})" + BOUNDARY, "gu");
 // re.match with `$`: a trailing newline still matches, like Python.
@@ -58,22 +58,6 @@ export interface Entity {
 
 type Counter = Map<string, number>;
 
-/** int() of a string of Unicode decimal digits. */
-function int(digits: string): number {
-  let value = 0;
-  for (const char of digits) {
-    const code = char.codePointAt(0)!;
-    let digit = code - 0x30;
-    if (digit < 0 || digit > 9) {
-      // Decimal digits come in contiguous runs of ten; find the zero of this run.
-      let zero = code;
-      while (zero > 0 && /\p{Nd}/u.test(String.fromCodePoint(zero - 1))) zero--;
-      digit = (code - zero) % 10;
-    }
-    value = value * 10 + digit;
-  }
-  return value;
-}
 
 function month(year: string, value: number): string {
   return year + "-" + String(value).padStart(2, "0");
@@ -81,7 +65,7 @@ function month(year: string, value: number): string {
 
 export function monthNameRe(locale: Locale): RegExp {
   const names = Object.keys(locale.months).sort((a, b) => len(b) - len(a));
-  return new RegExp(BOUNDARY + "(" + names.map(escapeRegExp).join("|") + ")\\.?" + WS + "+(" + D + "{4})" + BOUNDARY, "giu");
+  return new RegExp(BOUNDARY + "(" + names.map(ignoreCase).join("|") + ")\\.?" + WS + "+(" + D + "{4})" + BOUNDARY, "gu");
 }
 
 function global(pattern: RegExp): RegExp {
@@ -92,12 +76,12 @@ export function extractMonths(text: string, locale: Locale): string[] {
   const found: string[] = [];
   if (locale.dayMonthYear) {
     for (const match of text.matchAll(global(locale.dayMonthYear))) {
-      const value = int(match[2]!);
+      const value = pyInt(match[2]!);
       if (value >= 1 && value <= 12) found.push(month(match[3]!, value));
     }
   }
   for (const match of text.matchAll(ISO_RE)) {
-    const value = int(match[2]!);
+    const value = pyInt(match[2]!);
     if (value >= 1 && value <= 12) found.push(month(match[1]!, value));
   }
   for (const match of text.matchAll(monthNameRe(locale))) {
@@ -106,7 +90,7 @@ export function extractMonths(text: string, locale: Locale): string[] {
     found.push(month(match[2]!, value));
   }
   for (const match of text.matchAll(MONTH_YEAR_RE)) {
-    const value = int(match[1]!);
+    const value = pyInt(match[1]!);
     if (value >= 1 && value <= 12) found.push(month(match[2]!, value));
   }
   return found;
@@ -119,14 +103,14 @@ export function loadEntities(path: string): Entity[] {
   for (const raw of splitlines(readText(path))) {
     let line = strip(raw);
     if (!line || line.startsWith("#")) continue;
-    let flags = "gu";
+    let literal = escapeRegExp;
     if (line.startsWith("i:")) {
-      flags = "giu";
+      literal = ignoreCase;
       line = line.slice(2);
     }
     const aliases = line.split("|").map((alias) => strip(alias)).filter((alias) => alias);
     if (aliases.length > 0) {
-      const pattern = new RegExp(BOUNDARY + "(?:" + aliases.map(escapeRegExp).join("|") + ")" + BOUNDARY, flags);
+      const pattern = new RegExp(BOUNDARY + "(?:" + aliases.map(literal).join("|") + ")" + BOUNDARY, "gu");
       entities.push({ name: aliases[0]!, aliases, pattern });
     }
   }

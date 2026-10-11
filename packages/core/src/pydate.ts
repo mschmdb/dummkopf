@@ -1,5 +1,7 @@
 /** A calendar date like Python's datetime.date: proleptic Gregorian, no time zone. */
 
+import { pyInt, strip } from "./py.ts";
+
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function isLeap(year: number): boolean {
@@ -109,9 +111,9 @@ export class PyDate {
       const char = pattern[i]!;
       if (char === "%" && i + 1 < pattern.length) {
         const code = pattern[++i];
-        if (code === "Y") source += "(?<Y>\\d\\d\\d\\d)";
+        if (code === "Y") source += "(?<Y>\\p{Nd}{4})";
         else if (code === "m") source += "(?<m>1[0-2]|0[1-9]|[1-9])";
-        else if (code === "d") source += "(?<d>3[01]|[12]\\d|0[1-9]|[1-9]| [1-9])";
+        else if (code === "d") source += "(?<d>3[01]|[12]\\p{Nd}|0[1-9]|[1-9]| [1-9])";
         else throw new Error("unsupported directive %" + code);
       } else if (/\s/.test(char)) {
         source += "\\s+";
@@ -119,8 +121,8 @@ export class PyDate {
         source += char.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
       }
     }
-    const match = new RegExp("^" + source + "$", "i").exec(value);
+    const match = new RegExp("^" + source + "$", "iu").exec(value);
     if (!match?.groups) throw new RangeError("time data does not match format");
-    return new PyDate(Number(match.groups.Y ?? 1900), Number(match.groups.m ?? 1), Number(match.groups.d ?? 1));
+    return new PyDate(pyInt(match.groups.Y ?? "1900"), pyInt(match.groups.m ?? "1"), pyInt(strip(match.groups.d ?? "1")));
   }
 }

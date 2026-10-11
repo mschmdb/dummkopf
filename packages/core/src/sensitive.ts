@@ -7,7 +7,7 @@
 
 import type { Config } from "./config.ts";
 import { iterNoteFiles } from "./files.ts";
-import { casefold, escapeRegExp, sorted, splitlines, splitWhitespace, strip } from "./py.ts";
+import { casefold, ignoreCase, sorted, splitlines, splitWhitespace, strip } from "./py.ts";
 import { isFile, join, parent, parts, readText } from "./pyos.ts";
 
 /** Horizontal whitespace: Python's `[^\S\r\n]`. */
@@ -25,8 +25,9 @@ const patterns = new Map<string, RegExp>();
 export function markerPattern(marker: string): RegExp {
   let pattern = patterns.get(marker);
   if (pattern === undefined) {
-    const tokens = splitWhitespace(marker).map(escapeRegExp);
-    pattern = new RegExp("^" + HSPACE + "*" + tokens.join(HSPACE + "*"), "iu");
+    // ignoreCase matches like Python's re.IGNORECASE; JavaScript's `i` flag misses `İ` and `ı` for `i`.
+    const tokens = splitWhitespace(marker).map(ignoreCase);
+    pattern = new RegExp("^" + HSPACE + "*" + tokens.join(HSPACE + "*"), "u");
     patterns.set(marker, pattern);
   }
   return pattern;

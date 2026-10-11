@@ -9,7 +9,7 @@
 import type { Config } from "../config.ts";
 import { getLocale } from "../locale.ts";
 import { text as say } from "../messages.ts";
-import { BOUNDARY, compare, escapeRegExp, len, rstrip, slice, splitlines, strip, unique } from "../py.ts";
+import { BOUNDARY, compare, ignoreCase, len, rstrip, slice, splitlines, strip, unique } from "../py.ts";
 import { PyDate } from "../pydate.ts";
 import { template } from "../scaffold.ts";
 import { age, openNotes, readNote, require, topicFolders } from "./common.ts";
@@ -44,7 +44,7 @@ export interface CuratorScan {
 
 export function openPattern(config: Config): RegExp {
   const words = getLocale(config.ui.locale).openWords;
-  return new RegExp(BOUNDARY + "(?:" + words.map(escapeRegExp).join("|") + ")" + BOUNDARY, "iu");
+  return new RegExp(BOUNDARY + "(?:" + words.map(ignoreCase).join("|") + ")" + BOUNDARY, "u");
 }
 
 function byPath<T extends { path: string }>(items: T[]): T[] {

@@ -206,34 +206,75 @@ export function listdir(target: string): string[] {
   return fs.readdirSync(target);
 }
 
-/** fnmatch.fnmatchcase(name, pattern) as a regular expression. */
+/**
+ * fnmatch.fnmatchcase(name, pattern) as a regular expression, ported from Python 3.13's
+ * fnmatch._translate: an unclosed `[` is literal, reversed ranges like `[z-a]` match nothing, and an
+ * empty set never matches.
+ */
 export function fnmatchRegExp(pattern: string): RegExp {
+  const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
   let out = "";
   let i = 0;
-  while (i < pattern.length) {
+  const n = pattern.length;
+  while (i < n) {
     const char = pattern[i]!;
     i++;
-    if (char === "*") out += "[\\s\\S]*";
-    else if (char === "?") out += "[\\s\\S]";
-    else if (char === "[") {
+    if (char === "*") {
+      out += "[\\s\\S]*";
+    } else if (char === "?") {
+      out += "[\\s\\S]";
+    } else if (char === "[") {
       let j = i;
-      if (j < pattern.length && pattern[j] === "!") j++;
-      if (j < pattern.length && pattern[j] === "]") j++;
-      while (j < pattern.length && pattern[j] !== "]") j++;
-      if (j >= pattern.length) {
+      if (j < n && pattern[j] === "!") j++;
+      if (j < n && pattern[j] === "]") j++;
+      while (j < n && pattern[j] !== "]") j++;
+      if (j >= n) {
         out += "\\[";
+        continue;
+      }
+      let stuff = pattern.slice(i, j);
+      if (!stuff.includes("-")) {
+        stuff = stuff.replaceAll("\\", "\\\\");
       } else {
-        let body = pattern.slice(i, j).replace(/\\/g, "\\\\");
-        i = j + 1;
-        if (body.startsWith("!")) body = "^" + body.slice(1);
-        else if (body.startsWith("^")) body = "\\" + body;
-        out += "[" + body + "]";
+        const chunks: string[] = [];
+        let start = i;
+        let k = pattern[i] === "!" ? i + 2 : i + 1;
+        for (;;) {
+          k = pattern.indexOf("-", k);
+          if (k < 0 || k >= j) break;
+          chunks.push(pattern.slice(start, k));
+          start = k + 1;
+          k = k + 3;
+        }
+        const chunk = pattern.slice(start, j);
+        if (chunk) chunks.push(chunk);
+        else chunks[chunks.length - 1] += "-";
+        // Remove empty ranges: they are invalid in a regular expression.
+        for (let m = chunks.length - 1; m > 0; m--) {
+          if (chunks[m - 1]!.slice(-1) > chunks[m]!.slice(0, 1)) {
+            chunks[m - 1] = chunks[m - 1]!.slice(0, -1) + chunks[m]!.slice(1);
+            chunks.splice(m, 1);
+          }
+        }
+        stuff = chunks.map((part) => part.replaceAll("\\", "\\\\").replaceAll("-", "\\-")).join("-");
+      }
+      i = j + 1;
+      if (!stuff) {
+        out += "(?!)";
+      } else if (stuff === "!") {
+        out += "[\\s\\S]";
+      } else {
+        // Inside a `u` class only these need escaping; `&` and `~` are plain characters there.
+        stuff = stuff.replace(/[|\]\[/{}()]/g, "\\$&");
+        if (stuff.startsWith("!")) stuff = "^" + stuff.slice(1);
+        else if (stuff.startsWith("^")) stuff = "\\" + stuff;
+        out += "[" + stuff + "]";
       }
     } else {
-      out += char.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
+      out += escape(char);
     }
   }
-  return new RegExp("^" + out + "$", "u");
+  return new RegExp("^(?:" + out + ")$", "u");
 }
 
 /** Path.rglob(name pattern) below root: no descent into symlinked folders, dot files included. */

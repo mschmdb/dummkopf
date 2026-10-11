@@ -12,12 +12,31 @@ export const WORD = "[\\p{L}\\p{N}_]";
 /** `\b` of a Python str pattern; JavaScript's `\b` knows only ASCII. */
 export const BOUNDARY = "(?:(?<=[\\p{L}\\p{N}_])(?![\\p{L}\\p{N}_])|(?<![\\p{L}\\p{N}_])(?=[\\p{L}\\p{N}_]))";
 
+/** `\\d` of a Python str pattern: any Unicode decimal digit, not only 0-9. */
+export const DIGIT = "\\p{Nd}";
+
 const WS_RE = new RegExp("^" + WS + "$", "u");
 const LINE_BREAK = /\r\n|[\n\r\x0b\f\x1c\x1d\x1e\x85\u2028\u2029]/;
 const ASCII = /^[\x00-\x7f]*$/;
 
 export function isSpace(char: string): boolean {
   return WS_RE.test(char);
+}
+
+const DIGIT_RE = new RegExp("^" + DIGIT + "$", "u");
+
+/** int() of a run of decimal digits, which may be non-ASCII: `١٠` is 10, like in Python. */
+export function pyInt(digits: string): number {
+  let value = 0;
+  for (const char of digits) {
+    const code = char.codePointAt(0)!;
+    // Unicode decimal digits come in runs of ten, and runs can touch (U+1D7CE to U+1D7FF): find the
+    // start of the whole block, then count in tens from there.
+    let start = code;
+    while (DIGIT_RE.test(String.fromCodePoint(start - 1))) start--;
+    value = value * 10 + ((code - start) % 10);
+  }
+  return value;
 }
 
 /** Number of code points, like Python's len(). */
@@ -70,11 +89,86 @@ export function splitWhitespace(value: string): string[] {
   return value.split(new RegExp(WS + "+", "u")).filter((part) => part !== "");
 }
 
-/** str.casefold(), close enough for search: ß becomes ss, Σ becomes σ, ligatures split. */
+/**
+ * str.casefold(): ß becomes ss, Σ becomes σ, ligatures split. Upper-then-lower per character gives
+ * the full case folding except where Python differs: the dotless ı stays itself, and Cherokee folds
+ * to its capital letters.
+ */
 export function casefold(value: string): string {
   const lower = value.toLowerCase();
   if (ASCII.test(lower)) return lower;
-  return lower.replace(/[^\x00-\x7f]/gu, (char) => char.toUpperCase().toLowerCase());
+  return lower.replace(/[^\x00-\x7f]/gu, (char) => {
+    const code = char.codePointAt(0)!;
+    if (code === 0x131) return char;
+    if (code >= 0xab70 && code <= 0xabbf) return String.fromCodePoint(code - 0xab70 + 0x13a0);
+    if (code >= 0x13f8 && code <= 0x13fd) return String.fromCodePoint(code - 8);
+    return char.toUpperCase().toLowerCase();
+  });
+}
+
+/** Python's re case fixes (re._casefix): characters that share an uppercase form, not a lowercase one. */
+const CASE_FIXES: Readonly<Record<number, readonly number[]>> = {
+  0x69: [0x131], 0x73: [0x17f], 0xb5: [0x3bc], 0x131: [0x69], 0x17f: [0x73], 0x345: [0x3b9, 0x1fbe],
+  0x390: [0x1fd3], 0x3b0: [0x1fe3], 0x3b2: [0x3d0], 0x3b5: [0x3f5], 0x3b8: [0x3d1], 0x3b9: [0x345, 0x1fbe],
+  0x3ba: [0x3f0], 0x3bc: [0xb5], 0x3c0: [0x3d6], 0x3c1: [0x3f1], 0x3c2: [0x3c3], 0x3c3: [0x3c2],
+  0x3c6: [0x3d5], 0x3d0: [0x3b2], 0x3d1: [0x3b8], 0x3d5: [0x3c6], 0x3d6: [0x3c0], 0x3f0: [0x3ba],
+  0x3f1: [0x3c1], 0x3f5: [0x3b5], 0x432: [0x1c80], 0x434: [0x1c81], 0x43e: [0x1c82], 0x441: [0x1c83],
+  0x442: [0x1c84, 0x1c85], 0x44a: [0x1c86], 0x463: [0x1c87], 0x1c80: [0x432], 0x1c81: [0x434],
+  0x1c82: [0x43e], 0x1c83: [0x441], 0x1c84: [0x442, 0x1c85], 0x1c85: [0x442, 0x1c84], 0x1c86: [0x44a],
+  0x1c87: [0x463], 0x1c88: [0xa64b], 0x1e61: [0x1e9b], 0x1e9b: [0x1e61], 0x1fbe: [0x345, 0x3b9],
+  0x1fd3: [0x390], 0x1fe3: [0x3b0], 0xa64b: [0x1c88], 0xfb05: [0xfb06], 0xfb06: [0xfb05],
+};
+
+/** Non-ASCII characters whose simple lowercase is an ASCII letter. */
+const ASCII_LOWER_EXTRAS: Readonly<Record<string, readonly string[]>> = { i: ["\u0130"], k: ["\u212a"] };
+
+/** The simple lowercase mapping Python's re uses: one character in, one out. */
+function simpleLower(char: string): string {
+  if (char === "\u0130") return "i";
+  const lower = char.toLowerCase();
+  return Array.from(lower).length === 1 ? lower : char;
+}
+
+let lowerSources: Map<string, string[]> | null = null;
+
+/** Every character whose simple lowercase is `target`. */
+function charsLoweringTo(target: string): string[] {
+  if (target.length === 1 && target < "\x80") {
+    const found = new Set([target, target.toUpperCase(), ...(ASCII_LOWER_EXTRAS[target] ?? [])]);
+    return [...found].filter((char) => simpleLower(char) === target);
+  }
+  if (lowerSources === null) {
+    lowerSources = new Map();
+    for (let code = 0; code <= 0x2ffff; code++) {
+      if (code >= 0xd800 && code <= 0xdfff) continue;
+      const char = String.fromCodePoint(code);
+      const lower = simpleLower(char);
+      const list = lowerSources.get(lower);
+      if (list) list.push(char);
+      else lowerSources.set(lower, [char]);
+    }
+  }
+  return lowerSources.get(target) ?? [target];
+}
+
+/**
+ * Regex source that matches `text` literally the way a Python pattern with re.IGNORECASE does.
+ * JavaScript's `i` flag uses Unicode case folding and misses pairs Python accepts, such as `İ`
+ * and `ı` for `i`, or `ſ` for `s`. Use it with the `u` flag and without `i`.
+ */
+export function ignoreCase(text: string): string {
+  let out = "";
+  for (const char of text) {
+    const lower = simpleLower(char);
+    const targets = [lower, ...(CASE_FIXES[lower.codePointAt(0)!] ?? []).map((code) => String.fromCodePoint(code))];
+    const members = new Set(targets.flatMap(charsLoweringTo));
+    if (members.size <= 1) {
+      out += escapeRegExp(char);
+    } else {
+      out += "[" + [...members].map((member) => member.replace(/[\\\]\[^-]/g, "\\$&")).join("") + "]";
+    }
+  }
+  return out;
 }
 
 /** str.count(sub) for a non-empty sub: non-overlapping occurrences. */

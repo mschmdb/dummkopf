@@ -6,7 +6,7 @@
  * INDEX.md and README tables byte-identical.
  */
 
-import { BOUNDARY as B, WS } from "./py.ts";
+import { BOUNDARY as B, ignoreCase, WS } from "./py.ts";
 
 export interface Locale {
   readonly stopwords: ReadonlySet<string>;
@@ -14,7 +14,7 @@ export interface Locale {
   readonly nextWeek: RegExp;
   readonly negations: ReadonlySet<string>;
   readonly without: ReadonlySet<string>;
-  /** Groups `year` (optional), `month`, `day`. */
+  /** Groups `year` (optional), `month`, `day`. Digits are any Unicode decimal digits, like Python's `\\d`. */
   readonly rowDate: RegExp;
   readonly periodConnector: string;
   readonly months: Readonly<Record<string, number>>;
@@ -53,7 +53,7 @@ export const EN: Locale = {
   nextWeek: new RegExp(B + "next week" + B, "u"),
   negations: wordSet("not no none never"),
   without: wordSet("without except excluding"),
-  rowDate: new RegExp(B + "(?:(?<year>\\d{4})-)?(?<month>\\d{1,2})-(?<day>\\d{1,2})" + B, "u"),
+  rowDate: new RegExp(B + "(?:(?<year>\\p{Nd}{4})-)?(?<month>\\p{Nd}{1,2})-(?<day>\\p{Nd}{1,2})" + B, "u"),
   periodConnector: "to",
   months: {
     january: 1, jan: 1, february: 2, feb: 2, march: 3, mar: 3, april: 4, apr: 4,
@@ -63,7 +63,7 @@ export const EN: Locale = {
   },
   dayMonthYear: null,
   openWords: ["open question", "to check", "unverified", "TODO", "TBD", "not yet"],
-  updatedLabel: new RegExp("(?:As of|Updated):?" + WS + "*(\\d{4}-\\d{2}-\\d{2})", "iu"),
+  updatedLabel: new RegExp("(?:" + ignoreCase("As of") + "|" + ignoreCase("Updated") + "):?" + WS + "*(\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2})", "u"),
   dateFormats: ["%Y-%m-%d"],
   archiveHint: "archive",
   filesHeading: "## Files",
@@ -94,7 +94,7 @@ export const DE: Locale = {
   nextWeek: new RegExp(B + "nachste(?:n)? woche" + B, "u"),
   negations: wordSet("nicht kein keine keinen keinem keiner"),
   without: wordSet("ohne"),
-  rowDate: new RegExp(B + "(?<day>\\d{1,2})\\.(?<month>\\d{1,2})\\.(?:(?<year>\\d{4})" + B + ")?", "u"),
+  rowDate: new RegExp(B + "(?<day>\\p{Nd}{1,2})\\.(?<month>\\p{Nd}{1,2})\\.(?:(?<year>\\p{Nd}{4})" + B + ")?", "u"),
   periodConnector: "bis",
   months: {
     januar: 1, jan: 1, februar: 2, feb: 2, "märz": 3, "mär": 3, mrz: 3,
@@ -102,9 +102,9 @@ export const DE: Locale = {
     august: 8, aug: 8, september: 9, sept: 9, sep: 9, oktober: 10, okt: 10,
     november: 11, nov: 11, dezember: 12, dez: 12,
   },
-  dayMonthYear: new RegExp(B + "(\\d{1,2})\\.(\\d{1,2})\\.(\\d{4})" + B, "u"),
+  dayMonthYear: new RegExp(B + "(\\p{Nd}{1,2})\\.(\\p{Nd}{1,2})\\.(\\p{Nd}{4})" + B, "u"),
   openWords: ["offen", "offene Frage", "prüfen", "ungeprüft", "TODO", "noch nicht"],
-  updatedLabel: new RegExp("Stand:?" + WS + "*(\\d{1,2}\\.\\d{1,2}\\.\\d{4}|\\d{4}-\\d{2}-\\d{2})", "u"),
+  updatedLabel: new RegExp("Stand:?" + WS + "*(\\p{Nd}{1,2}\\.\\p{Nd}{1,2}\\.\\p{Nd}{4}|\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2})", "u"),
   dateFormats: ["%Y-%m-%d", "%d.%m.%Y"],
   archiveHint: "archiv",
   filesHeading: "## Dateien",
