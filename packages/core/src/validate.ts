@@ -10,7 +10,7 @@ import { getLocale } from "./locale.ts";
 import { text as say } from "./messages.ts";
 import { compareTuples, count, rstrip, sorted, splitlines, str, strip } from "./py.ts";
 import { PyDate } from "./pydate.ts";
-import { isObject, type JsonObject } from "./pyjson.ts";
+import { isObject, type JsonObject, keys as jsonKeys } from "./pyjson.ts";
 import { exists, join, name, parent, parts } from "./pyos.ts";
 import { effectiveScope } from "./scopes.ts";
 import { authoredText } from "./tables.ts";
@@ -246,7 +246,8 @@ export function validatePacket(access: Access, packet: unknown): Plan {
     if (overlay.has(rel)) throw new Rejected("duplicate_path");
     const expected = item.expected as string | null;
     const previous = exists(join(access.root, rel)) ? access.read(rel) : null;
-    const metadata: Metadata = new Map(has(item, "metadata") ? Object.entries(item.metadata as JsonObject) : []);
+    const given = (has(item, "metadata") ? item.metadata : {}) as JsonObject;
+    const metadata: Metadata = new Map(jsonKeys(given).map((key) => [key, given[key]]));
     let rawContent: string;
     if (has(item, "content")) rawContent = item.content as string;
     else if (has(item, "append")) rawContent = appendedContent(previous, item.append, expected);

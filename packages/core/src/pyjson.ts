@@ -30,6 +30,18 @@ const NUMBER = /-?(?:0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?/y;
 const WHITESPACE = /[ \t\n\r]*/y;
 const ESCAPES: Record<string, string> = { '"': '"', "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" };
 
+/**
+ * Key order of a parsed object as Python's dict keeps it: first appearance in the source. JavaScript
+ * objects list integer-like keys first, so code that must keep the order reads it from `keys()`.
+ */
+const KEY_ORDER = Symbol("keyOrder");
+
+/** Keys in source order for objects from `loads`, else Object.keys. */
+export function keys(value: JsonObject): string[] {
+  const order = (value as { [KEY_ORDER]?: string[] })[KEY_ORDER];
+  return order ? [...order] : Object.keys(value);
+}
+
 export function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -127,6 +139,8 @@ class Decoder {
   private object(pos: number): [JsonObject, number] {
     const s = this.s;
     const result = Object.create(null) as JsonObject;
+    const order: string[] = [];
+    Object.defineProperty(result, KEY_ORDER, { value: order, enumerable: false });
     let i = this.skip(pos);
     if (s[i] === "}") return [result, i + 1];
     if (s[i] !== '"') this.fail("Expecting property name enclosed in double quotes", i);
@@ -136,6 +150,7 @@ class Decoder {
       if (s[i] !== ":") this.fail("Expecting ':' delimiter", i);
       i = this.skip(i + 1);
       const [value, afterValue] = this.value(i);
+      if (!(key in result)) order.push(key);
       result[key] = value;
       i = this.skip(afterValue);
       if (s[i] === "}") return [result, i + 1];
