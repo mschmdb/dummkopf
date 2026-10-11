@@ -12,6 +12,8 @@ import { contextPacket, find, type Packet } from "../src/search.ts";
 import { brain, DEV_BIN, documentText, german, invoke, revision, tempDir } from "./helpers.ts";
 import { spawnSync } from "node:child_process";
 
+process.setMaxListeners(0);
+
 const paths = (packet: Packet): string[] => packet.hits.map((hit) => hit.path);
 const json = (text: string): Packet => JSON.parse(text) as Packet;
 

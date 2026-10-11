@@ -13,6 +13,8 @@ import { bounded } from "../src/render.ts";
 import { contextPacket, type Packet } from "../src/search.ts";
 import { type Brain, BASE_CONFIG, german, invoke, makeBrain, tempDir } from "./helpers.ts";
 
+process.setMaxListeners(0);
+
 const TODAY = new PyDate(2026, 10, 4);
 
 /** A German brain with one private, sensitive dated-plan route (as an existing hub uses it). */
