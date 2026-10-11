@@ -254,6 +254,90 @@ test("pre-commit prints no report line without findings", () => {
   assert.ok(!result.out.includes("Report"), result.out);
 });
 
+/** The report lines one pre-commit run prints. */
+function reportLines(b: Brain): string[] {
+  return b.run(["hook", "pre-commit"]).out.split("\n").filter((line) => line.startsWith("Report:"));
+}
+
+function addTodo(b: Brain, name: string): void {
+  b.write("notes/" + name + ".md", FRESH.replace("key_fact: K.", "key_fact: TODO") + "\n# " + name + "\n");
+}
+
+const ONE_TODO = "Report: 0 stale, 0 without date, 1 without key fact. Run `dummkopf meta report` for details.";
+
+test("pre-commit prints the same counts only once", () => {
+  const b = indexed();
+  addTodo(b, "todo");
+  assert.deepEqual(reportLines(b), [ONE_TODO]);
+  assert.deepEqual(reportLines(b), []);
+  assert.deepEqual(reportLines(b), []);
+});
+
+test("pre-commit prints the report again when a note turns stale", () => {
+  const b = indexed();
+  addTodo(b, "todo");
+  reportLines(b);
+  b.write("notes/old.md", FRESH.replace("updated: " + TODAY, "updated: 2020-01-01") + "\n# Old\n");
+  assert.deepEqual(reportLines(b), ["Report: 1 stale, 0 without date, 1 without key fact. "
+    + "Run `dummkopf meta report` for details."]);
+  assert.deepEqual(reportLines(b), []);
+});
+
+test("pre-commit prints the report again after the findings were gone", () => {
+  const b = indexed();
+  addTodo(b, "todo");
+  reportLines(b);
+  fs.unlinkSync(path.join(b.root, "notes", "todo.md"));
+  assert.deepEqual(reportLines(b), []);
+  addTodo(b, "todo");
+  assert.deepEqual(reportLines(b), [ONE_TODO]);
+});
+
+test("pre-commit keeps the last counts in the Git folder, not in the working tree", () => {
+  const b = indexed();
+  addTodo(b, "todo");
+  const before = b.git(["status", "--porcelain", "--untracked-files=all"]);
+  reportLines(b);
+  assert.ok(fs.existsSync(path.join(b.root, ".git", "dummkopf-report")));
+  const after = b.git(["status", "--porcelain", "--untracked-files=all"]).split("\n")
+    .filter((line) => !line.endsWith(".sensitive-paths") && !line.endsWith("INDEX.md"));
+  assert.deepEqual(after, before.split("\n").filter((line) => !line.endsWith(".sensitive-paths")
+    && !line.endsWith("INDEX.md")));
+});
+
+test("pre-commit in a brain without Git still prints the report", () => {
+  const b = new Sandbox().brain();
+  b.write("INDEX.md", "# Index\n\n## Topics\n\n## Notes (flat)\n\n## Bookmarks\n");
+  addTodo(b, "todo");
+  const first = b.run(["hook", "pre-commit"]);
+  assert.equal(first.code, 0);
+  assert.ok(first.out.includes(ONE_TODO), first.out + first.err);
+});
+
+test("hooks.report always prints the report on every run", () => {
+  const b = indexed();
+  b.configure('[hooks]\nreport = "always"\n');
+  addTodo(b, "todo");
+  assert.deepEqual(reportLines(b), [ONE_TODO]);
+  assert.deepEqual(reportLines(b), [ONE_TODO]);
+});
+
+test("hooks.report never prints no report", () => {
+  const b = indexed();
+  b.configure('[hooks]\nreport = "never"\n');
+  addTodo(b, "todo");
+  assert.deepEqual(reportLines(b), []);
+  assert.ok(!fs.existsSync(path.join(b.root, ".git", "dummkopf-report")));
+});
+
+test("an unknown hooks.report value is a config error", () => {
+  const b = indexed();
+  b.configure('[hooks]\nreport = "sometimes"\n');
+  const result = b.run(["check"]);
+  assert.equal(result.code, 2);
+  assert.equal(result.err, "dummkopf.toml: hooks.report: must be one of changes, always, never\n");
+});
+
 test("meta report keeps the full list", () => {
   const b = indexed();
   b.write("notes/todo.md", FRESH.replace("key_fact: K.", "key_fact: TODO") + "\n# Todo\n");

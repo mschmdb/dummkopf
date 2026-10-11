@@ -51,7 +51,15 @@ describe("config", () => {
   test("example config loads", () => {
     const root = tempDir();
     write(root, fs.readFileSync(path.join(REPO, "examples", "dummkopf.example.toml"), "utf-8"));
-    assert.equal(loadConfig(root).curator.openDays, 28);
+    const config = loadConfig(root);
+    assert.equal(config.curator.openDays, 28);
+    assert.equal(config.hooks.report, "changes");
+  });
+
+  test("hooks.report defaults to changes", () => {
+    const root = tempDir();
+    write(root, "schema_version = 1\n");
+    assert.equal(loadConfig(root).hooks.report, "changes");
   });
 
   test("german hub mapping needs no note migration", () => {

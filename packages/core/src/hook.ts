@@ -14,7 +14,7 @@ import type { Config } from "./config.ts";
 import { DummkopfError } from "./errors.ts";
 import { iterNoteFiles } from "./files.ts";
 import { text as say } from "./messages.ts";
-import { generate, migrate, reportSummary } from "./meta.ts";
+import { generate, migrate, reportCounts, reportSummary } from "./meta.ts";
 import { run } from "./proc.ts";
 import { repr, splitlines } from "./py.ts";
 import { isObject } from "./pyjson.ts";
@@ -90,6 +90,35 @@ export function stage(config: Config, paths: readonly string[], unstaged: Readon
   if (ready.length > 0) gitLines(config, "add", "--", ...ready);
 }
 
+/** Where the pre-commit hook keeps the counts it printed last: inside the Git folder, never in the tree. */
+export const REPORT_STATE = "dummkopf-report";
+
+function reportStatePath(config: Config): string | null {
+  const done = run("git", ["rev-parse", "--git-dir"], { cwd: config.root, timeoutS: config.limits.gitTimeoutS });
+  if (done.failed || done.code !== 0) return null;
+  const gitDir = done.stdout.trim();
+  return gitDir ? join(resolve(join(config.root, gitDir)), REPORT_STATE) : null;
+}
+
+/**
+ * The report line for this commit, or "" to stay quiet. With hooks.report = "changes" a line that
+ * never changes would turn into noise, so it is printed only when the counts differ from the last run.
+ * Without a Git folder there is nowhere to remember them, so the line is always printed.
+ */
+export function reportLine(config: Config): string {
+  const mode = config.hooks.report;
+  if (mode === "never") return "";
+  if (mode === "always") return reportSummary(config);
+  const counts = reportCounts(config);
+  const state = reportStatePath(config);
+  if (state === null) return reportSummary(config, counts);
+  const current = [counts.stale, counts.missing, counts.todo].join(" ") + "\n";
+  const last = isFile(state) && !isSymlink(state) ? readText(state) : null;
+  if (current === last) return "";
+  if (!isSymlink(state)) fs.writeFileSync(state, current, "utf-8");
+  return reportSummary(config, counts);
+}
+
 /** Regenerate the sensitive-paths list, complete frontmatter of staged notes, rebuild indexes. */
 export function preCommit(config: Config, output: HookOutput): number {
   if (!isFile(join(config.root, config.layout.index))) return 0;
@@ -109,7 +138,7 @@ export function preCommit(config: Config, output: HookOutput): number {
       .filter((rel) => notes.has(rel) && !unstaged.has(rel) && !readText(join(config.root, rel)).startsWith("---"));
     if (staged.length > 0) stage(config, migrate(config, false, staged), unstaged, output);
     stage(config, generate(config), unstaged, output);
-    const summary = reportSummary(config);
+    const summary = reportLine(config);
     if (summary) output.out(summary + "\n");
   } catch (error) {
     output.err(say("hook_index_failed", "plain", { reason: reason(error) }) + "\n");

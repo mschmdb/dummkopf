@@ -16,6 +16,9 @@ All notable changes to this project are listed here. The format follows
   `links.output`, `curator.report_dir`). Changes to `dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`,
   `.codex/` and other files stay uncommitted for a human commit, and no longer block a write.
   `repo.sync_exclude` still keeps paths inside those folders out.
+- The pre-commit hook prints its `Report: ...` line only when the counts changed since the last time it
+  printed them. It keeps them in `.git/dummkopf-report`, outside the working tree. `dummkopf meta report`
+  is unchanged.
 
 ### Fixed
 

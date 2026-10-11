@@ -200,8 +200,9 @@ as `--expected` when you change the file.
 Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 
 - `.git/hooks/pre-commit`: regenerates `.sensitive-paths`, completes frontmatter of staged notes,
-  rebuilds `INDEX.md` and the README tables. With stale or incomplete notes it prints one summary line;
-  `dummkopf meta report` lists them. It never blocks a commit.
+  rebuilds `INDEX.md` and the README tables. With stale or incomplete notes it prints one summary line,
+  but only when the counts changed since the last commit (`[hooks] report`); `dummkopf meta report` lists
+  them. It keeps the last counts in `.git/dummkopf-report`, never in the working tree, and never blocks a commit.
 - `.claude/settings.json`: a `PostToolUse` hook on `Write|Edit|MultiEdit|Bash` and a `SessionEnd` hook.
   Both run `dummkopf hook agent`, which commits note changes and, in a synced brain, pushes them.
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex
@@ -237,6 +238,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[sensitive]` | `marker`, `paths_file`, `always` | Marker line, generated list, and path prefixes that are always sensitive. |
 | `[frontmatter]` | `key_fact`, `summary`, `aliases`, `updated`, `status`, `period`, `entities`, `scope`, `todo_placeholder`, `summary_max` | Maps each field to the key used in your files. |
 | `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `cheeky` or `plain`. |
+| `[hooks]` | `report` | When the pre-commit hook prints its report line: `changes` (default, only when the counts changed), `always` or `never`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
 | `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |

@@ -55,6 +55,9 @@ summary_max = 160
 locale = "en"                          # "en" | "de": generated headings + language heuristics
 tone = "cheeky"                        # "cheeky" | "plain"; --serious forces plain
 
+[hooks]
+report = "changes"                     # pre-commit report line: "changes" | "always" | "never"
+
 [limits]
 max_chars = 6000                       # output budget, CLI range 500..20000
 find_limit = 3                         # CLI range 1..10

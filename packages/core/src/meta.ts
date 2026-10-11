@@ -252,8 +252,19 @@ export function report(config: Config, maxAge: number | null = null, scope: stri
 }
 
 /** One line for the pre-commit hook, or "" without findings. `meta report` keeps the full list. */
-export function reportSummary(config: Config): string {
+export interface ReportCounts {
+  readonly stale: number;
+  readonly missing: number;
+  readonly todo: number;
+}
+
+export function reportCounts(config: Config): ReportCounts {
   const { missing, stale, todo } = findings(config, null, null);
-  if (missing.length === 0 && stale.length === 0 && todo.length === 0) return "";
-  return say("report_summary", "plain", { stale: stale.length, missing: missing.length, todo: todo.length });
+  return { stale: stale.length, missing: missing.length, todo: todo.length };
+}
+
+/** One line for the pre-commit hook, or "" without findings. */
+export function reportSummary(config: Config, counts: ReportCounts = reportCounts(config)): string {
+  if (counts.missing === 0 && counts.stale === 0 && counts.todo === 0) return "";
+  return say("report_summary", "plain", { ...counts });
 }
