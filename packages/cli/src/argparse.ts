@@ -17,7 +17,7 @@ export class UsageError extends Error {
   }
 }
 
-/** --help was given; the help text is ready to print. */
+/** --help or --version was given; the text is ready to print. */
 export class HelpRequested extends Error {
   readonly text: string;
   constructor(text: string) {
@@ -71,6 +71,8 @@ export interface CommandInfo {
   notes?: string;
   /** The heading the top-level help lists the command under. */
   group?: string;
+  /** What --version prints; only the top level sets it. */
+  version?: string;
 }
 
 function camel(flag: string): string {
@@ -186,6 +188,9 @@ export class Parser {
         continue;
       }
       if (!onlyPositionals && (arg === "-h" || arg === "--help")) throw new HelpRequested(this.help());
+      if (!onlyPositionals && arg === "--version" && this.info.version !== undefined) {
+        throw new HelpRequested(this.info.version + "\n");
+      }
       if (!onlyPositionals && arg.startsWith("-") && arg !== "-" && !isNegativeNumber(arg)) {
         const found = this.match(arg);
         if (!found) {
@@ -278,7 +283,7 @@ export class Parser {
     }));
     return {
       prog: this.prog, purpose: this.info.purpose, examples: this.info.examples ?? "", notes: this.info.notes ?? "",
-      options: this.options, positionals: this.positionals, commands,
+      options: this.options, positionals: this.positionals, commands, version: this.info.version !== undefined,
     };
   }
 

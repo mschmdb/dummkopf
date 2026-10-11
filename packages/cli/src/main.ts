@@ -4,7 +4,7 @@
  * Exit codes: 0 ok, 2 rejected call (nothing changed), 3 saved but Git sync failed.
  */
 
-import { type Config, DummkopfError, findRoot, HELP, loadConfig } from "@dummkopf/core";
+import { type Config, DummkopfError, findRoot, HELP, loadConfig, VERSION } from "@dummkopf/core";
 
 import { register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta } from "./admin.ts";
 import { HelpRequested, type Namespace, Parser, UsageError } from "./argparse.ts";
@@ -23,7 +23,7 @@ const GROUPS: Readonly<Record<string, string>> = {
 };
 
 export function parser(): Parser {
-  const command = new Parser("dummkopf", { purpose: HELP.prog! });
+  const command = new Parser("dummkopf", { purpose: HELP.prog!, version: "dummkopf " + VERSION });
   commonOptions(command, true);
   command.commandsDest("command");
   const add = (name: string): Parser => {

@@ -187,7 +187,7 @@ inside those folders out. The commit subject is `repo.commit_message`; `write` a
 
 Read commands share `--scope`, `--topic`, `--allow-sensitive`, `--json` and `--max-chars`. Every command
 accepts `--root PATH` and `--serious`. `dummkopf <command> --help` shows the purpose and examples first, then
-the options grouped as Access, Output and the command's own options.
+the options grouped as Access, Output and the command's own options. `dummkopf --version` prints the version.
 
 Every hit starts with a header line: `path | rev=<12 chars> | updated | status | scope`. Pass that `rev`
 as `--expected` when you change the file.

@@ -147,6 +147,7 @@ export const HELP: Readonly<Record<string, string>> = {
   "prog": "Long-term memory for coding agents, kept in a Git repo of Markdown notes.",
   "footer": "Details and examples: dummkopf <command> --help",
   "help": "Show this help.",
+  "version": "Show the version.",
   "required": "Required.",
   "group_read": "Read",
   "group_write": "Write",
