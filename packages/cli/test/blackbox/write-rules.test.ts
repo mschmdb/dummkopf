@@ -186,8 +186,35 @@ test("dead link is rejected with note and line", () => {
   const result = ingest(brain, [newEntry("notes/linker.md", md({ body: "[x](gone.md)" }))]);
   assert.equal(result.code, 2);
   assert.ok(result.err.startsWith("The write package breaks the rules: link-unavailable.\n"));
-  assert.ok(result.err.includes("- notes/linker.md, line 13: A link target is missing or not released."));
+  assert.ok(result.err.includes("- notes/linker.md, line 7: A link target is missing or not released."));
   assert.ok(!result.err.includes("gone.md"));
+});
+
+// The agent fixes its own content, so the line counts in that content, not in the completed frontmatter.
+test("a rejected link in new content names the line of that content", () => {
+  const brain = repo();
+  const content = "---\nkey_fact: A fact.\nstatus: aktiv\n---\n\n# T\n\nText.\n\n[x](gone.md)\n";
+  const result = ingest(brain, [newEntry("notes/linker.md", content)]);
+  assert.equal(result.code, 2);
+  assert.ok(result.err.includes("- notes/linker.md, line 10: "), result.err);
+});
+
+test("a rejected link names the content line when a sensitive marker is added", () => {
+  const brain = repo();
+  brain.configure('[sensitive]\nalways = ["notes/health.md"]\n');
+  const content = md({ body: "Text.\n\n[x](gone.md)" });
+  const result = ingest(brain, [newEntry("notes/health.md", content)], ["--allow-sensitive", "notes/health.md"]);
+  assert.equal(result.code, 2);
+  assert.ok(result.err.includes("- notes/health.md, line 9: "), result.err);
+});
+
+test("a rejected link in an append names the line in the note", () => {
+  const brain = repo();
+  const before = brain.read("notes/first.md").replace(/\n+$/u, "");
+  const result = ingest(brain, [{ path: "notes/first.md", expected: rev(brain, "notes/first.md"), append: "[x](gone.md)" }]);
+  assert.equal(result.code, 2);
+  const line = before.split("\n").length + 2;
+  assert.ok(result.err.includes("- notes/first.md, line " + line + ": "), result.err);
 });
 
 test("link to an existing note is accepted", () => {
