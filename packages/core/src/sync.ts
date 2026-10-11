@@ -78,7 +78,7 @@ function verify(config: Config): void {
   if (git(config, ["symbolic-ref", "--short", "HEAD"]).stdout.trim() !== repo.branch) {
     throw new SyncError("git_branch", { branch: repo.branch });
   }
-  if (!repo.local && git(config, ["remote", "get-url", "--end-of-options", remote]).stdout.trim() !== repo.remote) {
+  if (!repo.local && git(config, ["remote", "get-url", "--", remote]).stdout.trim() !== repo.remote) {
     throw new SyncError("git_remote", { name: repo.remoteName });
   }
   for (const state of OPEN_OPERATIONS) {
@@ -94,11 +94,10 @@ function count(config: Config, range: string): number {
 
 function refresh(config: Config): void {
   const [remote, branch] = remoteAndBranch(config);
-  // --no-write-fetch-head: parallel fetches would otherwise race on FETCH_HEAD. --end-of-options in this and
-  // the other calls is a second guard: nothing after it is read as an option. The repeated check below is
-  // unreachable; it keeps the guard next to the call, where CodeQL looks for it.
-  if (remote.startsWith("-") || branch.startsWith("-")) return;
-  git(config, ["fetch", "--no-write-fetch-head", "--end-of-options", remote,
+  // --no-write-fetch-head: parallel fetches would otherwise race on FETCH_HEAD. The "--" here, in push and in
+  // remote get-url (--end-of-options where "--" would start paths) is a second guard: nothing after it is
+  // read as an option.
+  git(config, ["fetch", "--no-write-fetch-head", "--", remote,
     "refs/heads/" + branch + ":" + remoteRef(config)]);
   if (count(config, "HEAD.." + remoteRef(config))) {
     try {
@@ -174,8 +173,7 @@ export function syncLocked(config: Config, refreshRemote = false, message: strin
   if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) {
     refresh(config);
     const [remote, branch] = remoteAndBranch(config);
-    if (remote.startsWith("-") || branch.startsWith("-")) return; // Unreachable; see refresh().
-    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--end-of-options", remote, branch]);
+    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--", remote, branch]);
   }
 }
 
