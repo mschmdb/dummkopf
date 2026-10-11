@@ -9,8 +9,9 @@
   "scripts": {
     "build": "tsc -b packages/core packages/cli",
     "typecheck": "tsc -b packages/core packages/cli --noEmit",
-    "test": "pnpm build && node --test packages/core/test/*.test.ts packages/cli/test/*.test.ts",
-    "test:blackbox": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" uv run pytest tests/blackbox"
+    "test": "node --test 'packages/*/test/*.test.ts'",
+    "test:blackbox": "DUMMKOPF_BIN=\"$PWD/packages/cli/dev/dummkopf\" uv run pytest tests/blackbox",
+    "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" uv run pytest tests/blackbox"
   },
   "devDependencies": {
     "@types/node": "22.19.1",
