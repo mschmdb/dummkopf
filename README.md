@@ -281,6 +281,11 @@ does the same for a single call. Error messages are equally precise in both tone
 **Does it send my notes anywhere?** Only to your own Git remote, by `git push`, and only in a synced brain.
 ˈdʊmkɔpf has no other network code and no runtime dependencies beyond Node.js.
 
+**How fast is it?** Fast enough for agents to query before every answer. On an Apple M5 Pro with Node 24,
+`context` and `find` take about 0.13 s in a brain of 200 notes and 0.48 s with 2,000 notes. `read` takes
+0.08 s at either size, and 0.02 s of every call is Node starting up. A real brain of 189 notes on a Mac
+answers in 0.16 s. To measure your own machine, run `pnpm bench` in a checkout.
+
 **Windows?** Not tested yet. The process lock and the hooks assume a POSIX system.
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
