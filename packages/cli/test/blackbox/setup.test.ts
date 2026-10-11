@@ -52,12 +52,12 @@ test("init creates the scaffold", () => {
     "notes/.gitkeep", "sources", "sources/.gitkeep", "topics", "topics/.gitkeep"]);
 });
 
-test("init prints next steps without a remote", () => {
+test("init without a remote says the brain stays local", () => {
   const sandbox = new Sandbox();
   const result = sandbox.run(["init", path.join(sandbox.tmp, "newbrain"), "--serious"], { cwd: sandbox.tmp });
   assert.equal(result.code, 0);
   assert.ok(result.out.startsWith("New brain created in "));
-  assert.ok(result.out.endsWith(". Next: set repo.remote in dummkopf.toml, then `dummkopf install`.\n"));
+  assert.ok(result.out.endsWith(". It stays local: dummkopf commits, but never pushes. Next: `dummkopf install`.\n"));
 });
 
 test("init prints next steps with a remote", () => {
@@ -76,9 +76,11 @@ test("init writes a config with the remote", () => {
   assert.ok(text.includes('tone = "cheeky"'));
 });
 
-test("init without remote writes a placeholder remote", () => {
+test("init without remote names the remote only in a comment", () => {
   const root = initBrain(new Sandbox());
-  assert.ok(read(root, "dummkopf.toml").includes('remote = "git@github.com:you/your-brain.git"'));
+  const toml = read(root, "dummkopf.toml");
+  assert.ok(toml.includes('# To sync, set a private repository: remote = "git@github.com:you/your-brain.git"'));
+  assert.ok(!/^remote\s*=/m.test(toml));
 });
 
 test("init makes a git repository on main with the remote", () => {
