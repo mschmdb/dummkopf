@@ -44,6 +44,8 @@ export interface Page {
   readonly options: readonly HelpOption[];
   readonly positionals: readonly HelpPositional[];
   readonly commands: readonly HelpCommand[];
+  /** The top level lists --version. */
+  readonly version?: boolean;
 }
 
 /** `N` for numbers, `a|b` for choices, else the explicit metavar or the long flag in upper case. */
@@ -116,6 +118,7 @@ export function render(page: Page): string {
     const entries: [string, string][] = page.options.filter((option) => option.group === group)
       .map((option) => [optionName(option), option.required ? HELP.required! + " " + option.help : option.help]);
     if (group === "global") entries.push(["-h, --help", HELP.help!]);
+    if (group === "global" && page.version) entries.push(["--version", HELP.version!]);
     if (entries.length > 0) sections.push([HELP["group_" + group]!, entries]);
   }
   const longest = Math.max(...sections.flatMap(([, entries]) => entries.map(([name]) => name.length)));
