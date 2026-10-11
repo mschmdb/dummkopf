@@ -11,13 +11,8 @@ your own) and can be marked sensitive. Agents never see sensitive notes unless t
 
 ## Quickstart (5 minutes)
 
-You need Node.js 22.18 or newer, Git, and macOS or Linux.
-
-```bash
-npm install -g dummkopf
-```
-
-Until the first npm release, build it from source:
+You need Node.js 22.18 or newer, pnpm, Git, and macOS or Linux. dummkopf is not on npm yet, so build it from
+source:
 
 ```bash
 git clone https://github.com/mschmdb/dummkopf.git ~/src/dummkopf

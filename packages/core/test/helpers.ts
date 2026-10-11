@@ -1,4 +1,4 @@
-/** Test helpers: temporary brains and Git repositories. Port of tests/conftest.py. */
+/** Test helpers: temporary brains and Git repositories. */
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

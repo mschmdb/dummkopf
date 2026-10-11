@@ -19,7 +19,7 @@ function write(root: string, text: string): string {
   return target;
 }
 
-/** pytest.raises(ConfigError, match=key): the message names the key. */
+/** The call throws a ConfigError whose message names the key. */
 function rejects(root: string, key: string): void {
   assert.throws(() => loadConfig(root), (error: unknown) => error instanceof ConfigError && error.message.includes(key));
 }

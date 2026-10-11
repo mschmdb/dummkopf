@@ -14,32 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: ["3.11", "3.12", "3.13"]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: ${{ matrix.python }}
-      - name: Configure Git for test repositories
-        run: |
-          git config --global user.name "CI"
-          git config --global user.email "ci@example.com"
-          git config --global init.defaultBranch main
-      - name: Install
-        run: uv sync --locked
-      - name: Lint
-        run: uv run ruff check .
-      - name: Type check
-        run: uv run mypy
-      - name: Test
-        run: uv run pytest
-
-  typescript:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
         node: ["22", "24"]
     runs-on: ${{ matrix.os }}
     steps:

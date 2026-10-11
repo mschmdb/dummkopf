@@ -7,17 +7,18 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
-- TypeScript port in `packages/`: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+. It passes
-  the full black-box suite and is not released yet; the Python package stays the release until the switch.
-- `scripts/compare-brain.ts` runs the Python release and the port on copies of a real brain and reports every
-  difference.
+- dummkopf is written in TypeScript now: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+.
+  Brains, config, frontmatter and hooks stay the same; output matches the Python release byte for byte.
 - Local brains: without `repo.remote` dummkopf commits but never fetches, pushes or checks a remote.
   `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
 - The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
 
-### Security
+### Removed
 
-Both the Python release and the TypeScript port:
+- The Python release (`src/`, `pyproject.toml`, `uv.lock`) and its pytest suite. Install with Node instead; see
+  "Coming from the Python version" in the README.
+
+### Security
 
 - A new `README.md` in a folder hidden from the writer answers `topic_unavailable`, like a missing topic. Before,
   it answered `scope_change` only when hidden notes sat below it.

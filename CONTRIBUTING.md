@@ -4,56 +4,44 @@ Thanks for helping. A few rules keep ˈdʊmkɔpf small and safe.
 
 ## Setup
 
-The project uses [uv](https://docs.astral.sh/uv/) for everything: environment, lock file, tools.
+You need Node.js 22.18 or newer, pnpm and Git.
 
 ```bash
-uv sync
+pnpm install
 ```
 
 Then run the checks before every commit:
 
 ```bash
-uv run pytest && uv run mypy && uv run ruff check .
-```
-
-Add dependencies with `uv add` (runtime) or `uv add --dev` (tooling) and commit `uv.lock`.
-
-## TypeScript port
-
-`packages/core` (library) and `packages/cli` (CLI) hold the TypeScript port. It needs Node 22.18+ and pnpm.
-
-```bash
-pnpm install
 pnpm typecheck && pnpm test && pnpm test:blackbox
 ```
 
-`pnpm test:blackbox` runs the black-box suite in `packages/cli/test/blackbox` against the TypeScript sources
-through `packages/cli/dev/dummkopf`; `pnpm test:blackbox:dist` builds first and tests the built CLI. The suite
-only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
+- `pnpm test` runs the unit tests in `packages/*/test` with `node:test`.
+- `pnpm test:blackbox` runs the black-box suite in `packages/cli/test/blackbox` against the TypeScript sources,
+  through `packages/cli/dev/dummkopf`. No build needed.
+- `pnpm test:blackbox:dist` builds first and tests the built CLI, like CI does.
 
-The Python code under `src/` stays as a reference until it is removed, and gets no new features. Local brains
-(no `repo.remote`) exist only in the TypeScript version.
+The black-box suite only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
 
-To compare both on a real brain without touching it:
+## Layout
 
-```bash
-node scripts/compare-brain.ts ~/brain
-```
-
-The script works on two copies in a temporary folder and prints where the report lives. The report contains note
-text; delete it when done.
+- `packages/core` is the library `@dummkopf/core`: config, frontmatter, the read gate `Access`, search, writes,
+  Git sync, hooks and the extras.
+- `packages/cli` is the CLI `dummkopf`: argument parsing, output and the command handlers.
+- Node runs the TypeScript sources directly. Use only erasable syntax (no enums, no parameter properties) and
+  `import type` for types.
 
 ## Rules
 
 - Write the test first, then the code. Bug fixes start with a failing test.
-- Type hints everywhere; `mypy --strict` must pass.
+- `pnpm typecheck` must pass with the strict settings in `tsconfig.base.json`.
 - Keep files under 500 lines. Split a module before it grows past that.
-- No new runtime dependencies. ˈdʊmkɔpf uses the Python standard library only.
-- Every user-facing message goes into `src/dummkopf/messages.py`. A cheeky variant must embed `{plain}`,
+- No runtime dependencies. ˈdʊmkɔpf uses Node's built-in modules only.
+- Every user-facing message goes into `packages/core/src/messages.ts`. A cheeky variant must embed `{plain}`,
   so the joke never hides what failed or what to do.
-- Generated headings and text heuristics for a language go into `src/dummkopf/locale.py`.
+- Generated headings and text heuristics for a language go into `packages/core/src/locale.ts`.
 - Never print raw Git output or note text in an error. Errors for sensitive or missing paths look identical.
-- No `print` debugging in committed code.
+- No `console.log` debugging in committed code; the CLI writes through `packages/cli/src/io.ts`.
 - Commit messages in imperative mood ("Add feature"), one logical change per commit.
 
 ## Tests
@@ -63,5 +51,5 @@ network or your home folder.
 
 ## Translations
 
-A new locale needs an entry in `LOCALES` in `locale.py` and in `config.LOCALES`, plus a test that generates
-an index with it. CLI messages are English only for now.
+A new locale needs an entry in `LOCALES` in `packages/core/src/locale.ts` and in `LOCALES` in
+`packages/core/src/config.ts`, plus a test that generates an index with it. CLI messages are English only for now.
