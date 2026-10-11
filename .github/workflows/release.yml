@@ -82,6 +82,7 @@ jobs:
           name: tarballs
           path: release
       - name: Publish, core first because the CLI depends on it
+        # The leading ./ matters: npm reads release/name.tgz as the GitHub repository "release/name.tgz".
         run: |
-          npm publish release/dummkopf-core-*.tgz --access public --ignore-scripts
-          npm publish release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
+          npm publish ./release/dummkopf-core-*.tgz --access public --ignore-scripts
+          npm publish ./release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
