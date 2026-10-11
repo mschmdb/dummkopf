@@ -56,7 +56,17 @@ test("top-level help: usage, purpose, commands, global options, pointer", () => 
   assert.ok(global.some((line) => /^ {2}--root PATH {2,}\S/.test(line)), result.out);
   assert.ok(global.some((line) => /^ {2}--serious {2,}\S/.test(line)), result.out);
   assert.ok(global.some((line) => line.startsWith("  -h, --help")), result.out);
+  assert.ok(global.some((line) => /^ {2}--version {2,}\S/.test(line)), result.out);
   assert.equal(lines.filter((line) => line !== "").at(-1), "Details and examples: dummkopf <command> --help");
+});
+
+test("--version prints the version and exits 0, at the top level only", () => {
+  const result = run(["--version"]);
+  assert.equal(result.code, 0);
+  assert.match(result.out, /^dummkopf \d+\.\d+\.\d+\S*\n$/);
+  assert.equal(result.err, "");
+  assert.equal(run(["--serious", "--version"]).out, result.out);
+  assert.equal(run(["find", "--version"]).code, 2);
 });
 
 test("help drops the argparse sections", () => {
