@@ -5,6 +5,12 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Releases use npm Trusted Publishing instead of an npm token. A build job runs every check and packs the
+  tarballs; a separate publish job, the only one with `id-token: write`, uploads them. Its actions are pinned
+  to commit SHAs, and installs skip lifecycle scripts.
+
 ### Fixed
 
 - Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf

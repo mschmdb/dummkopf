@@ -60,16 +60,18 @@ network or your home folder.
 `pnpm pack:check` packs both packages like `pnpm publish`, installs the tarballs with npm into a temporary
 folder and runs the installed CLI. CI runs it on every push.
 
-A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop:
+A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop. It uses npm
+Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm token exists. On npmjs.com, both
+`dummkopf` and `@dummkopf/core` name `mschmdb/dummkopf` and `release.yml` as their Trusted Publisher.
 
-1. Once: create the npm organization `dummkopf` and store an npm automation token as the repository secret
-   `NPM_TOKEN`.
-2. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
+1. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
    `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.
-3. Merge, then tag the commit: `git tag v0.3.0 && git push origin v0.3.0`.
+2. Merge, then tag the commit: `git tag v0.4.0 && git push origin v0.4.0`.
 
-The workflow checks that the tag matches both versions, runs all checks and publishes with npm provenance.
-pnpm turns the `workspace:*` dependency into the exact core version.
+The `build` job checks that the tag matches both versions, runs all checks and packs the tarballs. pnpm turns
+the `workspace:*` dependency into the exact core version. The `publish` job then uploads only those tarballs,
+core first, with provenance. It runs no project code. If npm stages a release, approve it on npmjs.com under
+"Staged Packages", core first.
 
 ## Translations
 
