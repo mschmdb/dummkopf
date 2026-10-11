@@ -7,16 +7,22 @@ All notable changes to this project are listed here. The format follows
 
 ## [0.3.1] - 2026-10-11
 
+### Added
+
+- A release tag also creates the GitHub release, with the version's changelog section and both tarballs.
+
+### Fixed
+
+- The release workflow passes the tarballs to `npm publish` as `./release/…`. Without `./`, npm took the
+  path for a GitHub repository and the first 0.3.1 publish failed.
+- Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf
+  crashed with an EPIPE stack trace. The command keeps its exit code.
+
 ### Security
 
 - Releases use npm Trusted Publishing instead of an npm token. A build job runs every check and packs the
   tarballs; a separate publish job, the only one with `id-token: write`, uploads them. Its actions are pinned
   to commit SHAs, and installs skip lifecycle scripts.
-
-### Fixed
-
-- Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf
-  crashed with an EPIPE stack trace. The command keeps its exit code.
 
 ### Documentation
 

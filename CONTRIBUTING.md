@@ -70,8 +70,11 @@ Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm toke
 
 The `build` job checks that the tag matches both versions, runs all checks and packs the tarballs. pnpm turns
 the `workspace:*` dependency into the exact core version. The `publish` job then uploads only those tarballs,
-core first, with provenance. It runs no project code. If npm stages a release, approve it on npmjs.com under
-"Staged Packages", core first.
+core first, with provenance. It runs no project code. Last, the `github-release` job creates the GitHub
+release: its text is the version's section of `CHANGELOG.md` (`scripts/release-notes.sh`), and it attaches
+both tarballs. A tag without a changelog section fails in the `build` job, before anything is published.
+If npm stages a release, approve it on npmjs.com under "Staged Packages", core first. The GitHub release
+appears right away; the npm versions follow once approved.
 
 ## Translations
 

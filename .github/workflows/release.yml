@@ -4,8 +4,9 @@ name: Release
 # npm Trusted Publishing: GitHub Actions proves its identity through OIDC, so there is no npm token.
 # Each package names this repository and this workflow file as its Trusted Publisher on npmjs.com.
 #
-# Two jobs: `build` runs every check and packs the tarballs; `publish` only uploads those tarballs.
-# No project code runs in the job that may publish. Actions are pinned to commit SHAs (Dependabot updates them).
+# Three jobs: `build` runs every check and packs the tarballs; `publish` only uploads those tarballs to npm;
+# `github-release` then creates the GitHub release with the CHANGELOG.md section and the tarballs.
+# No project code runs in the jobs that may publish. Actions are pinned to commit SHAs (Dependabot updates them).
 
 on:
   push:
@@ -57,11 +58,14 @@ jobs:
           for package in core cli; do
             (cd "packages/$package" && pnpm pack --pack-destination ../../release)
           done
+          sh scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > release/notes.md
           ls -l release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: tarballs
-          path: release/*.tgz
+          path: |
+            release/*.tgz
+            release/notes.md
           if-no-files-found: error
           retention-days: 7
 
@@ -82,6 +86,25 @@ jobs:
           name: tarballs
           path: release
       - name: Publish, core first because the CLI depends on it
+        # The leading ./ matters: npm reads release/name.tgz as the GitHub repository "release/name.tgz".
         run: |
-          npm publish release/dummkopf-core-*.tgz --access public --ignore-scripts
-          npm publish release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
+          npm publish ./release/dummkopf-core-*.tgz --access public --ignore-scripts
+          npm publish ./release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarballs
+          path: release
+      - name: Create the GitHub release from the CHANGELOG.md section
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" ./release/*.tgz \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "ˈdʊmkɔpf ${GITHUB_REF_NAME#v}" --notes-file release/notes.md
