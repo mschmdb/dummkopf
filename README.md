@@ -278,9 +278,9 @@ the note folders. ˈdʊmkɔpf gives the same answer in all three cases, on purpo
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
 change based on an old revision.
 
-**Can I build my own frontend?** Yes. `@dummkopf/core` (`npm install @dummkopf/core`) is the library behind the CLI. Read notes through its
-`Access` class: it applies the same scope, sensitivity and path rules as the CLI. The package exports no raw
-note reader, so a frontend cannot skip those rules by accident.
+**Can I build my own frontend?** Yes. `@dummkopf/core` (`npm install @dummkopf/core`) is the library behind
+the CLI. Read notes through its `Access` class: it applies the same scope, sensitivity and path rules as the
+CLI. The package exports no raw note reader, so a frontend cannot skip those rules by accident.
 
 ## Coming from the Python version
 
