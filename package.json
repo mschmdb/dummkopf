@@ -14,7 +14,7 @@
     "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" node --test 'packages/cli/test/blackbox/*.test.ts'"
   },
   "devDependencies": {
-    "@types/node": "22.19.1",
+    "@types/node": "26.6.4",
     "typescript": "7.0.2"
   }
 }
