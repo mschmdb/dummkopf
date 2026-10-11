@@ -1,32 +1,38 @@
 name: Release
 
 # Publishes dummkopf and @dummkopf/core to npm when a tag like v0.3.0 is pushed.
-# Needs the repository secret NPM_TOKEN (an npm automation token with publish rights on @dummkopf).
+# npm Trusted Publishing: GitHub Actions proves its identity through OIDC, so there is no npm token.
+# Each package names this repository and this workflow file as its Trusted Publisher on npmjs.com.
+#
+# Two jobs: `build` runs every check and packs the tarballs; `publish` only uploads those tarballs.
+# No project code runs in the job that may publish. Actions are pinned to commit SHAs (Dependabot updates them).
 
 on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: read
-  id-token: write # npm provenance
+permissions: {}
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           cache: pnpm
-          registry-url: https://registry.npmjs.org
-      - run: |
+      - name: Configure Git for test repositories
+        run: |
           git config --global user.name "CI"
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Tag matches both package versions and VERSION
         run: |
           tag="${GITHUB_REF_NAME#v}"
@@ -45,6 +51,37 @@ jobs:
       - run: pnpm test
       - run: pnpm test:blackbox:dist
       - run: pnpm pack:check
-      - run: pnpm -r publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Pack the tarballs
+        run: |
+          mkdir release
+          for package in core cli; do
+            (cd "packages/$package" && pnpm pack --pack-destination ../../release)
+          done
+          ls -l release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tarballs
+          path: release/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Trusted Publishing and provenance
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - name: npm with Trusted Publishing (11.5.1 or newer)
+        run: npm install -g npm@11.21.0 --ignore-scripts
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarballs
+          path: release
+      - name: Publish, core first because the CLI depends on it
+        run: |
+          npm publish release/dummkopf-core-*.tgz --access public --ignore-scripts
+          npm publish release/dummkopf-[0-9]*.tgz --access public --ignore-scripts

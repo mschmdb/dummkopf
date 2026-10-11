@@ -5,6 +5,19 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-11
+
+### Security
+
+- Releases use npm Trusted Publishing instead of an npm token. A build job runs every check and packs the
+  tarballs; a separate publish job, the only one with `id-token: write`, uploads them. Its actions are pinned
+  to commit SHAs, and installs skip lifecycle scripts.
+
+### Fixed
+
+- Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf
+  crashed with an EPIPE stack trace. The command keeps its exit code.
+
 ### Documentation
 
 - The README installs dummkopf with `npm install -g dummkopf` and links both commands into `~/.local/bin`.
