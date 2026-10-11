@@ -170,7 +170,8 @@ Write rules ˈdʊmkɔpf enforces:
 | `curator` | Run the curation scan or print its weekly LLM prompt (extra). |
 
 Read commands share `--scope`, `--topic`, `--allow-sensitive`, `--json` and `--max-chars`. Every command
-accepts `--root PATH` and `--serious`. `dummkopf <command> --help` shows examples.
+accepts `--root PATH` and `--serious`. `dummkopf <command> --help` shows the purpose and examples first, then
+the options grouped as Access, Output and the command's own options.
 
 Every hit starts with a header line: `path | rev=<12 chars> | updated | status | scope`. Pass that `rev`
 as `--expected` when you change the file.
