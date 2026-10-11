@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-11
+
 ### Security
 
 - Releases use npm Trusted Publishing instead of an npm token. A build job runs every check and packs the
