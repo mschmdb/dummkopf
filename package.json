@@ -10,8 +10,9 @@
     "build": "tsc -b packages/core packages/cli",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "node --test 'packages/*/test/*.test.ts'",
-    "test:blackbox": "DUMMKOPF_BIN=\"$PWD/packages/cli/dev/dummkopf\" uv run pytest tests/blackbox",
-    "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" uv run pytest tests/blackbox"
+    "test:blackbox": "node --test 'packages/cli/test/blackbox/*.test.ts'",
+    "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" node --test 'packages/cli/test/blackbox/*.test.ts'",
+    "test:blackbox:py": "DUMMKOPF_BIN=\"$PWD/packages/cli/dev/dummkopf\" uv run pytest tests/blackbox"
   },
   "devDependencies": {
     "@types/node": "22.19.1",
