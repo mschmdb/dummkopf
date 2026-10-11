@@ -66,8 +66,10 @@ export function migrate(config: Config, dryRun = false, only: readonly string[] 
     const raw = readRaw(path);
     if (raw === null) continue; // unreadable: never rewrite what we could not read
     const text = raw;
-    let { data, body, present } = parseFrontmatter(text);
-    if (!present) body = "\n" + text;
+    const parsed = parseFrontmatter(text);
+    const data = parsed.data;
+    let body = parsed.body;
+    if (!parsed.present) body = "\n" + text;
     if (!truthy(data.get(fm.updated))) {
       data.set(fm.updated, gitLastDate(config.root, rel) || PyDate.today().isoformat());
     }
@@ -91,7 +93,6 @@ export function migrate(config: Config, dryRun = false, only: readonly string[] 
       changed.push(rel);
       if (!dryRun) writeGenerated(path, updated);
     }
-    data = ordered;
   }
   return changed;
 }
