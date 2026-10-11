@@ -43,6 +43,11 @@ export interface Packet {
   missing?: string[];
 }
 
+/** len(note.text.splitlines()): the number of physical lines. */
+export function lineCount(note: Note): number {
+  return splitlines(note.text).length;
+}
+
 export function sourceHit(note: Note, start: number, end: number): Hit {
   const lines: SourceLine[] = [];
   splitlines(note.text).forEach((line, index) => {
@@ -208,7 +213,7 @@ export function contextPacket(access: Access, query: string, today: PyDate | nul
   const packet: Packet = { hits: [], match: "routed", more: false, truncated: false };
   const covered = new Set<number>();
   for (const note of selection.notes) {
-    const hit = sourceHit(note, 1, splitlines(note.text).length);
+    const hit = sourceHit(note, 1, lineCount(note));
     if (selection.period) {
       const [kept, dates] = planLines(note, selection.period, access.config);
       const keep = new Set(kept);

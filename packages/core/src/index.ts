@@ -18,6 +18,15 @@ export { syncRepository } from "./sync.ts";
 export { words } from "./text.ts";
 
 // Read path: search, routes, render.
+export {
+  bodyStart, contextPacket, find, headingRange, lineCount, searchExcerpt, sourceHit,
+  type DateRange, type Hit, type Packet, type SourceLine,
+} from "./search.ts";
+export {
+  filePeriod, planLines, routeProblem, routes, rowDate, select, specific, week,
+  type Period, type Route, type Selection,
+} from "./routes.ts";
+export { bounded, render, SEARCH_LINE_BUDGET } from "./render.ts";
 
 // Write path: links, validate, write.
 

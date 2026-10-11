@@ -1,8 +1,8 @@
 /** `context`, `find` and `read`: the read commands. Port of cli.run_read. */
 
 import {
-  Access, bodyStart, bounded, type Config, contextPacket, find, headingRange, type Packet, Rejected, sourceHit,
-  splitlines, withRepositoryLock,
+  Access, bodyStart, bounded, type Config, contextPacket, find, headingRange, lineCount, type Packet, Rejected,
+  sourceHit, withRepositoryLock,
 } from "@dummkopf/core";
 
 import type { Namespace } from "./argparse.ts";
@@ -29,7 +29,7 @@ export function runRead(args: Namespace, config: Config, tone: string): number {
       }
       if (section !== null && (startArg !== null || endArg !== null)) throw new Rejected("section_with_range");
       const note = access.read(args.path as string);
-      let end = endArg !== null ? endArg : splitlines(note.text).length;
+      let end = endArg !== null ? endArg : lineCount(note);
       let start = startArg;
       if (start === null) {
         const first = bodyStart(note);
