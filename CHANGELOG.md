@@ -12,6 +12,8 @@ All notable changes to this project are listed here. The format follows
 - Local brains: without `repo.remote` dummkopf commits but never fetches, pushes or checks a remote.
   `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
 - The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
+- `pnpm test:toml` checks the TOML parser against the official toml-test suite (TOML 1.0 cases, pinned
+  release, fetched into `.cache/`). CI runs it once per push.
 
 ### Changed
 
@@ -27,6 +29,12 @@ All notable changes to this project are listed here. The format follows
 
 - The Python release (`src/`, `pyproject.toml`, `uv.lock`) and its pytest suite. Install with Node instead; see
   "Coming from the Python version" in the README.
+
+### Fixed
+
+- `dummkopf.toml` with an impossible date or time (`2006-02-30`, `24:00:00`, offset `+24:00`) is rejected
+  as unreadable instead of accepted.
+- An integer beyond 2^53 in `dummkopf.toml` is rejected instead of silently rounded.
 
 ### Security
 

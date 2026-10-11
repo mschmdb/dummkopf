@@ -3,3 +3,6 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .claude/worktrees/
+
+# Dev-only caches, such as the toml-test suite
+.cache/

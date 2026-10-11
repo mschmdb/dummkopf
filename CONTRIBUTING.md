@@ -23,6 +23,12 @@ pnpm typecheck && pnpm test && pnpm test:blackbox
 
 The black-box suite only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
 
+When you touch `packages/core/src/toml.ts`, also run `pnpm test:toml`. It fetches a pinned release of the
+official [toml-test](https://github.com/toml-lang/toml-test) suite into `.cache/` (needs network and Git) and
+runs the parser against its TOML 1.0 cases. Cases dummkopf leaves out on purpose are listed with a reason in
+`packages/core/test/toml-test-skip.txt`; a listed case that starts to pass fails the run. `pnpm test` skips
+the suite unless `TOML_TEST_DIR` points at a toml-test checkout.
+
 ## Layout
 
 - `packages/core` is the library `@dummkopf/core`: config, frontmatter, the read gate `Access`, search, writes,
