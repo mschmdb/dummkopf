@@ -1,5 +1,5 @@
 # Runs an existing German-language brain on ˈdʊmkɔpf without migrating a single note.
-# Copy to <your-brain>/dummkopf.toml, set repo.remote and adjust the paths to your folders.
+# Copy to <your-brain>/dummkopf.toml, set repo.remote (or delete it for a local brain) and adjust the paths to your folders.
 
 schema_version = 1
 

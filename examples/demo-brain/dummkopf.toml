@@ -1,4 +1,4 @@
-# Demo brain. Copy the folder, set repo.remote, run `git init -b main` and `dummkopf install`.
+# Demo brain. Copy the folder, set repo.remote (or delete it for a local brain), run `git init -b main` and `dummkopf install`.
 schema_version = 1
 
 [repo]

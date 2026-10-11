@@ -58,10 +58,18 @@ def git_lines(config: Config, *args: str) -> list[str]:
 
 
 def stage(config: Config, paths: list[str], unstaged: set[str]) -> None:
-    """Stage generated changes, but never a file with unstaged human edits: they would ride along."""
-    for path in paths:
-        if path in unstaged:
+    """Stage generated changes, but never a file with unstaged human edits: they would ride along.
+
+    Sensitive paths are only counted: hook output lands in terminals, CI logs and agent transcripts.
+    """
+    sensitivity = Sensitivity.load(config)
+    held = [path for path in paths if path in unstaged]
+    hidden = [path for path in held if sensitivity.is_sensitive(path)]
+    for path in held:
+        if path not in hidden:
             sys.stdout.write(say("hook_unstaged", "plain", path=path) + "\n")
+    if hidden:
+        sys.stdout.write(say("hook_unstaged_hidden", "plain", count=len(hidden)) + "\n")
     ready = [path for path in paths if path not in unstaged]
     if ready:
         git_lines(config, "add", "--", *ready)

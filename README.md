@@ -5,32 +5,52 @@ Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.
 *Without memory, every agent is a Dummkopf.*
 
 ˈdʊmkɔpf turns a folder of Markdown notes into a memory that Claude Code, Codex and other agents can query and
-write through one CLI. Hooks commit and push every change, so the memory follows you to every machine.
-Notes carry a scope (`private`, `work`, or your own) and can be marked sensitive. Agents never see sensitive
-notes unless the user names the topic.
+write through one CLI. Hooks commit every change. With a remote, they also push it, so the memory follows you
+to every machine. Without one, the brain stays on your machine. Notes carry a scope (`private`, `work`, or
+your own) and can be marked sensitive. Agents never see sensitive notes unless the user names the topic.
 
 ## Quickstart (5 minutes)
 
-You need Python 3.11+, Git, and macOS or Linux.
+You need Node.js 22.18 or newer, Git, and macOS or Linux.
 
 ```bash
-uv tool install "git+https://github.com/mschmdb/dummkopf.git"
+npm install -g dummkopf
 ```
 
-Then run `uv tool update-shell` once, so `dummkopf` is on your `PATH`. The hooks call it by name and also
-look in `~/.local/bin`, where `uv tool` and `pipx` install it. `pipx install` and `pip install` with the same
-URL work too; after `pip install` into a virtual environment, keep that environment activated.
+Until the first npm release, build it from source:
 
-Create a brain with an empty private repository as its remote:
+```bash
+git clone https://github.com/mschmdb/dummkopf.git ~/src/dummkopf
+cd ~/src/dummkopf && pnpm install && pnpm build
+mkdir -p ~/.local/bin
+ln -s ~/src/dummkopf/packages/cli/bin/dummkopf ~/src/dummkopf/packages/cli/bin/dk ~/.local/bin/
+```
+
+The hooks call `dummkopf` by name and also look in `~/.local/bin`. Agents often start hooks with a narrower
+`PATH` than your terminal, the Claude desktop app for one. Make sure `dummkopf` is on that `PATH`, or link it
+into `~/.local/bin` as above.
+
+Create a brain. Decide first where it lives:
+
+```bash
+dummkopf init ~/brain
+```
+
+This brain is **local**. dummkopf commits every change, but never fetches or pushes. Choose it when your notes
+must not leave the machine.
 
 ```bash
 dummkopf init ~/brain --remote git@github.com:you/your-brain.git
 ```
 
-Wire up the Git and agent hooks, then commit and push the scaffold:
+This brain is **synced**. Use an empty *private* repository as its remote. dummkopf pushes after every change
+and rebases onto the remote before every write, so all your machines share one memory.
+
+Wire up the Git and agent hooks, then commit the scaffold (and push it, for a synced brain):
 
 ```bash
-cd ~/brain && dummkopf install && git add -A && git commit -m "Create brain" && git push -u origin main
+cd ~/brain && dummkopf install && git add -A && git commit -m "Create brain"
+git push -u origin main   # synced brains only
 ```
 
 Write a first note and ask for it:
@@ -43,11 +63,27 @@ printf -- '---\nkey_fact: pnpm 10 needs approve-builds for esbuild.\n---\n\n# pn
 dk context "How do I fix the pnpm esbuild error?"
 ```
 
-`dk` is a short alias for `dummkopf`. `write` validated the note, added missing frontmatter, committed and pushed.
-The pre-commit hook added it to `INDEX.md`.
+`dk` is a short alias for `dummkopf`. `write` validated the note, added missing frontmatter and committed it.
+In a synced brain it pushed, too. The pre-commit hook added the note to `INDEX.md`.
 
 Start Claude Code or Codex inside `~/brain` and the agent follows `AGENTS.md`. To use the brain from other
 projects, see [Agent setup](#agent-setup).
+
+## Local or synced
+
+The only difference is `repo.remote` in `dummkopf.toml`.
+
+| | Local brain | Synced brain |
+|---|---|---|
+| `repo.remote` | not set | your private repository |
+| Commits note changes | yes | yes |
+| Fetches and rebases before a write | never | yes |
+| Pushes after a write | never | yes, unless `auto_push = false` |
+| Checks the Git remote | never | sync refuses any other URL |
+
+A local brain never talks to a remote, even when the Git repository has one. To turn a local brain into a
+synced one later, add the remote to Git and set `repo.remote` to the same URL. To go back, remove the
+`remote` line.
 
 ## How a brain looks
 
@@ -102,8 +138,10 @@ becomes sensitive too. That is on purpose: hiding one note too many is the cheap
 Sensitive notes stay out of search results, `INDEX.md`, the file tables of open topics, the links map and
 the curator scan. `read`, `find`, `context`, link checks and new files in a topic answer a hidden path exactly like a
 missing one. A topic `README.md` lists only notes of its own scope.
-One signal stays by design: whoever may create notes learns whether a path is free, because
-`write --expected new` fails on an existing hidden file. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
+One signal stays by design: whoever may write packets learns whether a path is taken. A new file on an
+existing hidden file fails with `path_denied`, also inside a hidden topic. A free path in a hidden topic fails with
+`topic_unavailable`, like a path in a missing topic. A new `README.md` in a hidden folder answers like a missing topic,
+whether notes sit below it or not. An agent may pass `--allow-sensitive <path>` only after the user named the topic in the current prompt;
 `AGENTS.md` says so. The pre-commit hook derives `.sensitive-paths` from the markers, so `rg --ignore-file`
 works as a fallback without the CLI.
 
@@ -129,8 +167,8 @@ Write rules ˈdʊmkɔpf enforces:
 | `write <path> --expected new\|<rev>` | Write one file from Markdown on stdin. `--append` appends. |
 | `ingest --input -` | Write a JSON package of several files atomically. |
 | `check [paths]` | Validate frontmatter and links. |
-| `sync` | Commit note changes, rebase onto the remote, push. |
-| `init [path]` | Create a new brain. |
+| `sync` | Commit note changes; in a synced brain also rebase onto the remote and push. |
+| `init [path]` | Create a new brain; `--remote URL` makes it synced. |
 | `install` | Install the Git pre-commit hook and the Claude Code and Codex hooks. |
 | `meta migrate\|generate\|report\|index\|agents` | Maintain frontmatter and indexes; print rendered `AGENTS.md`. |
 | `links` | Build the links map (extra). |
@@ -153,7 +191,7 @@ Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 - `.git/hooks/pre-commit`: regenerates `.sensitive-paths`, completes frontmatter of staged notes,
   rebuilds `INDEX.md` and the README tables. It never blocks a commit.
 - `.claude/settings.json`: a `PostToolUse` hook on `Write|Edit|MultiEdit|Bash` and a `SessionEnd` hook.
-  Both run `dummkopf hook agent`, which commits and pushes note changes.
+  Both run `dummkopf hook agent`, which commits note changes and, in a synced brain, pushes them.
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex
   version has hooks enabled.
 
@@ -174,13 +212,13 @@ Long-term memory lives in ~/brain. Before answering questions about earlier deci
 
 ## Configuration reference
 
-`dummkopf.toml` lives in the brain root. Only `schema_version` and `repo.remote` are required. Unknown keys
-are an error, so a typo never switches a rule off silently. The full file with every default is in
+`dummkopf.toml` lives in the brain root. Only `schema_version` is required. Unknown keys are an error, so a
+typo never switches a rule off silently. The full file with every default is in
 [examples/dummkopf.example.toml](examples/dummkopf.example.toml).
 
 | Section | Keys | Purpose |
 |---|---|---|
-| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Sync refuses any remote URL or branch except these. `auto_push = false` commits locally only. `sync_exclude` lists paths humans commit themselves. |
+| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. `sync_exclude` lists paths humans commit themselves. |
 | `[layout]` | `topics`, `topic_readme`, `notes`, `bookmarks`, `archive`, `sources`, `index` | Folder and file names. |
 | `[scopes]` | `values`, `all`, `query_default`, `mixed_label`, `require_on_new_topic`, `link_barriers` | Your scopes, the keyword for "all scopes", the default for `--scope`, the label for unscoped notes, and forbidden link directions such as `work>private`. |
 | `[status]` | `active`, `archived` | Status values; stale checks look at `active` notes. |
@@ -219,19 +257,40 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 
 ## FAQ
 
+**Can I keep my notes off GitHub?** Yes. Create the brain without `--remote`. A local brain commits every
+change, but nothing ever leaves your machine. Back it up like any other folder.
+
 **Can I use it at work?** Yes. Set `tone = "plain"` in `[ui]` and every message stays neutral. `--serious`
 does the same for a single call. Error messages are equally precise in both tones.
 
-**Does it send my notes anywhere?** Only to your own Git remote, by `git push`. ˈdʊmkɔpf has no network code
-and no dependencies beyond the Python standard library.
+**Does it send my notes anywhere?** Only to your own Git remote, by `git push`, and only in a synced brain.
+ˈdʊmkɔpf has no other network code and no runtime dependencies beyond Node.js.
 
-**Windows?** Not yet. The process lock uses `fcntl`.
+**Windows?** Not tested yet. The process lock and the hooks assume a POSIX system.
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
 the note folders. ˈdʊmkɔpf gives the same answer in all three cases, on purpose.
 
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
 change based on an old revision.
+
+**Can I build my own frontend?** Yes. `@dummkopf/core` is the library behind the CLI. Read notes through its
+`Access` class: it applies the same scope, sensitivity and path rules as the CLI. The package exports no raw
+note reader, so a frontend cannot skip those rules by accident.
+
+## Coming from the Python version
+
+Releases up to 0.2.0 were written in Python and installed with `uv tool install`. The TypeScript version reads
+the same brains: same `dummkopf.toml`, same folders, same frontmatter, same hooks. Nothing needs converting.
+
+1. Install the new version as described in the [Quickstart](#quickstart-5-minutes).
+2. Remove the old one: `uv tool uninstall dummkopf` (or `pipx uninstall dummkopf`).
+3. Nothing else changes. The installed hooks call `dummkopf` by name and now start the new version.
+
+## Development
+
+The code lives in `packages/core` (library) and `packages/cli` (CLI). See [CONTRIBUTING.md](CONTRIBUTING.md)
+for setup, tests and rules.
 
 ## License
 

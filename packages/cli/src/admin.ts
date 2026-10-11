@@ -1,0 +1,131 @@
+/** Setup and maintenance commands: init, install, hook, meta, links, curator. Port of admin.py. */
+
+import {
+  agentEvent, type Config, curator, DummkopfError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
+  loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, preCommit, refreshPathsFile, renderAgents,
+  requireExtra,
+} from "@dummkopf/core";
+
+import type { Namespace, Parser } from "./argparse.ts";
+import { err, out, readStdin } from "./io.ts";
+
+const output = { out, err };
+
+export function register(add: (name: string) => Parser): void {
+  let command = add("init");
+  command.positional("path", HELP.init_path!, { nargs: "?" });
+  command.option("--remote", { help: HELP.init_remote! });
+  command.option("--locale", { choices: LOCALES, default: "en", help: HELP.init_locale! });
+  command = add("install");
+  command.option("--replace-command", { kind: "append", metavar: "TEXT", help: HELP.install_replace! });
+  command = add("hook");
+  command.positional("kind", HELP.hook_kind!, { choices: ["pre-commit", "agent"] });
+  command = add("meta");
+  command.positional("action", HELP.meta_action!, { choices: ["migrate", "generate", "report", "index", "agents"] });
+  command.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
+  command.option("--only", { kind: "append", metavar: "PATH", help: HELP.meta_only! });
+  command.option("--max-age", { type: "int", help: HELP.meta_max_age! });
+  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
+  command = add("links");
+  command.option("--out", { metavar: "PATH", help: HELP.links_out! });
+  command.option("--min-topics", { type: "int", help: HELP.links_min! });
+  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
+  command.option("--json", { kind: "flag", help: HELP.extra_json! });
+  command = add("curator");
+  command.option("--open-days", { type: "int", help: HELP.curator_open! });
+  command.option("--stale-days", { type: "int", help: HELP.curator_stale! });
+  command.option("--prompt", { kind: "flag", help: HELP.curator_prompt! });
+  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
+  command.option("--json", { kind: "flag", help: HELP.extra_json! });
+}
+
+function optional<T>(value: unknown): T | null {
+  return value === undefined || value === null ? null : value as T;
+}
+
+export function runInit(args: Namespace, root: string, tone: string): number {
+  const target = args.path ? args.path as string : root;
+  const remote = optional<string>(args.remote);
+  const created = init(target, remote, args.locale as string);
+  const key = remote ? "out_init_with_remote" : "out_init";
+  out(say(key, tone, { path: created }) + "\n");
+  return 0;
+}
+
+/** Hooks must never return 2: Claude Code treats exit 2 as a blocking error. */
+export function runHook(args: Namespace, root: string, tone: string): number {
+  void tone;
+  let config: Config;
+  try {
+    config = loadConfig(findRoot(process.cwd(), root));
+  } catch (error) {
+    if (error instanceof DummkopfError) return 0;
+    throw error;
+  }
+  if (args.kind === "pre-commit") return preCommit(config, output);
+  let event: unknown;
+  try {
+    event = loadsJson(readStdin());
+  } catch {
+    return 0;
+  }
+  return agentEvent(event, config, output);
+}
+
+export function runInstall(args: Namespace, config: Config, tone: string): number {
+  const replace = args.replaceCommand as string[];
+  const [written, removed] = install(config, replace);
+  if (replace.length > 0) out(say("out_removed_hooks", tone, { count: removed }) + "\n");
+  for (const path of written) out(say("out_installed", tone, { what: path }) + "\n");
+  return 0;
+}
+
+export function runMeta(args: Namespace, config: Config, tone: string): number {
+  const dryRun = args.dryRun as boolean;
+  if (args.action === "report") {
+    out(metaReport(config, optional<number>(args.maxAge), false, optional<string>(args.scope)) + "\n");
+    return 0;
+  }
+  if (args.action === "agents") {
+    out(renderAgents(config));
+    return 0;
+  }
+  const changed: string[] = [];
+  if (args.action === "migrate") {
+    const only = args.only as string[];
+    changed.push(...migrate(config, dryRun, only.length > 0 ? only : null));
+  } else {
+    if (args.action === "index" && !dryRun) {
+      if (refreshPathsFile(config)) changed.push(config.sensitive.pathsFile);
+    }
+    changed.push(...generate(config, dryRun));
+  }
+  for (const path of changed) out(path + "\n");
+  err(say("out_index_changed", tone, { count: changed.length }) + "\n");
+  return 0;
+}
+
+export function runLinks(args: Namespace, config: Config, tone: string): number {
+  const minTopics = optional<number>(args.minTopics);
+  const scope = optional<string>(args.scope);
+  if (args.json) {
+    out(dumpJson(linksExtra.build(config, minTopics, scope)) + "\n");
+    return 0;
+  }
+  const path = linksExtra.writeLinks(config, optional<string>(args.out), minTopics, scope);
+  out(say("out_written", tone, { path: path.slice(config.root.length + 1) }) + "\n");
+  return 0;
+}
+
+export function runCurator(args: Namespace, config: Config, tone: string): number {
+  void tone;
+  if (args.prompt) {
+    requireExtra(config, "curator");
+    out(curator.prompt(config));
+    return 0;
+  }
+  const result = curator.scan(config, optional<number>(args.openDays), optional<number>(args.staleDays),
+    optional<string>(args.scope));
+  out(args.json ? dumpJson(result) + "\n" : curator.renderMarkdown(result));
+  return 0;
+}

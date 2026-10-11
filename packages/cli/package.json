@@ -1,0 +1,18 @@
+{
+  "name": "dummkopf",
+  "version": "0.3.0-dev",
+  "description": "Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "dummkopf": "bin/dummkopf",
+    "dk": "bin/dk"
+  },
+  "files": ["bin", "dist"],
+  "dependencies": {
+    "@dummkopf/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

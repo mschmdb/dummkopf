@@ -55,7 +55,8 @@ def test_new_sub_readme_cannot_move_private_notes_into_work(brain: Brain) -> Non
     readme = {"path": "topics/pub/sub/README.md", "expected": None, "content": document(scope="work")}
     with pytest.raises(DummkopfError) as caught:
         ingest(Access(brain.config, scope="work"), {"changes": [readme]}, sync=False)
-    assert caught.value.key == "scope_change"
+    # The folder is hidden from a work writer, so the answer matches a missing topic.
+    assert caught.value.key == "topic_unavailable"
     assert find(Access(brain.config, scope="work"), "wibble")["hits"] == []
 
 

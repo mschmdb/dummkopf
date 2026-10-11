@@ -1,0 +1,4 @@
+#!/bin/sh
+# Development runner: the CLI straight from packages/*/src. The black-box suite puts this folder on PATH,
+# so Git hooks that call `dummkopf` run the same sources.
+exec node --conditions=source --disable-warning=ExperimentalWarning "$(dirname "$0")/run.ts" "$@"

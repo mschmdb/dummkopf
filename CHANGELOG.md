@@ -5,6 +5,31 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- TypeScript port in `packages/`: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+. It passes
+  the full black-box suite and is not released yet; the Python package stays the release until the switch.
+- `scripts/compare-brain.ts` runs the Python release and the port on copies of a real brain and reports every
+  difference.
+- Local brains: without `repo.remote` dummkopf commits but never fetches, pushes or checks a remote.
+  `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
+- The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
+
+### Security
+
+Both the Python release and the TypeScript port:
+
+- A new `README.md` in a folder hidden from the writer answers `topic_unavailable`, like a missing topic. Before,
+  it answered `scope_change` only when hidden notes sat below it.
+- A link to a non-Markdown file listed in `.sensitive-paths` answers `link-unavailable`, like a missing file.
+  Before, the check looked up the stand-in path `<file>.md` and let the link pass.
+- The pre-commit hook no longer prints sensitive paths with unstaged edits. It names only their count.
+
+### Documentation
+
+- The README states the "path is taken" signal for writers in full: `path_denied` for a taken path,
+  `topic_unavailable` for a free path in a hidden topic. A black-box test pins it.
+
 ## [0.2.0] - 2026-10-10
 
 ### Added

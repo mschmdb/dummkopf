@@ -1,0 +1,21 @@
+{
+  "name": "@dummkopf/core",
+  "version": "0.3.0-dev",
+  "description": "Core of dummkopf: notes, scopes, the sensitivity gate, search and Git sync.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  }
+}

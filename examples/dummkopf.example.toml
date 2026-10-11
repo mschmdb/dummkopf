@@ -5,7 +5,8 @@
 schema_version = 1                     # REQUIRED
 
 [repo]
-remote = "git@github.com:you/your-brain.git"   # REQUIRED; sync refuses any other remote URL
+remote = "git@github.com:you/your-brain.git"   # without it the brain is local: commits, never pushes;
+                                               # with it, sync refuses any other remote URL
 remote_name = "origin"
 branch = "main"
 auto_push = true                       # false: commit locally, never push

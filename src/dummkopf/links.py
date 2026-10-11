@@ -5,6 +5,7 @@ from __future__ import annotations
 import posixpath
 import re
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import PurePosixPath
 from typing import NotRequired, TypedDict
 from urllib.parse import unquote, urlsplit
@@ -156,7 +157,12 @@ def link_issues(access: Access, note: Note, overlay: Mapping[str, str],
             elif target_path.suffix == ".md":
                 source = access.read(rel)
             else:
+                # A stand-in note carries the folder rules; the paths file lists the real target.
                 source = access.preview(rel + ".md", "# Link\n", overlay)
+                if access.sensitivity.is_listed(rel):
+                    if not access.is_granted(rel):
+                        raise AccessDenied("path_denied")
+                    source = replace(source, sensitive=True)
             if (source.sensitive and not note.sensitive) or crosses_barrier(
                     access.config.scopes.link_barriers, note, source):
                 problem("link-scope", "link_scope", security=True)

@@ -1,0 +1,316 @@
+/** Port of tests/test_sync.py: Git sync, ingest with sync, rollback and the repository lock. */
+
+import assert from "node:assert/strict";
+import { spawn, spawnSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
+import { describe, test } from "node:test";
+
+import { Access } from "../src/access.ts";
+import { DummkopfError, SyncError } from "../src/errors.ts";
+import { withRepositoryLock } from "../src/lock.ts";
+import { prepareRepository, syncRepository } from "../src/sync.ts";
+import { atomicWrite, ingest, seams } from "../src/write.ts";
+import { documentText as document, invoke, REPO, revision, type Synced, synced, tempDir } from "./helpers.ts";
+
+process.setMaxListeners(0);
+
+type Item = Record<string, unknown>;
+
+function packet(s: Synced, rel = "notes/first.md", body = "New content"): { changes: Item[] } {
+  const expected = s.brain.exists(rel) ? revision(s.brain, rel) : null;
+  return { changes: [{ path: rel, content: document({ body }), expected }] };
+}
+
+function caught(body: () => unknown): DummkopfError {
+  try {
+    body();
+  } catch (error) {
+    assert.ok(error instanceof DummkopfError, String(error));
+    return error;
+  }
+  assert.fail("no error");
+}
+
+/** Replace a write step for one call, like Python's unittest.mock.patch. */
+function patched<K extends keyof typeof seams, T>(name: K, replacement: (typeof seams)[K], body: () => T): T {
+  const original = seams[name];
+  seams[name] = replacement;
+  try {
+    return body();
+  } finally {
+    seams[name] = original;
+  }
+}
+
+function repoOption(s: Synced, line: string): void {
+  s.brain.toml = s.brain.toml.replace("[repo]\n", "[repo]\n" + line + "\n");
+  s.brain.configure("");
+}
+
+function excludeTools(s: Synced): void {
+  repoOption(s, "sync_exclude = ['scripts', 'tool']");
+  s.brain.commit("Configure");
+  s.git(["push", "-q"]);
+}
+
+describe("sync", () => {
+  test("sync commits and pushes change", () => {
+    const s = synced();
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["status", "--porcelain"]), "");
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "origin/main"]));
+    assert.equal(s.git(["log", "-1", "--format=%s"]), "Update notes");
+  });
+
+  test("commit message comes from config", () => {
+    const s = synced();
+    repoOption(s, "commit_message = 'Brain dump'");
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["log", "-1", "--format=%s"]), "Brain dump");
+  });
+
+  test("sync pushes existing local commit", () => {
+    const s = synced();
+    s.brain.write("notes/first.md", "updated\n");
+    s.brain.commit("Earlier edit");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "origin/main"]));
+    assert.equal(s.git(["log", "-1", "--format=%s"]), "Earlier edit");
+  });
+
+  test("sync preserves other fetch head", () => {
+    const s = synced();
+    s.git(["fetch", "origin"]);
+    const fetchHead = path.join(s.brain.root, ".git", "FETCH_HEAD");
+    const shared = fs.readFileSync(fetchHead, "utf-8").repeat(2);
+    fs.writeFileSync(fetchHead, shared);
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(fs.readFileSync(fetchHead, "utf-8"), shared);
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "refs/heads/main"], s.remote));
+  });
+
+  test("sync rebases remote change", () => {
+    const s = synced();
+    s.remoteEdit("notes/remote.md", "remote edit\n");
+    s.brain.write("notes/first.md", "local edit\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.brain.read("notes/remote.md"), "remote edit\n");
+    assert.equal(s.brain.read("notes/first.md"), "local edit\n");
+    assert.equal(s.git(["status", "--porcelain"]), "");
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "refs/heads/main"], s.remote));
+  });
+
+  test("sync leaves excluded paths uncommitted", () => {
+    const s = synced();
+    excludeTools(s);
+    s.brain.write("scripts/tool.py", "draft\n");
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["status", "--porcelain", "--untracked-files=all"]), "?? scripts/tool.py");
+    assert.equal(s.git(["show", "--name-only", "--format=", "HEAD"]), "notes/first.md");
+  });
+
+  test("sync with only excluded changes creates no commit", () => {
+    const s = synced();
+    excludeTools(s);
+    const before = s.git(["rev-parse", "HEAD"]);
+    s.brain.write("tool", "cli\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["rev-parse", "HEAD"]), before);
+    assert.equal(s.git(["status", "--porcelain"]), "?? tool");
+  });
+
+  test("sync rebases remote change with dirty excluded file", () => {
+    const s = synced();
+    excludeTools(s);
+    s.brain.write("scripts/tool.py", "v1\n");
+    s.brain.commit("Add tool");
+    s.git(["push", "-q"]);
+    s.remoteEdit("notes/remote.md", "remote edit\n");
+    s.brain.write("scripts/tool.py", "v2 draft\n");
+    s.brain.write("notes/first.md", "local edit\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.brain.read("notes/remote.md"), "remote edit\n");
+    assert.equal(s.brain.read("scripts/tool.py"), "v2 draft\n");
+    assert.equal(s.git(["status", "--porcelain"]), "M scripts/tool.py");
+  });
+
+  test("prepare ignores excluded changes but not note changes", () => {
+    const s = synced();
+    excludeTools(s);
+    s.brain.write("scripts/tool.py", "draft\n");
+    prepareRepository(s.brain.config);
+    s.brain.write("notes/first.md", "updated\n");
+    const error = caught(() => prepareRepository(s.brain.config));
+    assert.ok(error instanceof SyncError);
+    assert.equal(error.key, "git_dirty");
+  });
+
+  test("sync refuses other remote", () => {
+    const s = synced();
+    s.git(["remote", "set-url", "origin", "git@example.org:other/repo.git"]);
+    s.brain.write("notes/first.md", "updated\n");
+    assert.equal(caught(() => syncRepository(s.brain.config)).key, "git_remote");
+    assert.notEqual(s.git(["status", "--porcelain"]), "");
+  });
+
+  test("sync refuses other branch", () => {
+    const s = synced();
+    s.git(["checkout", "-q", "-b", "experiment"]);
+    s.brain.write("notes/first.md", "updated\n");
+    assert.equal(caught(() => syncRepository(s.brain.config)).key, "git_branch");
+    assert.notEqual(s.git(["status", "--porcelain"]), "");
+  });
+
+  test("auto push false commits locally only", () => {
+    const s = synced();
+    repoOption(s, "auto_push = false");
+    const remoteHead = s.git(["rev-parse", "refs/heads/main"], s.remote);
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["status", "--porcelain"]), "");
+    assert.equal(s.git(["rev-parse", "refs/heads/main"], s.remote), remoteHead);
+  });
+
+  test("ingest commits and pushes one validated batch", () => {
+    const s = synced();
+    const data = packet(s);
+    data.changes.push({ path: "notes/second.md", content: document(), expected: null });
+    const before = Number(s.git(["rev-list", "--count", "HEAD"]));
+    const result = ingest(new Access(s.brain.config), data);
+    assert.equal(result.sync, "ok");
+    assert.equal(Number(s.git(["rev-list", "--count", "HEAD"])), before + 1);
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "main"], s.remote));
+    assert.equal(s.git(["status", "--porcelain"]), "");
+  });
+
+  test("refresh brings remote change without local commit", () => {
+    const s = synced();
+    s.remoteEdit("notes/remote.md", document());
+    syncRepository(s.brain.config, true);
+    assert.ok(s.brain.exists("notes/remote.md"));
+  });
+
+  test("remote refresh invalidates a prepared revision", () => {
+    const s = synced();
+    const data = packet(s, "notes/first.md", "Stale local edit");
+    s.remoteEdit("notes/first.md", document({ body: "Remote content" }));
+    assert.equal(caught(() => ingest(new Access(s.brain.config), data)).key, "version_conflict");
+    assert.ok(s.brain.read("notes/first.md").includes("Remote content"));
+    assert.equal(s.git(["status", "--porcelain"]), "");
+  });
+
+  test("sync conflict aborts rebase and preserves local commit", () => {
+    const s = synced();
+    s.remoteEdit("notes/first.md", document({ body: "Remote content" }));
+    s.brain.write("notes/first.md", document({ body: "Local content" }));
+    const error = caught(() => syncRepository(s.brain.config));
+    assert.ok(error instanceof SyncError);
+    assert.equal(error.key, "git_diverged");
+    assert.ok(s.brain.read("notes/first.md").includes("Local content"));
+    assert.equal(s.git(["status", "--porcelain"]), "");
+    assert.ok(!s.brain.exists(".git/rebase-merge"));
+  });
+
+  test("sync errors never echo git output", () => {
+    const s = synced();
+    s.remoteEdit("notes/first.md", document({ body: "Remote SECRET content" }));
+    s.brain.write("notes/first.md", document({ body: "Local SECRET content" }));
+    const done = invoke(s.brain, ["sync"]);
+    assert.equal(done.code, 2);
+    assert.ok(!(done.out + done.err).includes("SECRET"));
+    assert.ok(done.err.includes("Local commits are kept"));
+  });
+
+  test("sync failure reports saved files and exit code 3", () => {
+    const s = synced();
+    const result = patched("syncLocked", () => {
+      throw new SyncError("git_unavailable");
+    }, () => ingest(new Access(s.brain.config), packet(s)));
+    assert.ok(result.sync === "failed" && result.saved);
+    assert.ok(s.brain.read("notes/first.md").includes("New content"));
+    s.git(["checkout", "--", "."]);
+    // The CLI runs in a subprocess, so a remote that refuses the push stands in for the patch.
+    const hook = path.join(s.remote, "hooks", "pre-receive");
+    fs.writeFileSync(hook, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+    const done = invoke(s.brain, ["write", "notes/first.md", "--expected", revision(s.brain, "notes/first.md").slice(0, 12),
+      "--serious"], document({ body: "Third" }));
+    assert.equal(done.code, 3, done.err);
+    assert.ok(done.out.includes("sync: failed"));
+    assert.ok(done.err.includes("Retry with `dummkopf sync`"));
+  });
+
+  test("cli sync reports in tone", () => {
+    const s = synced();
+    assert.equal(invoke(s.brain, ["sync"]).out, "Brain synced.\n");
+    assert.equal(invoke(s.brain, ["sync", "--serious"]).out, "Synced.\n");
+  });
+
+  test("write failure rolls back earlier changes", () => {
+    const s = synced();
+    const before = fs.readFileSync(path.join(s.brain.root, "notes/first.md"));
+    const data = packet(s);
+    data.changes.push({ path: "notes/second.md", content: document(), expected: null });
+    const error = patched("atomicWrite", (target, content) => {
+      if (path.basename(target) === "second.md") throw Object.assign(new Error("Full disk"), { code: "ENOSPC", errno: -28 });
+      atomicWrite(target, content);
+    }, () => caught(() => ingest(new Access(s.brain.config), data, false, false)));
+    assert.equal(error.key, "not_saved");
+    assert.deepEqual(fs.readFileSync(path.join(s.brain.root, "notes/first.md")), before);
+    assert.ok(!s.brain.exists("notes/second.md"));
+  });
+
+  test("rollback never overwrites a foreign change", () => {
+    const s = synced();
+    const data = packet(s);
+    data.changes.push({ path: "notes/second.md", content: document(), expected: null });
+    const error = patched("atomicWrite", (target, content) => {
+      if (path.basename(target) === "second.md") {
+        fs.writeFileSync(path.join(s.brain.root, "notes/first.md"), "Foreign change");
+        throw Object.assign(new Error("Full disk"), { code: "ENOSPC", errno: -28 });
+      }
+      atomicWrite(target, content);
+    }, () => caught(() => ingest(new Access(s.brain.config), data, false, false)));
+    assert.equal(error.key, "rollback_failed");
+    assert.equal(s.brain.read("notes/first.md"), "Foreign change");
+  });
+
+  test("parallel ingests accept only one version", async () => {
+    const s = synced();
+    const src = (name: string): string => pathToFileURL(path.join(REPO, "packages/core/src", name)).href;
+    const worker = path.join(tempDir(), "worker.mjs");
+    fs.writeFileSync(worker, [
+      'import * as fs from "node:fs";',
+      'import { Access } from "' + src("access.ts") + '";',
+      'import { loadConfig } from "' + src("config.ts") + '";',
+      'import { ingest } from "' + src("write.ts") + '";',
+      "const packet = JSON.parse(fs.readFileSync(0, \"utf-8\"));",
+      "process.stdout.write(JSON.stringify(ingest(new Access(loadConfig(process.argv[2])), packet, false, false)));",
+    ].join("\n"));
+    const packets = [packet(s, "notes/first.md", "First worker"), packet(s, "notes/first.md", "Second worker")];
+    const codes = await Promise.all(packets.map((data) => new Promise<number>((resolve) => {
+      const child = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", worker, s.brain.root],
+        { stdio: ["pipe", "ignore", "ignore"] });
+      child.on("exit", (code) => resolve(code ?? -1));
+      child.stdin.end(JSON.stringify(data));
+    })));
+    assert.deepEqual(codes.map((code) => code === 0).sort(), [false, true]);
+  });
+
+  test("reader waits for writer lock", () => {
+    const s = synced();
+    const script = 'import { withRepositoryLock } from "'
+      + pathToFileURL(path.join(REPO, "packages/core/src/lock.ts")).href + '";\n'
+      + "withRepositoryLock(process.argv[1], () => {}, 0.1);\n";
+    const result = withRepositoryLock(s.brain.root, () => spawnSync(process.execPath,
+      ["--disable-warning=ExperimentalWarning", "--input-type=module", "-e", script, s.brain.root],
+      { encoding: "utf-8", timeout: 10_000 }));
+    assert.notEqual(result.status, 0);
+    assert.ok(result.stderr.includes("busy"), result.stderr);
+  });
+});
