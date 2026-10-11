@@ -11,19 +11,26 @@ your own) and can be marked sensitive. Agents never see sensitive notes unless t
 
 ## Quickstart (5 minutes)
 
-You need Node.js 22.18 or newer, pnpm, Git, and macOS or Linux. dummkopf is not on npm yet, so build it from
-source:
+You need Node.js 22.18 or newer, Git, and macOS or Linux.
 
 ```bash
-git clone https://github.com/mschmdb/dummkopf.git ~/src/dummkopf
-cd ~/src/dummkopf && pnpm install && pnpm build
-mkdir -p ~/.local/bin
-ln -s ~/src/dummkopf/packages/cli/bin/dummkopf ~/src/dummkopf/packages/cli/bin/dk ~/.local/bin/
+npm install -g dummkopf
 ```
 
+This installs `dummkopf` and its short form `dk`. Update later with the same command.
+
 The hooks call `dummkopf` by name and also look in `~/.local/bin`. Agents often start hooks with a narrower
-`PATH` than your terminal, the Claude desktop app for one. Make sure `dummkopf` is on that `PATH`, or link it
-into `~/.local/bin` as above.
+`PATH` than your terminal, the Claude desktop app for one. npm's global folder is often missing there, for
+example with nvm. Link both commands into `~/.local/bin` to be safe:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf "$(npm prefix -g)/bin/dummkopf" "$(npm prefix -g)/bin/dk" ~/.local/bin/
+```
+
+To run the latest `main` instead, build from source with pnpm: clone the repository, run
+`pnpm install && pnpm build`, and link `packages/cli/bin/dummkopf` and `packages/cli/bin/dk` into
+`~/.local/bin`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Create a brain. Decide first where it lives:
 
@@ -271,7 +278,7 @@ the note folders. ˈdʊmkɔpf gives the same answer in all three cases, on purpo
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
 change based on an old revision.
 
-**Can I build my own frontend?** Yes. `@dummkopf/core` is the library behind the CLI. Read notes through its
+**Can I build my own frontend?** Yes. `@dummkopf/core` (`npm install @dummkopf/core`) is the library behind the CLI. Read notes through its
 `Access` class: it applies the same scope, sensitivity and path rules as the CLI. The package exports no raw
 note reader, so a frontend cannot skip those rules by accident.
 
