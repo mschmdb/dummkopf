@@ -8,3 +8,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # @types/node follows the oldest supported Node line (engines: >=22.18). Raise it with the minimum.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
