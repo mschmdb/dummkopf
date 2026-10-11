@@ -118,8 +118,8 @@ for (const [toml, named] of [
 for (const [label, toml, message] of [
   ["missing schema_version", '[repo]\nremote = "x"\n', "dummkopf.toml: schema_version: is required"],
   ["schema_version 2", 'schema_version = 2\n[repo]\nremote = "x"\n', "dummkopf.toml: schema_version: unsupported version"],
-  ["missing repo", "schema_version = 1\n", "dummkopf.toml: repo.remote: is required"],
-  ["empty remote", 'schema_version = 1\n[repo]\nremote = ""\n', "dummkopf.toml: repo.remote: is required"],
+  // A missing or empty remote is valid now: it makes a local brain (local.test.ts).
+  ["repo not a table", 'schema_version = 1\nrepo = "x"\n', "dummkopf.toml: repo: must be a table"],
   ["unknown tone", 'schema_version = 1\n[repo]\nremote = "x"\n[ui]\ntone = "loud"\n',
     "dummkopf.toml: ui.tone: must be one of cheeky, plain"],
   ["negative max_chars", 'schema_version = 1\n[repo]\nremote = "x"\n[limits]\nmax_chars = -1\n',
