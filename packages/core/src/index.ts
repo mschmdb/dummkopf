@@ -34,7 +34,8 @@ export { type Change, metadataIssues, type Plan, validatePacket } from "./valida
 export { atomicWrite, check, type CheckResult, ingest, report, type WriteResult } from "./write.ts";
 
 // Setup and maintenance: meta, scaffold, install, hook, extras.
-export { type Entry, entry, generate, migrate, newestFirst, refreshPathsFile, report as metaReport, topicDirs } from "./meta.ts";
+export { type Entry, entry, generate, migrate, newestFirst, refreshPathsFile, report as metaReport,
+  reportSummary, topicDirs } from "./meta.ts";
 export { init, renderAgents } from "./scaffold.ts";
 export { install } from "./install.ts";
 export { agentEvent, type HookOutput, preCommit } from "./hook.ts";

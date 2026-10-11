@@ -83,7 +83,7 @@ export function runInstall(args: Namespace, config: Config, tone: string): numbe
 export function runMeta(args: Namespace, config: Config, tone: string): number {
   const dryRun = args.dryRun as boolean;
   if (args.action === "report") {
-    out(metaReport(config, optional<number>(args.maxAge), false, optional<string>(args.scope)) + "\n");
+    out(metaReport(config, optional<number>(args.maxAge), optional<string>(args.scope)) + "\n");
     return 0;
   }
   if (args.action === "agents") {

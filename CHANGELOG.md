@@ -17,6 +17,9 @@ All notable changes to this project are listed here. The format follows
 
 - `context` no longer prints "Partial match": a whole question almost never matches every word. `find` keeps
   the line, and the JSON `match` value stays the same.
+- `check` prints issues as `path:line: message (severity)` when it knows the line, so editors can jump there.
+  It still never names a link target.
+- The pre-commit hook prints one summary line instead of the full `meta report`, and nothing without findings.
 
 ### Removed
 

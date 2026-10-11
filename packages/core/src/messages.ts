@@ -113,6 +113,8 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "report_todo": "### No key fact (`{todo}`) ({count})",
   "report_stale_item": "- `{path}` ({key} {date})",
   "report_sensitive": "_{count} sensitive file(s) skipped._",
+  "report_summary": "Report: {stale} stale, {missing} without date, {todo} without key fact. "
+    + "Run `dummkopf meta report` for details.",
   "out_paths_file_updated": "{file} updated.",
   "curator_title": "Curator scan",
   "curator_open_loops": "Open loops",

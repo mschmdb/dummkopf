@@ -184,7 +184,8 @@ as `--expected` when you change the file.
 Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 
 - `.git/hooks/pre-commit`: regenerates `.sensitive-paths`, completes frontmatter of staged notes,
-  rebuilds `INDEX.md` and the README tables. It never blocks a commit.
+  rebuilds `INDEX.md` and the README tables. With stale or incomplete notes it prints one summary line;
+  `dummkopf meta report` lists them. It never blocks a commit.
 - `.claude/settings.json`: a `PostToolUse` hook on `Write|Edit|MultiEdit|Bash` and a `SessionEnd` hook.
   Both run `dummkopf hook agent`, which commits note changes and, in a synced brain, pushes them.
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex

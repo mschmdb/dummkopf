@@ -215,24 +215,32 @@ function isoDate(value: string): PyDate | null {
   }
 }
 
-export function report(config: Config, maxAge: number | null = null, onlyFindings = false,
-                       scope: string | null = null): string {
-  const fm = config.frontmatter;
+interface Findings {
+  days: number;
+  missing: string[];
+  stale: [string, string][];
+  todo: string[];
+  skipped: number;
+}
+
+function findings(config: Config, maxAge: number | null, scope: string | null): Findings {
   const days = maxAge === null ? config.limits.staleAfterDays : maxAge;
   const limit = PyDate.today().addDays(-days);
   const notes = openNotes(config, scope);
-  const missing: string[] = [];
-  const stale: [string, string][] = [];
-  const todo: string[] = [];
-  const skipped = notes.sensitiveFiles;
+  const found: Findings = { days, missing: [], stale: [], todo: [], skipped: notes.sensitiveFiles };
   for (const rel of notes.files) {
     const item = entry(config, rel);
     const updated = isoDate(item.updated);
-    if (updated === null) missing.push(rel);
-    else if (item.status === config.status.active && updated.compare(limit) < 0) stale.push([rel, item.updated]);
-    if (item.keyFact === fm.todoPlaceholder) todo.push(rel);
+    if (updated === null) found.missing.push(rel);
+    else if (item.status === config.status.active && updated.compare(limit) < 0) found.stale.push([rel, item.updated]);
+    if (item.keyFact === config.frontmatter.todoPlaceholder) found.todo.push(rel);
   }
-  if (onlyFindings && missing.length === 0 && stale.length === 0 && todo.length === 0) return "";
+  return found;
+}
+
+export function report(config: Config, maxAge: number | null = null, scope: string | null = null): string {
+  const fm = config.frontmatter;
+  const { days, missing, stale, todo, skipped } = findings(config, maxAge, scope);
   const out = [say("report_missing", "plain", { key: fm.updated, count: missing.length })];
   out.push(...missing.map((rel) => "- `" + rel + "`"), "");
   out.push(say("report_stale", "plain", { status: config.status.active, days, count: stale.length }));
@@ -241,4 +249,11 @@ export function report(config: Config, maxAge: number | null = null, onlyFinding
   out.push(...todo.map((rel) => "- `" + rel + "`"), "");
   out.push(say("report_sensitive", "plain", { count: skipped }));
   return out.join("\n");
+}
+
+/** One line for the pre-commit hook, or "" without findings. `meta report` keeps the full list. */
+export function reportSummary(config: Config): string {
+  const { missing, stale, todo } = findings(config, null, null);
+  if (missing.length === 0 && stale.length === 0 && todo.length === 0) return "";
+  return say("report_summary", "plain", { stale: stale.length, missing: missing.length, todo: todo.length });
 }

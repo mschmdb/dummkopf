@@ -14,7 +14,7 @@ import type { Config } from "./config.ts";
 import { DummkopfError } from "./errors.ts";
 import { iterNoteFiles } from "./files.ts";
 import { text as say } from "./messages.ts";
-import { generate, migrate, report } from "./meta.ts";
+import { generate, migrate, reportSummary } from "./meta.ts";
 import { run } from "./proc.ts";
 import { repr, splitlines } from "./py.ts";
 import { isObject } from "./pyjson.ts";
@@ -109,8 +109,8 @@ export function preCommit(config: Config, output: HookOutput): number {
       .filter((rel) => notes.has(rel) && !unstaged.has(rel) && !readText(join(config.root, rel)).startsWith("---"));
     if (staged.length > 0) stage(config, migrate(config, false, staged), unstaged, output);
     stage(config, generate(config), unstaged, output);
-    const findings = report(config, null, true);
-    if (findings) output.out(findings + "\n");
+    const summary = reportSummary(config);
+    if (summary) output.out(summary + "\n");
   } catch (error) {
     output.err(say("hook_index_failed", "plain", { reason: reason(error) }) + "\n");
   }
