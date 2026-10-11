@@ -142,7 +142,7 @@ test("init rejects an unknown locale", () => {
   const sandbox = new Sandbox();
   const result = sandbox.run(["init", path.join(sandbox.tmp, "x"), "--locale", "fr"], { cwd: sandbox.tmp });
   assert.equal(result.code, 2);
-  assert.ok(result.err.includes("invalid choice: 'fr'"));
+  assert.ok(result.err.includes("--locale must be one of en, de, not 'fr'"), result.err);
   assert.ok(!fs.existsSync(path.join(sandbox.tmp, "x")));
 });
 

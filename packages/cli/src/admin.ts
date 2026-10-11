@@ -14,7 +14,7 @@ const output = { out, err };
 export function register(add: (name: string) => Parser): void {
   let command = add("init");
   command.positional("path", HELP.init_path!, { nargs: "?" });
-  command.option("--remote", { help: HELP.init_remote! });
+  command.option("--remote", { metavar: "URL", help: HELP.init_remote! });
   command.option("--locale", { choices: LOCALES, default: "en", help: HELP.init_locale! });
   command = add("install");
   command.option("--replace-command", { kind: "append", metavar: "TEXT", help: HELP.install_replace! });
@@ -24,19 +24,19 @@ export function register(add: (name: string) => Parser): void {
   command.positional("action", HELP.meta_action!, { choices: ["migrate", "generate", "report", "index", "agents"] });
   command.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
   command.option("--only", { kind: "append", metavar: "PATH", help: HELP.meta_only! });
-  command.option("--max-age", { type: "int", help: HELP.meta_max_age! });
-  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
+  command.option("--max-age", { type: "int", metavar: "DAYS", help: HELP.meta_max_age! });
+  command.option("--scope", { metavar: "SCOPE", group: "access", help: HELP.scope! });
   command = add("links");
   command.option("--out", { metavar: "PATH", help: HELP.links_out! });
   command.option("--min-topics", { type: "int", help: HELP.links_min! });
-  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
-  command.option("--json", { kind: "flag", help: HELP.extra_json! });
+  command.option("--scope", { metavar: "SCOPE", group: "access", help: HELP.scope! });
+  command.option("--json", { kind: "flag", group: "output", help: HELP.extra_json! });
   command = add("curator");
-  command.option("--open-days", { type: "int", help: HELP.curator_open! });
-  command.option("--stale-days", { type: "int", help: HELP.curator_stale! });
+  command.option("--open-days", { type: "int", metavar: "DAYS", help: HELP.curator_open! });
+  command.option("--stale-days", { type: "int", metavar: "DAYS", help: HELP.curator_stale! });
   command.option("--prompt", { kind: "flag", help: HELP.curator_prompt! });
-  command.option("--scope", { metavar: "SCOPE", help: HELP.scope! });
-  command.option("--json", { kind: "flag", help: HELP.extra_json! });
+  command.option("--scope", { metavar: "SCOPE", group: "access", help: HELP.scope! });
+  command.option("--json", { kind: "flag", group: "output", help: HELP.extra_json! });
 }
 
 function optional<T>(value: unknown): T | null {

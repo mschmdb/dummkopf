@@ -106,5 +106,5 @@ test("max chars is checked for read too", () => {
 test("non-numeric max chars exits 2", () => {
   const result = docker().run(["find", "docker", "--max-chars", "abc"]);
   assert.equal(result.code, 2);
-  assert.ok(result.err.includes("invalid int value"), result.err);
+  assert.ok(result.err.includes("--max-chars needs a whole number, not 'abc'"), result.err);
 });

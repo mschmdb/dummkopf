@@ -370,5 +370,5 @@ test("agents prints the rules for this brain", () => {
 test("unknown meta action exits 2", () => {
   const result = brain().run(["meta", "bogus"]);
   assert.equal(result.code, 2);
-  assert.ok(result.err.includes("invalid choice: 'bogus'"));
+  assert.ok(result.err.includes("<action> must be one of migrate, generate, report, index, agents, not 'bogus'"), result.err);
 });

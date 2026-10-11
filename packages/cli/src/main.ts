@@ -16,12 +16,20 @@ import { runRead } from "./read.ts";
 export type Handler = (args: Namespace, config: Config, tone: string) => number;
 export type NoConfigHandler = (args: Namespace, root: string, tone: string) => number;
 
+/** The heading each command is listed under in `dummkopf --help`. */
+const GROUPS: Readonly<Record<string, string>> = {
+  context: "read", find: "read", read: "read", ingest: "write", write: "write", check: "write", sync: "write",
+  init: "setup", install: "setup", hook: "setup", meta: "setup", links: "extras", curator: "extras",
+};
+
 export function parser(): Parser {
-  const command = new Parser("dummkopf", HELP.prog!, HELP.epilog!);
+  const command = new Parser("dummkopf", { purpose: HELP.prog! });
   commonOptions(command, true);
   command.commandsDest("command");
   const add = (name: string): Parser => {
-    const sub = command.command(name, HELP["ex_" + name]!);
+    const sub = command.command(name, {
+      purpose: HELP["cmd_" + name]!, examples: HELP["ex_" + name], notes: HELP["notes_" + name], group: GROUPS[name],
+    });
     commonOptions(sub, false);
     return sub;
   };
@@ -36,7 +44,7 @@ export function parser(): Parser {
     } else if (name === "read") {
       action.option("--start", { type: "int", help: HELP.start! });
       action.option("--end", { type: "int", help: HELP.end! });
-      action.option("--section", { help: HELP.section! });
+      action.option("--section", { metavar: "HEADING", help: HELP.section! });
     }
   }
   registerCommands(add);
@@ -63,7 +71,7 @@ export function main(argv: readonly string[]): number {
       return 0;
     }
     if (error instanceof UsageError) {
-      err(error.parser.usage() + "\n" + error.parser.prog + ": error: " + error.message + "\n");
+      err(error.parser.error(error.message));
       return 2;
     }
     throw error;
