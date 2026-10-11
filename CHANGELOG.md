@@ -11,6 +11,9 @@ All notable changes to this project are listed here. The format follows
   the full black-box suite and is not released yet; the Python package stays the release until the switch.
 - `scripts/compare-brain.ts` runs the Python release and the port on copies of a real brain and reports every
   difference.
+- Local brains: without `repo.remote` dummkopf commits but never fetches, pushes or checks a remote.
+  `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
+- The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
 
 ## [0.2.0] - 2026-10-10
 

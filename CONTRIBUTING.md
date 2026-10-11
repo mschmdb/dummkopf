@@ -27,9 +27,12 @@ pnpm install
 pnpm typecheck && pnpm test && pnpm test:blackbox
 ```
 
-`pnpm test:blackbox` runs `tests/blackbox` against the TypeScript sources through `packages/cli/dev/dummkopf`;
-`pnpm test:blackbox:dist` builds first and tests the built CLI. The Python code stays the reference until the
-switch: a change in behavior lands in both, and the black-box suite proves they agree.
+`pnpm test:blackbox` runs the black-box suite in `packages/cli/test/blackbox` against the TypeScript sources
+through `packages/cli/dev/dummkopf`; `pnpm test:blackbox:dist` builds first and tests the built CLI. The suite
+only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
+
+The Python code under `src/` stays as a reference until it is removed, and gets no new features. Local brains
+(no `repo.remote`) exist only in the TypeScript version.
 
 To compare both on a real brain without touching it:
 
