@@ -7,14 +7,24 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
+- `pnpm bench` times `context`, `find` and `read` on generated brains of 200 and 2000 notes.
+- A wikilink that matches several readable notes reports `link-ambiguous` and names up to three of them
+  (`candidates` in `--json`). Before, it said "missing or not released". Hidden notes are never named or
+  counted.
+- `write` and `ingest` take `--message TEXT`, a one-line commit subject of at most 200 characters, in place of
+  `repo.commit_message`. An empty or multi-line message is rejected with exit code 2 before anything is saved.
+- `[hooks] report` sets when the pre-commit hook prints its report line: `changes` (default), `always` or
+  `never`.
+
 ### Changed
 
 - `pnpm pack:check` also lints both tarballs with publint and checks the types of `@dummkopf/core` with
   arethetypeswrong.
 - `write`, `ingest`, `sync` and the agent hooks commit only the note folders (`topics/`, `notes/`,
   `bookmarks/`, `sources/`, `archive/`) and the generated files (`INDEX.md`, `.sensitive-paths`,
-  `links.output`, `curator.report_dir`). Changes to `dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`,
-  `.codex/` and other files stay uncommitted for a human commit, and no longer block a write.
+  `links.output`, `curator.report_dir`), plus the routes and entities files named in `dummkopf.toml`.
+  Changes to `dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` and other files stay
+  uncommitted for a human commit, and no longer block a write.
   `repo.sync_exclude` still keeps paths inside those folders out.
 - The pre-commit hook prints its `Report: ...` line only when the counts changed since the last time it
   printed them. It keeps them in `.git/dummkopf-report`, outside the working tree. `dummkopf meta report`

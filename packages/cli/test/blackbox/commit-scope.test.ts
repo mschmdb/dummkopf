@@ -69,6 +69,17 @@ test("a configured links.output and curator.report_dir are committed too", () =>
   assert.ok(!files.includes("maps/other.md"));
 });
 
+test("the routes and entities files named in dummkopf.toml are committed, wherever they live", () => {
+  const world = new Sandbox().synced();
+  world.brain.configure('[context]\nroutes_file = "hub-routes.json"\n[links]\nentities_file = "scripts/entities.txt"\n');
+  world.brain.git(["commit", "-qam", "config"]);
+  world.brain.write("hub-routes.json", '{"routes": []}\n');
+  world.brain.write("scripts/entities.txt", "Docker\n");
+  assert.equal(agentHook(world), 0);
+  assert.ok(world.remoteFiles().includes("hub-routes.json"));
+  assert.ok(world.remoteFiles().includes("scripts/entities.txt"));
+});
+
 test("sync follows the same rule as the hook", () => {
   const world = new Sandbox().synced();
   changeConfig(world);

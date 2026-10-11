@@ -30,8 +30,10 @@ export const MAX_COMMIT_MESSAGE = 200;
  */
 export function committedPaths(config: Config): string[] {
   const layout = config.layout;
+  // The routes and entities files are content the user curates, wherever dummkopf.toml puts them.
   const paths = [...layout.roots, layout.sources, layout.archive, layout.index, config.sensitive.pathsFile,
-    config.links.output, stripTrailingSlashes(config.curator.reportDir)];
+    config.links.output, stripTrailingSlashes(config.curator.reportDir), config.context.routesFile,
+    config.links.entitiesFile];
   return [...new Set(paths)];
 }
 

@@ -178,7 +178,8 @@ Write rules ˈdʊmkɔpf enforces:
 
 **What gets committed.** `write`, `ingest`, `sync` and the agent hooks commit only what dummkopf manages: the
 note folders (`topics/`, `notes/`, `bookmarks/`), `sources/`, `archive/`, `INDEX.md`, `.sensitive-paths`, the
-links map (`links.output`) and the curator reports (`curator.report_dir`). Everything else, such as
+links map (`links.output`), the curator reports (`curator.report_dir`) and the routes and entities files
+(`context.routes_file`, `links.entities_file`). Everything else, such as
 `dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` or your scripts, stays uncommitted for you to
 commit by hand, and an uncommitted change there never blocks a write. `repo.sync_exclude` keeps further paths
 inside those folders out. The commit subject is `repo.commit_message`; `write` and `ingest` take

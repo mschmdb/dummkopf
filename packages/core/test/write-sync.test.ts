@@ -321,7 +321,7 @@ describe("commit scope and message", () => {
   test("committed paths are the note folders, content folders and generated files", () => {
     const config = defaultConfig("/brain", { links: { output: "maps/LINKS.md" } });
     assert.deepEqual(committedPaths(config), ["topics", "notes", "bookmarks", "sources", "archive", "INDEX.md",
-      ".sensitive-paths", "maps/LINKS.md", "topics/curator"]);
+      ".sensitive-paths", "maps/LINKS.md", "topics/curator", "routes.json", "entities.txt"]);
   });
 
   test("the pathspec never widens to the whole tree", () => {
