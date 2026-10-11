@@ -246,7 +246,7 @@ export class Parser {
     const parts = ["usage: " + this.prog, "[-h]"];
     for (const option of this.options) {
       const flag = option.flags[0]!;
-      const shown = option.kind === "flag" ? flag : flag + " " + (option.metavar ?? option.dest.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase());
+      const shown = option.kind === "flag" ? flag : flag + " " + metavarOf(option);
       parts.push(option.required ? shown : "[" + shown + "]");
     }
     for (const positional of this.positionals) {
@@ -269,12 +269,19 @@ export class Parser {
     }
     lines.push("options:", row("-h, --help", "show this help message and exit"));
     for (const option of this.options) {
-      const metavar = option.kind === "flag" ? "" : " " + (option.metavar ?? option.dest.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase());
+      const metavar = option.kind === "flag" ? "" : " " + metavarOf(option);
       lines.push(row(option.flags.map((flag) => flag + metavar).join(", "), option.help));
     }
     if (this.epilog) lines.push("", this.epilog);
     return lines.join("\n") + "\n";
   }
+}
+
+/** argparse's default metavar: `{a,b}` for choices, else the dest in upper case. */
+function metavarOf(option: Option): string {
+  if (option.metavar !== undefined) return option.metavar;
+  if (option.choices) return "{" + option.choices.join(",") + "}";
+  return option.dest.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase();
 }
 
 function row(name: string, help: string): string {
