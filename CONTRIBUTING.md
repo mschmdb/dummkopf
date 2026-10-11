@@ -55,6 +55,22 @@ the suite unless `TOML_TEST_DIR` points at a toml-test checkout.
 Tests build real temporary brains and Git repositories, so `git` must be installed. No test touches the
 network or your home folder.
 
+## Releases
+
+`pnpm pack:check` packs both packages like `pnpm publish`, installs the tarballs with npm into a temporary
+folder and runs the installed CLI. CI runs it on every push.
+
+A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop:
+
+1. Once: create the npm organization `dummkopf` and store an npm automation token as the repository secret
+   `NPM_TOKEN`.
+2. Set the same version in `packages/core/package.json` and `packages/cli/package.json`, and move the
+   changelog entries from "Unreleased" to that version.
+3. Merge, then tag the commit: `git tag v0.3.0 && git push origin v0.3.0`.
+
+The workflow checks that the tag matches both versions, runs all checks and publishes with npm provenance.
+pnpm turns the `workspace:*` dependency into the exact core version.
+
 ## Translations
 
 A new locale needs an entry in `LOCALES` in `packages/core/src/locale.ts` and in `LOCALES` in

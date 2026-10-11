@@ -12,7 +12,8 @@
     "test": "node --test 'packages/*/test/*.test.ts'",
     "test:blackbox": "node --test 'packages/cli/test/blackbox/*.test.ts'",
     "test:toml": "sh scripts/toml-test.sh",
-    "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" node --test 'packages/cli/test/blackbox/*.test.ts'"
+    "test:blackbox:dist": "pnpm build && DUMMKOPF_BIN=\"$PWD/packages/cli/bin/dummkopf\" node --test 'packages/cli/test/blackbox/*.test.ts'",
+    "pack:check": "sh scripts/pack-check.sh"
   },
   "devDependencies": {
     "@types/node": "22.19.1",

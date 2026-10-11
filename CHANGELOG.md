@@ -14,6 +14,8 @@ All notable changes to this project are listed here. The format follows
 - The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
 - `pnpm test:toml` checks the TOML parser against the official toml-test suite (TOML 1.0 cases, pinned
   release, fetched into `.cache/`). CI runs it once per push.
+- Release setup for npm: package metadata, `prepublishOnly` builds, `pnpm pack:check` (pack, install and run
+  the tarballs, also in CI) and a tag-triggered publish workflow with provenance. Nothing is published yet.
 
 ### Changed
 
