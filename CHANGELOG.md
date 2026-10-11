@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-11
+
 ### Added
 
 - `pnpm bench` times `context`, `find` and `read` on generated brains of 200 and 2000 notes.
