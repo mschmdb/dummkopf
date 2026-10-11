@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
 import { test } from "node:test";
 
 import { binary, fullNote, Sandbox } from "./harness.ts";
@@ -12,7 +13,7 @@ function intoClosedPipe(args: string, cwd: string): { err: string; code: string 
   const script = '( sleep 0.5; "$BIN" ' + args + ' 2>"$ERR"; echo $? >"$CODE" ) | true';
   const env = { ...process.env, BIN: binary(), ERR: cwd + "/stderr.txt", CODE: cwd + "/code.txt" };
   spawnSync("sh", ["-c", script], { cwd, env, encoding: "utf-8" });
-  const read = (file: string): string => spawnSync("cat", [file], { encoding: "utf-8" }).stdout;
+  const read = (file: string): string => fs.readFileSync(file, "utf-8");
   return { err: read(env.ERR), code: read(env.CODE).trim() };
 }
 
