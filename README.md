@@ -222,7 +222,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[frontmatter]` | `key_fact`, `summary`, `aliases`, `updated`, `status`, `period`, `entities`, `scope`, `todo_placeholder`, `summary_max` | Maps each field to the key used in your files. |
 | `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `cheeky` or `plain`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
-| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus` | Search ranking. |
+| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
 | `[extras]` | `links`, `curator`, `codex_sync` | Switch each extra on or off. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |

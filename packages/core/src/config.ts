@@ -101,6 +101,8 @@ export interface SearchWeights {
   readonly path: number;
   readonly body: number;
   readonly topicReadmeBonus: number;
+  /** Curator reports repeat the terms of many notes; their score counts this many percent. */
+  readonly curatorReportPercent: number;
 }
 
 export interface SearchConfig {
@@ -188,7 +190,7 @@ const SCHEMA: Section = {
   search: {
     weights: {
       title: ["int", 8], aliases: ["int", 12], key_fact: ["int", 4], path: ["int", 3], body: ["int", 1],
-      topic_readme_bonus: ["int", 30],
+      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25],
     },
   },
   context: { routes_file: ["str", "routes.json"] },
@@ -350,6 +352,9 @@ function validate(config: Config): void {
   }
   if (limits.maxChars > 20000) throw invalid("limits.max_chars", "must be at most 20000");
   if (limits.findLimit > 10) throw invalid("limits.find_limit", "must be at most 10");
+  if (config.search.weights.curatorReportPercent > 100) {
+    throw invalid("search.weights.curator_report_percent", "must be at most 100");
+  }
 
   relativePath(config.context.routesFile, "context.routes_file");
   relativePath(config.links.output, "links.output", false, true);

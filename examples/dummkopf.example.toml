@@ -71,9 +71,10 @@ key_fact = 4
 path = 3
 body = 1
 topic_readme_bonus = 30
+curator_report_percent = 25            # reports under curator.report_dir score this share, unless the query names the curator
 
 [context]
-routes_file = "routes.json"            # optional; missing file = no routes
+routes_file = "routes.json"            # optional; when set here, `check` warns if the file is missing
 
 [extras]
 links = true                           # cross-reference map (was: kanten)
@@ -82,7 +83,7 @@ codex_sync = true                      # Codex PostToolUse hook
 
 [links]                                # options for the links extra
 output = "LINKS.md"
-entities_file = "entities.txt"
+entities_file = "entities.txt"         # optional; when set here, `check` warns if the file is missing
 min_topics = 2
 allow_outside = []                     # folders outside the note folders that links may point to, e.g. ["archive"]
 

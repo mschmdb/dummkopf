@@ -19,6 +19,8 @@ All notable changes to this project are listed here. The format follows
 
 - `context` no longer prints "Partial match": a whole question almost never matches every word. `find` keeps
   the line, and the JSON `match` value stays the same.
+- `find` and `context` rank curator reports below the notes they summarize: their score counts
+  `search.weights.curator_report_percent` (default 25). A query naming the curator lifts the cut.
 - `check` prints issues as `path:line: message (severity)` when it knows the line, so editors can jump there.
   It still never names a link target.
 - `check` warns when `context.routes_file` or `links.entities_file` is set in `dummkopf.toml` but missing.
