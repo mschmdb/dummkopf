@@ -88,13 +88,26 @@ describe("config", () => {
     rejects(root, "sensitiv");
   });
 
-  for (const [text, key] of [["schema_version = 1\n[repo]\n", "repo.remote"], ['[repo]\nremote = "x"\n', "schema_version"]] as const) {
-    test("required keys: " + key, () => {
+  test("required keys: schema_version", () => {
+    const root = tempDir();
+    write(root, '[repo]\nremote = "x"\n');
+    rejects(root, "schema_version");
+  });
+
+  for (const text of ["schema_version = 1\n", "schema_version = 1\n[repo]\n", 'schema_version = 1\n[repo]\nremote = ""\n']) {
+    test("a config without a remote is a local brain: " + JSON.stringify(text), () => {
       const root = tempDir();
       write(root, text);
-      rejects(root, key);
+      const config = loadConfig(root);
+      assert.equal(config.repo.local, true);
     });
   }
+
+  test("a config with a remote is not local", () => {
+    const root = tempDir();
+    write(root, 'schema_version = 1\n[repo]\nremote = "git@example.org:me/brain.git"\n');
+    assert.equal(loadConfig(root).repo.local, false);
+  });
 
   const invalid: readonly (readonly [string, string])[] = [
     ["[scopes]\nvalues = []\n", "scopes.values"],

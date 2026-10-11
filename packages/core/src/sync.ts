@@ -1,4 +1,8 @@
-/** One Git sync path for the CLI and every agent hook. Never echoes raw Git output. */
+/**
+ * One Git sync path for the CLI and every agent hook. Never echoes raw Git output.
+ *
+ * A local brain (no `repo.remote`) only commits: no fetch, no push, no remote check.
+ */
 
 import type { Config } from "./config.ts";
 import { SyncError } from "./errors.ts";
@@ -33,7 +37,7 @@ function verify(config: Config): void {
   if (git(config, ["symbolic-ref", "--short", "HEAD"]).stdout.trim() !== repo.branch) {
     throw new SyncError("git_branch", { branch: repo.branch });
   }
-  if (git(config, ["remote", "get-url", repo.remoteName]).stdout.trim() !== repo.remote) {
+  if (!repo.local && git(config, ["remote", "get-url", repo.remoteName]).stdout.trim() !== repo.remote) {
     throw new SyncError("git_remote", { name: repo.remoteName });
   }
   for (const state of OPEN_OPERATIONS) {
@@ -68,7 +72,12 @@ export function prepareRepository(config: Config): void {
   if (git(config, ["status", "--porcelain", "--untracked-files=all", ...notePathspec(config)]).stdout) {
     throw new SyncError("git_dirty");
   }
-  if (config.repo.autoPush) refresh(config);
+  if (pushes(config)) refresh(config);
+}
+
+/** Fetch and push only with a remote and auto_push on; a local brain never talks to a remote. */
+function pushes(config: Config): boolean {
+  return config.repo.autoPush && !config.repo.local;
 }
 
 /**
@@ -100,7 +109,7 @@ export function syncLocked(config: Config, refreshRemote = false): void {
     git(config, ["add", "-A", ...spec]);
     if (git(config, ["diff", "--cached", "--quiet", ...spec], [0, 1]).code === 1) commitNotesOnly(config);
   }
-  if (!config.repo.autoPush) return;
+  if (!pushes(config)) return;
   if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) {
     refresh(config);
     if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", config.repo.remoteName, config.repo.branch]);

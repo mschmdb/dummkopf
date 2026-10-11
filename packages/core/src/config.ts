@@ -16,12 +16,15 @@ const SCOPE_RE = /^[\p{L}\p{N}_-]+$/u;
 const FRONTMATTER_KEY_RE = /^[A-Za-z0-9_.\-]+$/;
 
 export interface RepoConfig {
+  /** Empty means a local brain: dummkopf commits, but never fetches or pushes. */
   readonly remote: string;
   readonly remoteName: string;
   readonly branch: string;
   readonly autoPush: boolean;
   readonly commitMessage: string;
   readonly syncExclude: readonly string[];
+  /** True without a remote. Nothing leaves the machine. */
+  readonly local: boolean;
 }
 
 export interface LayoutConfig {
@@ -260,7 +263,6 @@ function relativePath(value: string, key: string, allowDir = false, written = fa
 }
 
 function validate(config: Config): void {
-  if (!strip(config.repo.remote)) throw invalid("repo.remote", "is required");
   if (!NAME_RE.test(config.repo.branch) || !NAME_RE.test(config.repo.remoteName)) {
     throw invalid("repo.branch", "must be a plain branch name");
   }
@@ -365,12 +367,14 @@ function validate(config: Config): void {
 /** Add the derived properties to the plain values from TOML and defaults. */
 function assemble(root: string, values: Record<string, unknown>): Config {
   const raw = values as unknown as Omit<Config, "root">;
+  const repo = raw.repo as Omit<RepoConfig, "local">;
   const layout = raw.layout as Omit<LayoutConfig, "roots" | "flatRoots">;
   const scopes = raw.scopes as Omit<ScopesConfig, "choices">;
   const fm = raw.frontmatter as Omit<FrontmatterConfig, "mappedKeys" | "listKeys" | "fieldOrder">;
   return {
     ...raw,
     root,
+    repo: { ...repo, local: !strip(repo.remote) },
     layout: { ...layout, roots: [layout.topics, layout.notes, layout.bookmarks], flatRoots: [layout.notes, layout.bookmarks] },
     scopes: { ...scopes, choices: [scopes.all, ...scopes.values] },
     frontmatter: {
@@ -408,8 +412,6 @@ export function loadConfig(rootPath: string): Config {
   // Python compares with ==, so 1.0 and true pass as version 1.
   const number = version instanceof TomlFloat ? version.value : typeof version === "boolean" ? Number(version) : version;
   if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this dummkopf reads version 1");
-  const repo = data.repo;
-  if (!isTable(repo) || !("remote" in repo)) throw invalid("repo.remote", "is required");
   const config = assemble(root, build(SCHEMA, data, ""));
   validate(config);
   return config;

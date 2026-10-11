@@ -13,6 +13,20 @@ import { Sensitivity } from "./sensitive.ts";
 
 export const PLACEHOLDER_REMOTE = "git@github.com:you/your-brain.git";
 
+/** dummkopf.toml of a local brain: the remote stays commented out until the owner wants sync. */
+const LOCAL_REMOTE_HINT = "# No remote: this brain stays on this machine. dummkopf commits, but never pushes.\n"
+  + "# To sync, set a private repository: remote = \"" + PLACEHOLDER_REMOTE + "\"\n";
+
+/** The sync rules in AGENTS.md: with a remote, and for a local brain. */
+const SYNC_REMOTE = "- The hooks installed by `dummkopf install` commit and push note changes after each edit and at session end.\n"
+  + "  `ingest`, `write`, the Claude Code hook and the Codex hook share one sync path and one process lock.\n"
+  + "- Before changes dummkopf fetches and rebases onto the remote. Never merge from or write to `FETCH_HEAD`;\n"
+  + "  parallel fetches share it.\n"
+  + "- If histories diverge, dummkopf stops and keeps local commits. Check before you resolve anything.";
+const SYNC_LOCAL = "- This brain is local: it has no remote, and nothing leaves this machine. Never add a remote or push.\n"
+  + "- The hooks installed by `dummkopf install` commit note changes after each edit and at session end.\n"
+  + "  `ingest`, `write`, the Claude Code hook and the Codex hook share one commit path and one process lock.";
+
 /** A packaged template; resolved next to the module, so it works from src and dist alike. */
 export function template(name: string): string {
   return fs.readFileSync(new URL("../templates/" + name, import.meta.url), "utf-8");
@@ -43,6 +57,7 @@ export function renderAgents(config: Config): string {
       + ". New files there get the marker automatically.";
   }
   return format(template("AGENTS.md"), {
+    sync: config.repo.local ? SYNC_LOCAL : SYNC_REMOTE,
     topics: layout.topics, notes: layout.notes, bookmarks: layout.bookmarks, sources: layout.sources,
     readme: layout.topicReadme, index: layout.index, scope_key: fm.scope, scopes: codeList(config.scopes.values),
     all: config.scopes.all, barriers: barrierText, marker: config.sensitive.marker,
@@ -87,7 +102,10 @@ export function init(targetPath: string, remote: string | null, locale: string):
   const target = resolve(targetPath);
   if (exists(join(target, CONFIG_NAME))) throw new Rejected("brain_exists", { path: target });
   fs.mkdirSync(target, { recursive: true });
-  const settings = template("dummkopf.toml").replaceAll("{remote}", () => remote || PLACEHOLDER_REMOTE);
+  // Without --remote the brain stays local: the remote line is only a commented hint.
+  const settings = remote
+    ? template("dummkopf.toml").replaceAll("{remote}", () => remote)
+    : template("dummkopf.toml").replace('remote = "{remote}"\n', () => LOCAL_REMOTE_HINT);
   writeText(join(target, CONFIG_NAME), settings.replaceAll("{locale}", () => locale));
   const config = loadConfig(target);
   const filesToWrite = new Map<string, string>([

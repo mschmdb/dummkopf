@@ -118,11 +118,7 @@ or timing.
 
 ## Git and generated indexes
 
-- The hooks installed by `dummkopf install` commit and push note changes after each edit and at session end.
-  `ingest`, `write`, the Claude Code hook and the Codex hook share one sync path and one process lock.
-- Before changes dummkopf fetches and rebases onto the remote. Never merge from or write to `FETCH_HEAD`;
-  parallel fetches share it.
-- If histories diverge, dummkopf stops and keeps local commits. Check before you resolve anything.
+{sync}
 - `{index}` and the `{readme}` file tables are generated from frontmatter by the pre-commit hook. Never edit
   those tables by hand.
 

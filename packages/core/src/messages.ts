@@ -120,7 +120,7 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "curator_stale_active": "Stale active notes",
   "curator_none": "None found.",
   "curator_skipped": "{files} sensitive files and {topics} sensitive topics skipped.",
-  "out_init": "New brain created in {path}. Next: set repo.remote in dummkopf.toml, then `dummkopf install`.",
+  "out_init": "New brain created in {path}. It stays local: dummkopf commits, but never pushes. Next: `dummkopf install`.",
   "out_init_with_remote": "New brain created in {path}. Next: `dummkopf install`, then commit and push.",
 };
 
@@ -152,7 +152,7 @@ export const HELP: Readonly<Record<string, string>> = {
   "ex_read": "Read a file. Without --start, output begins after the frontmatter;\nits key fields appear in the header line. --start 1 shows the whole frontmatter.\nIf --end lies before the first body line, output starts at line 1.\n\nExamples:\n  dummkopf read notes/topic.md\n  dummkopf read notes/topic.md --end 3\n  dummkopf read notes/topic.md --section \"Open questions\" --json",
   "ex_ingest": "Write several files atomically. Index, commit and push run automatically.\nPer entry exactly one of: content (whole file), replace (text pairs) or append (text at the end).\nexpected: null for new files, otherwise rev from read/context (12 characters are enough).\n\nExample:\n  dummkopf ingest --scope work --input - <<'EOF'\n  {\"changes\":[{\"path\":\"notes/topic.md\",\"expected\":\"9f4a55b37576\",\n    \"append\":\"## New\\n- Fact\",\"metadata\":{\"key_fact\":\"Proven statement\"}}]}\n  EOF",
   "ex_write": "Write one file from Markdown on stdin, no JSON. Metadata comes from the frontmatter.\nA new topic needs a README in the same package: use ingest for that.\n\nExamples:\n  dummkopf write notes/topic.md --scope work --expected new <<'EOF'\n  ---\n  key_fact: Proven statement\n  aliases: [topic]\n  ---\n\n  # Topic\n\n  Content\n  EOF\n  dummkopf write bookmarks/ai.md --expected 9f4a55b37576 --append <<'EOF'\n  ## Title\n  - URL: https://example.org\n  EOF",
-  "ex_init": "Create a new brain: dummkopf.toml, AGENTS.md, CLAUDE.md, .gitignore, INDEX.md and folders.\n\nExample:\n  dummkopf init ~/brain --remote git@github.com:you/your-brain.git",
+  "ex_init": "Create a new brain: dummkopf.toml, AGENTS.md, CLAUDE.md, .gitignore, INDEX.md and folders.\nWithout --remote the brain stays local: dummkopf commits, but never pushes.\n\nExamples:\n  dummkopf init ~/brain\n  dummkopf init ~/brain --remote git@github.com:you/your-brain.git",
   "ex_install": "Install the Git pre-commit hook, the Claude Code hooks (.claude/settings.json)\nand, with extras.codex_sync, the Codex hook (.codex/hooks.json).\n\nExample:\n  dummkopf install",
   "ex_hook": "Entry point for hooks; `dummkopf install` wires these up. Never blocks.\npre-commit: regenerate the sensitive-paths list and indexes.\nagent: read a Claude Code or Codex hook event on stdin and sync.\n\nExample:\n  dummkopf hook pre-commit",
   "ex_meta": "Maintain frontmatter and generated indexes.\nmigrate: add missing frontmatter. generate: rebuild INDEX.md and README file tables.\nreport: list notes without date, stale notes and missing key facts.\nindex: regenerate the sensitive-paths list, then the tables.\nagents: print AGENTS.md rendered for this brain's config.\n\nExample:\n  dummkopf meta report --max-age 30",
@@ -166,7 +166,7 @@ export const HELP: Readonly<Record<string, string>> = {
   "extra_json": "Print the result as JSON instead of Markdown.",
   "install_replace": "Remove existing hook commands containing TEXT first (repeatable), e.g. an old sync script.",
   "init_path": "Folder for the new brain (default: current folder).",
-  "init_remote": "Git remote URL for repo.remote.",
+  "init_remote": "Git remote URL for repo.remote. Without it the brain stays local.",
   "init_locale": "Language of generated headings and text heuristics: en or de.",
   "hook_kind": "pre-commit or agent.",
   "meta_action": "migrate, generate, report, index or agents.",

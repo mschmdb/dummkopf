@@ -121,12 +121,14 @@ test("init refuses an existing brain", () => {
   assert.equal(fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8"), before);
 });
 
-test("init without a remote leaves a placeholder", () => {
+test("init without a remote creates a local brain and names the remote only in a comment", () => {
   const base = tempDir();
   const result = cli(["init", base], base);
   assert.equal(result.code, 0);
-  assert.ok(fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8").includes("you/your-brain.git"));
-  assert.ok(result.out.includes("set repo.remote"));
+  const toml = fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8");
+  assert.ok(toml.includes('# To sync, set a private repository: remote = "git@github.com:you/your-brain.git"'));
+  assert.ok(!/^remote\s*=/m.test(toml));
+  assert.ok(result.out.includes("It stays local"));
 });
 
 test("init with a remote does not ask for it again", () => {
