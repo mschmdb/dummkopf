@@ -29,9 +29,6 @@ All notable changes to this project are listed here. The format follows
 - `check` warns when `context.routes_file` or `links.entities_file` is set in `dummkopf.toml` but missing.
   The default names stay silent, and `context` never warns.
 - The pre-commit hook prints one summary line instead of the full `meta report`, and nothing without findings.
-
-### Changed
-
 - Shorter `--help` without argparse's layout (#21). `dummkopf --help` lists the commands with one line each,
   grouped as Read, Write, Setup and maintenance, and Extras. `dummkopf <command> --help` shows a one-line
   purpose, the examples, then the options grouped as Access, Output and the command's own options, one per
