@@ -31,3 +31,12 @@ test("integers beyond 2^53 are rejected instead of rounded", () => {
   assert.equal(parseToml("n = 9007199254740991").n, Number.MAX_SAFE_INTEGER);
   assert.equal(parseToml("n = -9_007_199_254_740_991").n, -Number.MAX_SAFE_INTEGER);
 });
+
+test("CRLF line endings parse like LF, a bare CR is rejected", () => {
+  const text = '# c\na = "x" # c\nm = """\nl1\nl2 \\\n  l3"""\nl = \'\'\'\nr1\nr2\'\'\'\nar = [\n  1, # c\n  2,\n]\n[t]\nb = 1\n';
+  assert.deepEqual(parseToml(text.replace(/\n/g, "\r\n")), parseToml(text));
+  assert.equal(parseToml(text).m, "l1\nl2 l3");
+  for (const bad of ["a = 1\rb = 2", "# c\r\na = 1\r", 'm = """\rx"""', "l = '''x\ry'''", "# c\rx\n", "ar = [1,\r2]"]) {
+    assert.throws(() => parseToml(bad), TomlError, JSON.stringify(bad));
+  }
+});

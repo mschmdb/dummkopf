@@ -194,6 +194,33 @@ describe("config", () => {
     assert.throws(() => loadConfig(root), ConfigError);
   });
 
+  test("config with CRLF line endings loads like LF", () => {
+    const text = MINIMAL + "# comment\n[ui]\ntone = 'plain'\n";
+    const lf = tempDir();
+    write(lf, text);
+    const crlf = tempDir();
+    write(crlf, text.replace(/\n/g, "\r\n"));
+    const a = loadConfig(lf);
+    const b = loadConfig(crlf);
+    assert.equal(b.repo.remote, a.repo.remote);
+    assert.equal(b.ui.tone, "plain");
+    assert.deepEqual({ ...b, root: "" }, { ...a, root: "" });
+  });
+
+  test("bare carriage return is config_unreadable", () => {
+    for (const text of [
+      MINIMAL.replace("\n[repo]", "\r[repo]"),
+      MINIMAL + "# comment\rmore\n",
+      MINIMAL + "x = 1\r",
+    ]) {
+      const root = tempDir();
+      write(root, text);
+      assert.throws(() => loadConfig(root),
+                    (error: unknown) => error instanceof ConfigError && error.key === "config_unreadable",
+                    JSON.stringify(text));
+    }
+  });
+
   test("branch must not look like an option", () => {
     const root = tempDir();
     write(root, MINIMAL + "branch = '-x'\n");

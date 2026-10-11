@@ -2,7 +2,7 @@
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
-import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve,
+import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytesText, resolve,
   stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
@@ -414,7 +414,8 @@ export function loadConfig(rootPath: string): Config {
   if (!isFile(file)) throw new ConfigMissing("config_missing", { start: root });
   let data: Record<string, unknown>;
   try {
-    data = { ...parseToml(readText(file)) };
+    // Raw text: TOML defines its own newlines (LF or CRLF) and forbids a bare CR, so no normalising here.
+    data = { ...parseToml(readBytesText(file)) };
   } catch (error) {
     if (error instanceof TomlError) throw new ConfigError("config_unreadable", { detail: error.message });
     const detail = error instanceof Error ? error.message : String(error);

@@ -26,6 +26,8 @@ All notable changes to this project are listed here. The format follows
   as errors.
 - The published `@dummkopf/core` manifest no longer has a `source` export condition that pointed at `src/`,
   which is not in the tarball.
+- `dummkopf.toml` reaches the TOML parser as read, without newline normalisation. CRLF files load as before;
+  a bare carriage return, which TOML 1.0 forbids, now fails with `config_unreadable`.
 
 ## [0.3.1] - 2026-10-11
 
