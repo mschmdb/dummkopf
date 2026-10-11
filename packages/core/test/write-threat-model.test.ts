@@ -31,7 +31,7 @@ const silent = { out: (): void => {}, err: (): void => {} };
 
 describe("sensitivity", () => {
   const variants = [
-    "﻿> SENSITIVE\n\n# t\n\nzorkmid\n",
+    "\ufeff> SENSITIVE\n\n# t\n\nzorkmid\n",
     "# t\n\n  > SENSITIVE\n\nzorkmid\n",
     "# t\n\n\t> SENSITIVE\n\nzorkmid\n",
     "# t\ntext\r> SENSITIVE\rzorkmid\n",
@@ -47,7 +47,7 @@ describe("sensitivity", () => {
 
   test("marker variant in readme hides the topic", () => {
     const b = brain();
-    b.write("topics/t/README.md", "﻿  > SENSITIVE\n# T\n");
+    b.write("topics/t/README.md", "\ufeff  > SENSITIVE\n# T\n");
     b.note("topics/t/a.md", { body: "zorkmid" });
     assert.deepEqual(find(new Access(b.config), "zorkmid").hits, []);
   });
