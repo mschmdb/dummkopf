@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [0.3.1] - 2026-10-11
 
+### Added
+
+- A release tag also creates the GitHub release, with the version's changelog section and both tarballs.
+
 ### Fixed
 
 - The release workflow passes the tarballs to `npm publish` as `./release/…`. Without `./`, npm took the
