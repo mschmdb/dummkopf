@@ -5,6 +5,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- The README FAQ states the speed, measured with `pnpm bench` on an Apple M5 Pro.
+
 ## [0.4.0] - 2026-10-11
 
 ### Added
