@@ -77,7 +77,7 @@ Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm toke
 
 1. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
    `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.
-2. Merge, then tag the commit: `git tag v0.4.0 && git push origin v0.4.0`.
+2. Merge, then tag the commit: `git tag v0.5.0 && git push origin v0.5.0`.
 
 The `build` job checks that the tag matches both versions, runs all checks and packs the tarballs. pnpm turns
 the `workspace:*` dependency into the exact core version. The `publish` job then stages only those tarballs
