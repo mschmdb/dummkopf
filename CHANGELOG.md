@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-11
+
 ### Added
 
 - `dummkopf --version` prints the version and exits 0. Before, it failed with `missing <command>`.
