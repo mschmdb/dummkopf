@@ -4,6 +4,6 @@
 
 ## Checks
 
-- [ ] Tests written first; `pytest`, `mypy` and `ruff check .` pass
-- [ ] New user-facing text lives in `messages.py`
+- [ ] Tests written first; `pnpm typecheck`, `pnpm test` and `pnpm test:blackbox` pass
+- [ ] New user-facing text lives in `packages/core/src/messages.ts`
 - [ ] No change weakens scope or sensitivity rules, or the PR explains why
