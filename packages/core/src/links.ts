@@ -166,7 +166,14 @@ export function linkIssues(access: Access, note: Note, overlay: ReadonlyMap<stri
       let source: Note;
       if (overlay.has(rel)) source = access.preview(rel, overlay.get(rel)!, overlay);
       else if (suffix(targetPath) === ".md") source = access.read(rel);
-      else source = access.preview(rel + ".md", "# Link\n", overlay);
+      else {
+        // A stand-in note carries the folder rules; the paths file lists the real target.
+        source = access.preview(rel + ".md", "# Link\n", overlay);
+        if (access.sensitivity.isListed(rel)) {
+          if (!access.isGranted(rel)) throw new AccessDenied("path_denied");
+          source = { ...source, sensitive: true };
+        }
+      }
       if ((source.sensitive && !note.sensitive) || crossesBarrier(access.config.scopes.linkBarriers, note, source)) {
         problem("link-scope", "link_scope", true);
       }

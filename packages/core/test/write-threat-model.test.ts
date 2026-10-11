@@ -66,7 +66,7 @@ describe("scope", () => {
     b.write("topics/pub/README.md", document({ scope: "private" }));
     b.write("topics/pub/sub/b.md", document({ body: "wibble" }));
     const readme = { path: "topics/pub/sub/README.md", expected: null, content: document({ scope: "work" }) };
-    assert.equal(caught(() => ingest(new Access(b.config, "work"), { changes: [readme] }, false, false)).key, "scope_change");
+    assert.equal(caught(() => ingest(new Access(b.config, "work"), { changes: [readme] }, false, false)).key, "topic_unavailable");
     assert.deepEqual(find(new Access(b.config, "work"), "wibble").hits, []);
   });
 

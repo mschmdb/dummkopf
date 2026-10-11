@@ -73,11 +73,19 @@ export function gitLines(config: Config, ...args: string[]): string[] {
   return done.code === 0 ? splitlines(done.stdout) : [];
 }
 
-/** Stage generated changes, but never a file with unstaged human edits: they would ride along. */
+/**
+ * Stage generated changes, but never a file with unstaged human edits: they would ride along.
+ *
+ * Sensitive paths are only counted: hook output lands in terminals, CI logs and agent transcripts.
+ */
 export function stage(config: Config, paths: readonly string[], unstaged: ReadonlySet<string>, output: HookOutput): void {
-  for (const path of paths) {
-    if (unstaged.has(path)) output.out(say("hook_unstaged", "plain", { path }) + "\n");
+  const sensitivity = Sensitivity.load(config);
+  const held = paths.filter((path) => unstaged.has(path));
+  const hidden = held.filter((path) => sensitivity.isSensitive(path));
+  for (const path of held) {
+    if (!hidden.includes(path)) output.out(say("hook_unstaged", "plain", { path }) + "\n");
   }
+  if (hidden.length > 0) output.out(say("hook_unstaged_hidden", "plain", { count: hidden.length }) + "\n");
   const ready = paths.filter((path) => !unstaged.has(path));
   if (ready.length > 0) gitLines(config, "add", "--", ...ready);
 }

@@ -19,6 +19,8 @@ const EXPECTED_RE = /^[a-f0-9]{12,64}$/;
 const KEBAB_RE = /^[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*$/u;
 const ENTRY_KEYS = new Set(["path", "content", "replace", "append", "expected", "metadata"]);
 const CONTENT_KEYS = ["content", "replace", "append"];
+// Stand-in file name for folder checks; the kebab-case rule keeps real notes from taking it.
+const PROBE = "_probe.md";
 
 export interface Change {
   readonly note: Note;
@@ -308,6 +310,13 @@ export function checkScopeShifts(access: Access, overlay: ReadonlyMap<string, st
   const config = access.config;
   const readmes = [...overlay.keys()].filter((rel) => name(rel) === config.layout.topicReadme);
   if (readmes.length === 0) return;
+  for (const readme of readmes) {
+    // Check the folder first: a hidden folder must answer like a missing topic, whether notes sit below or not.
+    const ancestors = new Map([...overlay].filter(([rel]) => rel !== readme));
+    if (folderHidden(access, parent(readme), ancestors)) {
+      throw new AccessDenied("topic_unavailable", { readme: config.layout.topicReadme });
+    }
+  }
   const existing = iterNoteFiles(config);
   for (const readme of readmes) {
     const folder = parent(readme) + "/";
@@ -317,6 +326,17 @@ export function checkScopeShifts(access: Access, overlay: ReadonlyMap<string, st
       }
     }
   }
+}
+
+/** Would the read gate deny a new note without its own scope or marker in this folder? */
+export function folderHidden(access: Access, folder: string, overlay: ReadonlyMap<string, string>): boolean {
+  try {
+    access.preview(folder + "/" + PROBE, "# Probe\n", overlay);
+  } catch (error) {
+    if (error instanceof AccessDenied) return true;
+    throw error;
+  }
+  return false;
 }
 
 export function checkNewTopic(access: Access, rel: string, overlay: ReadonlyMap<string, string>): void {

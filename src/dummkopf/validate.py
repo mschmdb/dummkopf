@@ -25,6 +25,8 @@ EXPECTED_RE = re.compile(r"[a-f0-9]{12,64}")
 KEBAB_RE = re.compile(r"[^\W_]+(?:-[^\W_]+)*")
 ENTRY_KEYS = {"path", "content", "replace", "append", "expected", "metadata"}
 CONTENT_KEYS = ("content", "replace", "append")
+# Stand-in file name for folder checks; the kebab-case rule keeps real notes from taking it.
+PROBE = "_probe.md"
 
 
 @dataclass(frozen=True)
@@ -272,12 +274,27 @@ def check_scope_shifts(access: Access, overlay: Mapping[str, str]) -> None:
     readmes = [rel for rel in overlay if PurePosixPath(rel).name == config.layout.topic_readme]
     if not readmes:
         return
+    for readme in readmes:
+        # Check the folder first: a hidden folder must answer like a missing topic, whether notes sit below or not.
+        ancestors = {rel: text for rel, text in overlay.items() if rel != readme}
+        if folder_hidden(access, str(PurePosixPath(readme).parent), ancestors):
+            raise AccessDenied("topic_unavailable", readme=config.layout.topic_readme)
     existing = iter_note_files(config)
     for readme in readmes:
         folder = str(PurePosixPath(readme).parent) + "/"
         for rel in existing:
             if rel.startswith(folder) and effective_scope(config, rel) != effective_scope(config, rel, overlay):
                 raise Rejected("scope_change")
+
+
+def folder_hidden(access: Access, folder: str, overlay: Mapping[str, str]) -> bool:
+    """Would the read gate deny a new note without its own scope or marker in this folder?"""
+    probe = folder + "/" + PROBE
+    try:
+        access.preview(probe, "# Probe\n", overlay)
+    except AccessDenied:
+        return True
+    return False
 
 
 def check_new_topic(access: Access, rel: str, overlay: Mapping[str, str]) -> None:
