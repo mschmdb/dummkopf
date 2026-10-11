@@ -15,6 +15,8 @@ All notable changes to this project are listed here. The format follows
 
 - The release workflow passes the tarballs to `npm publish` as `./release/…`. Without `./`, npm took the
   path for a GitHub repository and the first 0.3.1 publish failed.
+- The release workflow runs `npm stage publish`, the only command the Trusted Publishers allow. Each version
+  waits on npmjs.com until a maintainer approves it with 2FA.
 - Output into a pipe that closes early, like `dummkopf --help | head -1`, ends quietly. Before, dummkopf
   crashed with an EPIPE stack trace. The command keeps its exit code.
 
