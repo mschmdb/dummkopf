@@ -4,7 +4,7 @@ name: Release
 # npm Trusted Publishing: GitHub Actions proves its identity through OIDC, so there is no npm token.
 # Each package names this repository and this workflow file as its Trusted Publisher on npmjs.com.
 #
-# Three jobs: `build` runs every check and packs the tarballs; `publish` only uploads those tarballs to npm;
+# Three jobs: `build` runs every check and packs the tarballs; `publish` only stages those tarballs on npm;
 # `github-release` then creates the GitHub release with the CHANGELOG.md section and the tarballs.
 # No project code runs in the jobs that may publish. Actions are pinned to commit SHAs (Dependabot updates them).
 
@@ -85,11 +85,12 @@ jobs:
         with:
           name: tarballs
           path: release
-      - name: Publish, core first because the CLI depends on it
-        # The leading ./ matters: npm reads release/name.tgz as the GitHub repository "release/name.tgz".
+      - name: Stage on npm, core first because the CLI depends on it
+        # The Trusted Publishers allow only `npm stage publish`: a maintainer approves each version on
+        # npmjs.com with 2FA. The leading ./ matters: npm reads release/name.tgz as a GitHub repository.
         run: |
-          npm publish ./release/dummkopf-core-*.tgz --access public --ignore-scripts
-          npm publish ./release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
+          npm stage publish ./release/dummkopf-core-*.tgz --access public --ignore-scripts
+          npm stage publish ./release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
 
   github-release:
     needs: publish
