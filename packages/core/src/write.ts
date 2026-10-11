@@ -9,6 +9,7 @@ import { AccessDenied, Rejected, SyncError } from "./errors.ts";
 import { type Issue, issue, linkIssues } from "./links.ts";
 import { withRepositoryLock } from "./lock.ts";
 import { text as say } from "./messages.ts";
+import { compare } from "./py.ts";
 import { exists, join, parent, sha256 } from "./pyos.ts";
 import { prepareRepository, syncLocked } from "./sync.ts";
 import { type Change, metadataIssues, type Plan, validatePacket } from "./validate.ts";
@@ -224,7 +225,9 @@ export function check(access: Access, paths: readonly string[] | null = null): C
     checked += 1;
     problems.push(...metadataIssues(note, access.config));
     // Report existing dead links; this is not a write request.
-    problems.push(...linkIssues(access, note, new Map(), note));
+    problems.push(...linkIssues(access, note, new Map(), note, true));
   }
+  // By path, then line; issues without a line (frontmatter) come first. The sort is stable.
+  problems.sort((a, b) => compare(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0));
   return { checked, issues: problems, ok: !problems.some((problem) => problem.severity === "error") };
 }

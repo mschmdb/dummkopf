@@ -254,6 +254,52 @@ test("work note may not link to a private note", () => {
   assert.ok(result.err.includes("A link crosses a sensitivity or scope boundary."));
 });
 
+/** A work page that already links to a private note, written past dummkopf as after a migration. */
+function oldBarrierLink(): Brain {
+  const brain = repo();
+  ingest(brain, [...topic("job", "work"), ...topic("home", "private"), newEntry("topics/home/diary.md"),
+    newEntry("topics/job/page.md")]);
+  brain.write("topics/job/page.md", md({ body: "Intro.\n\n[x](../home/diary.md)" }));
+  brain.commit("migrated");
+  return brain;
+}
+
+test("an edit beside an old barrier link is saved with a warning", () => {
+  const brain = oldBarrierLink();
+  const entry = { path: "topics/job/page.md", expected: rev(brain, "topics/job/page.md"),
+    content: md({ body: "Intro, edited.\n\n[x](../home/diary.md)" }) };
+  const result = ingest(brain, [entry]);
+  assert.equal(result.code, 0, result.err);
+  assert.ok(brain.read("topics/job/page.md").includes("Intro, edited."));
+});
+
+test("a new barrier link next to an old one is still rejected", () => {
+  const brain = oldBarrierLink();
+  ingest(brain, [newEntry("topics/home/other.md")]);
+  const entry = { path: "topics/job/page.md", expected: rev(brain, "topics/job/page.md"),
+    content: md({ body: "Intro.\n\n[x](../home/diary.md)\n\n[y](../home/other.md)" }) };
+  const result = ingest(brain, [entry]);
+  assert.equal(result.code, 2);
+  assert.ok(result.err.includes("link-scope"));
+});
+
+test("check still reports an old barrier link as an error", () => {
+  const result = oldBarrierLink().run(["check"]);
+  assert.equal(result.code, 2);
+  assert.ok(result.out.includes("topics/job/page.md:9: A link crosses a sensitivity or scope boundary. (error)"),
+    result.out);
+});
+
+test("check names the line of every occurrence of a repeated link, sorted", () => {
+  const brain = repo();
+  brain.write("notes/linker.md", fullNote({
+    body: "[[gone-wiki]]\n\n[a](gone.md)\n\n```\n[c](gone.md)\n```\n\nText [b](gone.md)",
+  }));
+  const lines = splitlines(brain.run(["check"]).out).filter((line) => line.startsWith("notes/linker.md"));
+  assert.deepEqual(lines.map((line) => line.split(":").slice(0, 2).join(":")),
+    ["notes/linker.md:13", "notes/linker.md:15", "notes/linker.md:21"]);
+});
+
 test("private note may link to a work note", () => {
   const brain = repo();
   ingest(brain, [...topic("job", "work"), ...topic("home", "private"), newEntry("topics/job/page.md")]);

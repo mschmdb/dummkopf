@@ -5,6 +5,14 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `check` names the real line of every link. Before, each occurrence of a repeated link carried the line of
+  the first one, and code blocks shifted the count. Issues are sorted by path and line.
+- An edit next to a link that already crosses a scope or sensitivity barrier is saved with a warning instead
+  of being rejected. A write that adds such a link is still rejected, and `check` still reports old ones
+  as errors.
+
 ## [0.3.1] - 2026-10-11
 
 ### Added

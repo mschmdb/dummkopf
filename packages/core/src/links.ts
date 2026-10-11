@@ -34,24 +34,36 @@ const WIKI_LINK = /\[\[([^\]\n]{1,500})\]\]/gu;
 const CODE_BLOCK = /(?:^|(?<=\n))```[\s\S]*?(?:^|(?<=\n))```[^\n]*/gu;
 const INLINE_CODE = /`[^`\n]*`/gu;
 
-export function references(text: string): string[] {
-  // Code samples are not links of the note.
-  const cleaned = text.replace(CODE_BLOCK, "");
-  const lines = cleaned.split("\n").filter((line) => len(line) <= MAX_LINK_LINE)
-    .map((line) => line.replace(INLINE_CODE, ""));
-  const markdown = lines.flatMap((line) => [...line.matchAll(MARKDOWN_LINK)].map((match) => match[1]!));
-  const wiki = lines.flatMap((line) => [...line.matchAll(WIKI_LINK)].map((match) => "wiki:" + match[1]!.split("|")[0]!));
-  return [...markdown.map((value) => strip(value, "<>")), ...wiki];
+/** A link target and the 1-based line it stands on. */
+export interface Reference {
+  target: string;
+  line: number;
 }
 
+/** Every link occurrence with its own line; a link used twice appears twice. */
+export function referencesWithLines(text: string): Reference[] {
+  // Code samples are not links of the note. Blank them but keep their newlines, so line numbers stay true.
+  const cleaned = text.replace(CODE_BLOCK, (block) => block.replace(/[^\n]/gu, ""));
+  const found: Reference[] = [];
+  cleaned.split("\n").forEach((raw, index) => {
+    if (len(raw) > MAX_LINK_LINE) return;
+    const line = raw.replace(INLINE_CODE, "");
+    for (const match of line.matchAll(MARKDOWN_LINK)) found.push({ target: strip(match[1]!, "<>"), line: index + 1 });
+    for (const match of line.matchAll(WIKI_LINK)) {
+      found.push({ target: "wiki:" + match[1]!.split("|")[0]!, line: index + 1 });
+    }
+  });
+  // Markdown links first, then wikilinks, as before; each group in reading order.
+  return [...found.filter((item) => !item.target.startsWith("wiki:")), ...found.filter((item) => item.target.startsWith("wiki:"))];
+}
+
+export function references(text: string): string[] {
+  return referencesWithLines(text).map((item) => item.target);
+}
+
+/** The first line that holds `reference`, for callers that only have the target. */
 export function referenceLine(text: string, reference: string): number | null {
-  const needle = reference.startsWith("wiki:") ? "[[" + reference.slice(5) : "](" + reference;
-  const lines = splitlines(text);
-  for (let number = 1; number <= lines.length; number++) {
-    const line = lines[number - 1]!;
-    if (line.includes(needle) || line.includes("(<" + reference + ">")) return number;
-  }
-  return null;
+  return referencesWithLines(text).find((item) => item.target === reference)?.line ?? null;
 }
 
 export const HINTS: Readonly<Record<string, string>> = {
@@ -88,20 +100,25 @@ export function crossesBarrier(barriers: readonly string[], note: Note, source: 
 }
 
 /**
- * Security problems are always errors; other problems only for links new in this write.
+ * Problems are errors for links new in this write and warnings for links that were already there.
+ * Unsafe links (schemes, paths leaving the brain) are always errors. A link across a sensitivity or
+ * scope barrier is an error when the write adds it, and in `check` (keepOldBarriers).
  *
  * A missing target and a hidden target give the same issue, so a link check never reveals
  * that a sensitive or out-of-scope note exists.
  */
 export function linkIssues(access: Access, note: Note, overlay: ReadonlyMap<string, string>,
-                           previous: Note | null = null): Issue[] {
+                           previous: Note | null = null, keepOldBarriers = false): Issue[] {
   const layout = access.config.layout;
   const problems: Issue[] = [];
   const old = new Set(previous ? references(previous.text) : []);
-  for (const reference of references(note.text)) {
+  for (const { target: reference, line } of referencesWithLines(note.text)) {
     const problem = (code: string, key: string, security = false): void => {
-      const severity = security || !old.has(reference) ? "error" : "warning";
-      problems.push(issue(note.path, code, say(key, "plain"), severity, referenceLine(note.text, reference)));
+      // A write must not add a barrier link; one that was already there only warns, so it cannot
+      // block unrelated edits (`check` reports it as an error through keepOldBarriers).
+      const oldBarrier = code === "link-scope" && old.has(reference) && !keepOldBarriers;
+      const severity = (security && !oldBarrier) || !old.has(reference) ? "error" : "warning";
+      problems.push(issue(note.path, code, say(key, "plain"), severity, line));
     };
 
     if (reference.startsWith("#")) continue;
