@@ -9,7 +9,7 @@ import { parseFrontmatter, textOr } from "./frontmatter.ts";
 import { lstrip, splitlines, strip } from "./py.ts";
 import {
   asPosix, exists, isAbsolute, isDir, isFile, isRelativeTo, isSymlink, join, listdir, name, parents, parts,
-  readBytesText, relativeTo, resolve as resolvePath, sha256, stem, suffix,
+  readBytesText, relativeTo, resolve as resolvePath, sha256, stem, stripTrailingSlashes, suffix,
 } from "./pyos.ts";
 import { Sensitivity } from "./sensitive.ts";
 
@@ -91,7 +91,7 @@ export class Access {
     const items = parts(value);
     if (isAbsolute(value) || items.includes("..") || value.includes("\\")) throw denied();
     if (items.length < 2 || !this.config.layout.roots.includes(items[0]!)) throw denied();
-    return asPosix(value).replace(/\/+$/, "");
+    return stripTrailingSlashes(asPosix(value));
   }
 
   private grant(value: string): string {

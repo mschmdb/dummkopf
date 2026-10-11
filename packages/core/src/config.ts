@@ -2,7 +2,8 @@
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
-import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve } from "./pyos.ts";
+import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve,
+  stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
 export const CONFIG_NAME = "dummkopf.toml";
@@ -259,7 +260,7 @@ function coerce(spec: Leaf | Section, raw: unknown, key: string): unknown {
 
 /** Relative, normalized (no `./`, no `//`), inside the brain. Prefix matching relies on the exact form. */
 function relativePath(value: string, key: string, allowDir = false, written = false): void {
-  const plain = allowDir ? value.replace(/\/+$/, "") : value;
+  const plain = allowDir ? stripTrailingSlashes(value) : value;
   const items = parts(plain);
   if (!plain || isAbsolute(plain) || items.includes("..") || value.includes("\\") || items.length === 0
       || value.startsWith("~") || asPosix(plain) !== plain
@@ -366,7 +367,7 @@ function validate(config: Config): void {
   relativePath(config.curator.reportDir, "curator.report_dir", true, true);
   for (const folder of config.links.allowOutside) {
     relativePath(folder, "links.allow_outside", true, true);
-    if ((layout.roots as readonly string[]).includes(parts(folder.replace(/\/+$/, ""))[0]!)) {
+    if ((layout.roots as readonly string[]).includes(parts(stripTrailingSlashes(folder))[0]!)) {
       throw invalid("links.allow_outside", "note folders are always allowed; list only folders outside them");
     }
   }
