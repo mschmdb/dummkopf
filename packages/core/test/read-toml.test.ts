@@ -31,3 +31,25 @@ test("integers beyond 2^53 are rejected instead of rounded", () => {
   assert.equal(parseToml("n = 9007199254740991").n, Number.MAX_SAFE_INTEGER);
   assert.equal(parseToml("n = -9_007_199_254_740_991").n, -Number.MAX_SAFE_INTEGER);
 });
+
+test("TOML 1.1 syntax is rejected: the parser reads strict TOML 1.0", () => {
+  for (const bad of [
+    's = "\\e"', 's = """\\e"""', 's = "\\x41"', 's = "\\x"',
+    "t = 07:32", "d = 1979-05-27T07:32", "d = 1979-05-27 07:32Z", "d = 1979-05-27T07:32-07:00",
+    "t = {\n a = 1 }", "t = { a = 1,\n b = 2 }", "t = { a = 1, }", "t = { # c\n a = 1 }",
+    "é = 1", "kéy = 1",
+  ]) {
+    assert.throws(() => parseToml(bad), TomlError, JSON.stringify(bad));
+  }
+  assert.deepEqual({ ...parseToml('s = "\\u001b\\t"') }, { s: "\x1b\t" });
+  assert.deepEqual({ ...parseToml("t = { a = 1, b = { c = 2 } }").t as object }, { a: 1, b: parseToml("c = 2") });
+});
+
+test("CRLF line endings parse like LF, a bare CR is rejected", () => {
+  const text = '# c\na = "x" # c\nm = """\nl1\nl2 \\\n  l3"""\nl = \'\'\'\nr1\nr2\'\'\'\nar = [\n  1, # c\n  2,\n]\n[t]\nb = 1\n';
+  assert.deepEqual(parseToml(text.replace(/\n/g, "\r\n")), parseToml(text));
+  assert.equal(parseToml(text).m, "l1\nl2 l3");
+  for (const bad of ["a = 1\rb = 2", "# c\r\na = 1\r", 'm = """\rx"""', "l = '''x\ry'''", "# c\rx\n", "ar = [1,\r2]"]) {
+    assert.throws(() => parseToml(bad), TomlError, JSON.stringify(bad));
+  }
+});

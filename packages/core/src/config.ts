@@ -2,7 +2,7 @@
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
-import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve,
+import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytesText, resolve,
   stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
@@ -11,6 +11,7 @@ export const SCHEMA_VERSION = 1;
 export const ROOT_ENV = "DUMMKOPF_ROOT";
 export const LOCALES = ["en", "de"] as const;
 export const TONES = ["cheeky", "plain"] as const;
+export const REPORT_MODES = ["changes", "always", "never"] as const;
 
 const NAME_RE = /^[\p{L}\p{N}_.][\p{L}\p{N}_.-]*$/u;
 const SCOPE_RE = /^[\p{L}\p{N}_-]+$/u;
@@ -85,6 +86,11 @@ export interface UiConfig {
   readonly tone: string;
 }
 
+export interface HooksConfig {
+  /** When the pre-commit hook prints its report line: "changes", "always" or "never". */
+  readonly report: string;
+}
+
 export interface LimitsConfig {
   readonly maxChars: number;
   readonly findLimit: number;
@@ -146,6 +152,7 @@ export interface Config {
   readonly sensitive: SensitiveConfig;
   readonly frontmatter: FrontmatterConfig;
   readonly ui: UiConfig;
+  readonly hooks: HooksConfig;
   readonly limits: LimitsConfig;
   readonly search: SearchConfig;
   readonly context: ContextConfig;
@@ -183,6 +190,7 @@ const SCHEMA: Section = {
     summary_max: ["int", 160],
   },
   ui: { locale: ["str", "en"], tone: ["str", "cheeky"] },
+  hooks: { report: ["str", "changes"] },
   limits: {
     max_chars: ["int", 6000], find_limit: ["int", 3], max_input_chars: ["int", 2_000_000],
     max_changes: ["int", 50], lock_timeout_s: ["int", 10], git_timeout_s: ["int", 60],
@@ -340,6 +348,9 @@ function validate(config: Config): void {
     throw invalid("ui.locale", "must be one of " + LOCALES.join(", "));
   }
   if (!(TONES as readonly string[]).includes(config.ui.tone)) throw invalid("ui.tone", "must be one of " + TONES.join(", "));
+  if (!(REPORT_MODES as readonly string[]).includes(config.hooks.report)) {
+    throw invalid("hooks.report", "must be one of " + REPORT_MODES.join(", "));
+  }
 
   const limits = config.limits;
   const lows: [string, number, number][] = [
@@ -414,7 +425,8 @@ export function loadConfig(rootPath: string): Config {
   if (!isFile(file)) throw new ConfigMissing("config_missing", { start: root });
   let data: Record<string, unknown>;
   try {
-    data = { ...parseToml(readText(file)) };
+    // Raw text: TOML defines its own newlines (LF or CRLF) and forbids a bare CR, so no normalising here.
+    data = { ...parseToml(readBytesText(file)) };
   } catch (error) {
     if (error instanceof TomlError) throw new ConfigError("config_unreadable", { detail: error.message });
     const detail = error instanceof Error ? error.message : String(error);

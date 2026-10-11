@@ -5,6 +5,45 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `pnpm bench` times `context`, `find` and `read` on generated brains of 200 and 2000 notes.
+- A wikilink that matches several readable notes reports `link-ambiguous` and names up to three of them
+  (`candidates` in `--json`). Before, it said "missing or not released". Hidden notes are never named or
+  counted.
+- `write` and `ingest` take `--message TEXT`, a one-line commit subject of at most 200 characters, in place of
+  `repo.commit_message`. An empty or multi-line message is rejected with exit code 2 before anything is saved.
+- `[hooks] report` sets when the pre-commit hook prints its report line: `changes` (default), `always` or
+  `never`.
+
+### Changed
+
+- `pnpm pack:check` also lints both tarballs with publint and checks the types of `@dummkopf/core` with
+  arethetypeswrong.
+- `write`, `ingest`, `sync` and the agent hooks commit only the note folders (`topics/`, `notes/`,
+  `bookmarks/`, `sources/`, `archive/`) and the generated files (`INDEX.md`, `.sensitive-paths`,
+  `links.output`, `curator.report_dir`), plus the routes and entities files named in `dummkopf.toml`.
+  Changes to `dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` and other files stay
+  uncommitted for a human commit, and no longer block a write.
+  `repo.sync_exclude` still keeps paths inside those folders out.
+- The pre-commit hook prints its `Report: ...` line only when the counts changed since the last time it
+  printed them. It keeps them in `.git/dummkopf-report`, outside the working tree. `dummkopf meta report`
+  is unchanged.
+
+### Fixed
+
+- `check` names the real line of every link. Before, each occurrence of a repeated link carried the line of
+  the first one, and code blocks shifted the count. Issues are sorted by path and line.
+- An edit next to a link that already crosses a scope or sensitivity barrier is saved with a warning instead
+  of being rejected. A write that adds such a link is still rejected, and `check` still reports old ones
+  as errors.
+- The published `@dummkopf/core` manifest no longer has a `source` export condition that pointed at `src/`,
+  which is not in the tarball.
+- `dummkopf.toml` reaches the TOML parser as read, without newline normalisation. CRLF files load as before;
+  a bare carriage return, which TOML 1.0 forbids, now fails with `config_unreadable`.
+- The TOML parser no longer accepts the `\e` escape, which only TOML 1.1 has. dummkopf reads strict
+  TOML 1.0; write `\u001B` instead.
+
 ## [0.3.1] - 2026-10-11
 
 ### Added

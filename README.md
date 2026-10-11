@@ -166,8 +166,8 @@ Write rules ˈdʊmkɔpf enforces:
 | `context "<question>"` | Best entry point for a user question. Drops filler words and follows routes. |
 | `find "<keywords>"` | Keyword search over title, aliases, key fact, path and text. |
 | `read <path>` | Read a note, a line range (`--start`, `--end`) or a section (`--section`). |
-| `write <path> --expected new\|<rev>` | Write one file from Markdown on stdin. `--append` appends. |
-| `ingest --input -` | Write a JSON package of several files atomically. |
+| `write <path> --expected new\|<rev>` | Write one file from Markdown on stdin. `--append` appends. `--message TEXT` sets the commit subject. |
+| `ingest --input -` | Write a JSON package of several files atomically. `--message TEXT` sets the commit subject. |
 | `check [paths]` | Validate frontmatter and links. |
 | `sync` | Commit note changes; in a synced brain also rebase onto the remote and push. |
 | `init [path]` | Create a new brain; `--remote URL` makes it synced. |
@@ -175,6 +175,15 @@ Write rules ˈdʊmkɔpf enforces:
 | `meta migrate\|generate\|report\|index\|agents` | Maintain frontmatter and indexes; print rendered `AGENTS.md`. |
 | `links` | Build the links map (extra). |
 | `curator` | Run the curation scan or print its weekly LLM prompt (extra). |
+
+**What gets committed.** `write`, `ingest`, `sync` and the agent hooks commit only what dummkopf manages: the
+note folders (`topics/`, `notes/`, `bookmarks/`), `sources/`, `archive/`, `INDEX.md`, `.sensitive-paths`, the
+links map (`links.output`), the curator reports (`curator.report_dir`) and the routes and entities files
+(`context.routes_file`, `links.entities_file`). Everything else, such as
+`dummkopf.toml`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.codex/` or your scripts, stays uncommitted for you to
+commit by hand, and an uncommitted change there never blocks a write. `repo.sync_exclude` keeps further paths
+inside those folders out. The commit subject is `repo.commit_message`; `write` and `ingest` take
+`--message "Add pnpm build fix"` (one line, at most 200 characters) for a subject of their own.
 
 Read commands share `--scope`, `--topic`, `--allow-sensitive`, `--json` and `--max-chars`. Every command
 accepts `--root PATH` and `--serious`. `dummkopf <command> --help` shows the purpose and examples first, then
@@ -192,8 +201,9 @@ as `--expected` when you change the file.
 Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 
 - `.git/hooks/pre-commit`: regenerates `.sensitive-paths`, completes frontmatter of staged notes,
-  rebuilds `INDEX.md` and the README tables. With stale or incomplete notes it prints one summary line;
-  `dummkopf meta report` lists them. It never blocks a commit.
+  rebuilds `INDEX.md` and the README tables. With stale or incomplete notes it prints one summary line,
+  but only when the counts changed since the last commit (`[hooks] report`); `dummkopf meta report` lists
+  them. It keeps the last counts in `.git/dummkopf-report`, never in the working tree, and never blocks a commit.
 - `.claude/settings.json`: a `PostToolUse` hook on `Write|Edit|MultiEdit|Bash` and a `SessionEnd` hook.
   Both run `dummkopf hook agent`, which commits note changes and, in a synced brain, pushes them.
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex
@@ -222,13 +232,14 @@ typo never switches a rule off silently. The full file with every default is in
 
 | Section | Keys | Purpose |
 |---|---|---|
-| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. `sync_exclude` lists paths humans commit themselves. |
+| `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. dummkopf commits only note folders and generated files (see [Commands](#commands)); `sync_exclude` lists further paths inside them that humans commit themselves. |
 | `[layout]` | `topics`, `topic_readme`, `notes`, `bookmarks`, `archive`, `sources`, `index` | Folder and file names. |
 | `[scopes]` | `values`, `all`, `query_default`, `mixed_label`, `require_on_new_topic`, `link_barriers` | Your scopes, the keyword for "all scopes", the default for `--scope`, the label for unscoped notes, and forbidden link directions such as `work>private`. |
 | `[status]` | `active`, `archived` | Status values; stale checks look at `active` notes. |
 | `[sensitive]` | `marker`, `paths_file`, `always` | Marker line, generated list, and path prefixes that are always sensitive. |
 | `[frontmatter]` | `key_fact`, `summary`, `aliases`, `updated`, `status`, `period`, `entities`, `scope`, `todo_placeholder`, `summary_max` | Maps each field to the key used in your files. |
 | `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `cheeky` or `plain`. |
+| `[hooks]` | `report` | When the pre-commit hook prints its report line: `changes` (default, only when the counts changed), `always` or `never`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
 | `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Packs both packages like `pnpm publish` would, installs the tarballs into a temporary folder with npm
 # and runs the installed CLI. Catches missing dist/ or template files and unresolved workspace: ranges.
+# Then lints the tarballs with publint and checks the types of @dummkopf/core with arethetypeswrong.
 set -eu
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -18,7 +19,19 @@ for tarball in "$TMP"/*.tgz; do
     echo "$(basename "$tarball") still has a workspace: range" >&2
     exit 1
   fi
+  if tar -xOzf "$tarball" package/package.json | grep -q '"\./src/'; then
+    echo "$(basename "$tarball") points into src/, which is not published" >&2
+    exit 1
+  fi
 done
+
+# Lint the tarballs pnpm packed, not the folders: only the tarballs carry publishConfig.exports.
+for tarball in "$TMP"/*.tgz; do
+  pnpm exec publint run --strict "$tarball"
+done
+# The packages are ESM-only, so the CommonJS resolutions are out of scope. The CLI ships only bins and has
+# no import entry point for attw to check.
+pnpm exec attw "$TMP"/dummkopf-core-*.tgz --profile esm-only --no-color
 
 mkdir "$TMP/install"
 npm install --prefix "$TMP/install" --no-audit --no-fund --silent "$TMP"/*.tgz

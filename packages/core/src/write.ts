@@ -9,8 +9,9 @@ import { AccessDenied, Rejected, SyncError } from "./errors.ts";
 import { type Issue, issue, linkIssues } from "./links.ts";
 import { withRepositoryLock } from "./lock.ts";
 import { text as say } from "./messages.ts";
+import { compare } from "./py.ts";
 import { exists, join, parent, sha256 } from "./pyos.ts";
-import { prepareRepository, syncLocked } from "./sync.ts";
+import { checkCommitMessage, prepareRepository, syncLocked } from "./sync.ts";
 import { type Change, metadataIssues, type Plan, validatePacket } from "./validate.ts";
 
 export const NEW_FILE_MODE = 0o600;
@@ -22,7 +23,7 @@ export const NEW_FILE_MODE = 0o600;
 export const seams = {
   atomicWrite: (path: string, data: Uint8Array): void => atomicWrite(path, data),
   prepareRepository: (config: Config): void => prepareRepository(config),
-  syncLocked: (config: Config): void => syncLocked(config),
+  syncLocked: (config: Config, message: string | null = null): void => syncLocked(config, false, message),
 };
 
 export interface WriteResult {
@@ -154,7 +155,10 @@ export function applyPlan(access: Access, plan: Plan): void {
   }
 }
 
-export function ingest(access: Access, packet: unknown, dryRun = false, sync = true): WriteResult {
+/** `message` replaces repo.commit_message for this save's commit. */
+export function ingest(access: Access, packet: unknown, dryRun = false, sync = true,
+                       message: string | null = null): WriteResult {
+  checkCommitMessage(message);
   const config = access.config;
   return withRepositoryLock(config.root, () => {
     let current = access;
@@ -171,7 +175,7 @@ export function ingest(access: Access, packet: unknown, dryRun = false, sync = t
     result.sync = "pending";
     if (sync) {
       try {
-        seams.syncLocked(config);
+        seams.syncLocked(config, message);
         result.sync = "ok";
       } catch (error) {
         if (!(error instanceof SyncError)) throw error;
@@ -224,7 +228,9 @@ export function check(access: Access, paths: readonly string[] | null = null): C
     checked += 1;
     problems.push(...metadataIssues(note, access.config));
     // Report existing dead links; this is not a write request.
-    problems.push(...linkIssues(access, note, new Map(), note));
+    problems.push(...linkIssues(access, note, new Map(), note, true));
   }
+  // By path, then line; issues without a line (frontmatter) come first. The sort is stable.
+  problems.sort((a, b) => compare(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0));
   return { checked, issues: problems, ok: !problems.some((problem) => problem.severity === "error") };
 }

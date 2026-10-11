@@ -11,7 +11,7 @@ remote_name = "origin"
 branch = "main"
 auto_push = true                       # false: commit locally, never push
 commit_message = "Update notes"
-sync_exclude = []                      # paths auto-sync never stages (e.g. tooling dirs)
+sync_exclude = []                      # paths inside the committed folders that sync never stages
 
 [layout]
 topics = "topics"                      # topics/<topic>/README.md carries the topic scope
@@ -54,6 +54,9 @@ summary_max = 160
 [ui]
 locale = "en"                          # "en" | "de": generated headings + language heuristics
 tone = "cheeky"                        # "cheeky" | "plain"; --serious forces plain
+
+[hooks]
+report = "changes"                     # pre-commit report line: "changes" | "always" | "never"
 
 [limits]
 max_chars = 6000                       # output budget, CLI range 500..20000

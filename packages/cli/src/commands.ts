@@ -1,7 +1,7 @@
 /** Write and maintenance commands: write, ingest, check, sync. Port of commands.py. */
 
 import {
-  Access, check, type Config, HELP, ingest, JsonDecodeError, loadsJson, message as say, Rejected, report,
+  Access, check, checkCommitMessage, type Config, HELP, ingest, JsonDecodeError, loadsJson, message as say, Rejected, report,
   syncRepository, validatePacket, withRepositoryLock,
 } from "@dummkopf/core";
 
@@ -25,8 +25,10 @@ export function register(add: (name: string) => Parser): void {
     if (name === "sync") continue;
     action.option("--input", { metavar: "PATH", help: name === "write" ? HELP.input_md! : HELP.input_json! });
     accessOptions(action);
-    if (name === "ingest" || name === "write") action.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
-    else action.positional("paths", HELP.check_paths!, { nargs: "*" });
+    if (name === "ingest" || name === "write") {
+      action.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
+      action.option("--message", { metavar: "TEXT", help: HELP.commit_message! });
+    } else action.positional("paths", HELP.check_paths!, { nargs: "*" });
   }
 }
 
@@ -111,8 +113,10 @@ export function run(args: Namespace, config: Config, tone: string): number {
     const access = new Access(config, args.scope as string | null, args.topic as string | null,
       args.allowSensitive as string[]);
     if (args.command === "ingest" || args.command === "write") {
+      const message = (args.message as string | null) ?? null;
+      checkCommitMessage(message);
       const packet = args.command === "ingest" ? loadPacket(args.input as string | null, limit) : writePacket(args, limit);
-      result = { ...ingest(access, packet, Boolean(args.dryRun)) };
+      result = { ...ingest(access, packet, Boolean(args.dryRun), true, message) };
       code = result.sync === "failed" ? EXIT_SYNC_FAILED : 0;
     } else {
       const paths = args.paths as string[];

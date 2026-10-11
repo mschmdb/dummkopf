@@ -6,5 +6,5 @@
     "declaration": false,
     "customConditions": ["source"]
   },
-  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "packages/cli/dev/*.ts"]
+  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "packages/cli/dev/*.ts", "scripts/*.ts"]
 }

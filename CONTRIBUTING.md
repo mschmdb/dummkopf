@@ -29,6 +29,14 @@ runs the parser against its TOML 1.0 cases. Cases dummkopf leaves out on purpose
 `packages/core/test/toml-test-skip.txt`; a listed case that starts to pass fails the run. `pnpm test` skips
 the suite unless `TOML_TEST_DIR` points at a toml-test checkout.
 
+## Benchmark
+
+`pnpm bench` builds the CLI, generates two synthetic local brains (200 and 2000 notes, fixed seed) in a
+temporary folder and runs `context`, `find` and `read` ten times each. It prints the median and the min–max
+in milliseconds next to a bare `node -e ""` start, plus the Node version, OS and CPU. `--no-build` reuses the
+existing `dist/`, `--runs N` changes the number of runs: `pnpm bench --no-build --runs 20`. Compare numbers
+only from the same machine.
+
 ## Layout
 
 - `packages/core` is the library `@dummkopf/core`: config, frontmatter, the read gate `Access`, search, writes,
@@ -58,7 +66,10 @@ network or your home folder.
 ## Releases
 
 `pnpm pack:check` packs both packages like `pnpm publish`, installs the tarballs with npm into a temporary
-folder and runs the installed CLI. CI runs it on every push.
+folder and runs the installed CLI. It also lints both tarballs with [publint](https://publint.dev) and checks
+the types of `@dummkopf/core` with [arethetypeswrong](https://arethetypeswrong.github.io) (`--profile esm-only`,
+since both packages are ESM-only). CI runs it on every push. The `source` condition in `@dummkopf/core`'s
+`exports` points into `src/` for the dev binary; `publishConfig.exports` drops it from the published manifest.
 
 A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop. It uses npm
 Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm token exists. On npmjs.com, both
