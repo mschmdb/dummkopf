@@ -5,6 +5,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `pnpm bench` times `context`, `find` and `read` on generated brains of 200 and 2000 notes.
+
 ### Changed
 
 - `pnpm pack:check` also lints both tarballs with publint and checks the types of `@dummkopf/core` with
