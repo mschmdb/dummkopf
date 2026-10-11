@@ -58,15 +58,27 @@ function remoteRef(config: Config): string {
   return "refs/remotes/" + config.repo.remoteName + "/" + config.repo.branch;
 }
 
+/**
+ * Remote and branch for a Git command line. loadConfig already rejects names that start with "-"; this check
+ * covers a Config a library caller built by hand, so a value can never act as a Git option (--upload-pack).
+ */
+function remoteAndBranch(config: Config): [string, string] {
+  const remote = config.repo.remoteName;
+  const branch = config.repo.branch;
+  if (remote.startsWith("-") || branch.startsWith("-")) throw new SyncError("git_branch", { branch });
+  return [remote, branch];
+}
+
 function verify(config: Config): void {
   const repo = config.repo;
+  const [remote] = remoteAndBranch(config);
   if (resolve(git(config, ["rev-parse", "--show-toplevel"]).stdout.trim()) !== config.root) {
     throw new SyncError("git_root");
   }
   if (git(config, ["symbolic-ref", "--short", "HEAD"]).stdout.trim() !== repo.branch) {
     throw new SyncError("git_branch", { branch: repo.branch });
   }
-  if (!repo.local && git(config, ["remote", "get-url", "--end-of-options", repo.remoteName]).stdout.trim() !== repo.remote) {
+  if (!repo.local && git(config, ["remote", "get-url", "--end-of-options", remote]).stdout.trim() !== repo.remote) {
     throw new SyncError("git_remote", { name: repo.remoteName });
   }
   for (const state of OPEN_OPERATIONS) {
@@ -81,10 +93,13 @@ function count(config: Config, range: string): number {
 }
 
 function refresh(config: Config): void {
-  const repo = config.repo;
-  // --no-write-fetch-head: parallel fetches would otherwise race on FETCH_HEAD. --end-of-options here and in
-  // the other calls: config values never act as Git options, even from a Config built without loadConfig.
-  git(config, ["fetch", "--no-write-fetch-head", "--end-of-options", repo.remoteName, "refs/heads/" + repo.branch + ":" + remoteRef(config)]);
+  const [remote, branch] = remoteAndBranch(config);
+  // --no-write-fetch-head: parallel fetches would otherwise race on FETCH_HEAD. --end-of-options in this and
+  // the other calls is a second guard: nothing after it is read as an option. The repeated check below is
+  // unreachable; it keeps the guard next to the call, where CodeQL looks for it.
+  if (remote.startsWith("-") || branch.startsWith("-")) return;
+  git(config, ["fetch", "--no-write-fetch-head", "--end-of-options", remote,
+    "refs/heads/" + branch + ":" + remoteRef(config)]);
   if (count(config, "HEAD.." + remoteRef(config))) {
     try {
       git(config, ["rebase", "--autostash", "--end-of-options", remoteRef(config)]);
@@ -158,7 +173,9 @@ export function syncLocked(config: Config, refreshRemote = false, message: strin
   if (!pushes(config)) return;
   if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) {
     refresh(config);
-    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--end-of-options", config.repo.remoteName, config.repo.branch]);
+    const [remote, branch] = remoteAndBranch(config);
+    if (remote.startsWith("-") || branch.startsWith("-")) return; // Unreachable; see refresh().
+    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--end-of-options", remote, branch]);
   }
 }
 

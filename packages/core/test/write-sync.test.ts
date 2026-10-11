@@ -66,6 +66,15 @@ describe("sync", () => {
     assert.equal(s.git(["log", "-1", "--format=%s"]), "Update notes");
   });
 
+  test("a hand-built config with an option-like remote never reaches git", () => {
+    const s = synced();
+    s.brain.write("notes/first.md", "updated\n");
+    const base = s.brain.config;
+    const config = { ...base, repo: { ...base.repo, remoteName: "--upload-pack=touch pwned" } };
+    assert.equal(caught(() => syncRepository(config)).key, "git_branch");
+    assert.ok(!fs.existsSync(path.join(s.brain.root, "pwned")));
+  });
+
   test("commit message comes from config", () => {
     const s = synced();
     repoOption(s, "commit_message = 'Brain dump'");
