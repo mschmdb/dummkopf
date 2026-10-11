@@ -105,7 +105,9 @@ export class Parser {
 
   parse(argv: readonly string[]): Namespace {
     const namespace: Namespace = {};
-    this.parseInto(argv, namespace);
+    const extras = this.parseInto(argv, namespace);
+    // Like parse_args: the top-level parser reports leftovers, also those after a subcommand.
+    if (extras.length > 0) throw new UsageError(this, "unrecognized arguments: " + extras.join(" "));
     return namespace;
   }
 
@@ -148,7 +150,8 @@ export class Parser {
     return value;
   }
 
-  private parseInto(argv: readonly string[], namespace: Namespace): void {
+  /** Parse into `namespace`; return the arguments nobody recognized, in their order. */
+  private parseInto(argv: readonly string[], namespace: Namespace): string[] {
     const loose: string[] = [];
     const seen = new Set<string>();
     let i = 0;
@@ -200,9 +203,7 @@ export class Parser {
         }
         this.defaults(namespace);
         namespace[this.commandDest] = arg;
-        sub.parseInto(argv.slice(i), namespace);
-        if (loose.length > 0) throw new UsageError(this, "unrecognized arguments: " + loose.join(" "));
-        return;
+        return [...loose, ...sub.parseInto(argv.slice(i), namespace)];
       }
       loose.push(arg);
     }
@@ -210,16 +211,18 @@ export class Parser {
       throw new UsageError(this, "the following arguments are required: " + this.commandDest);
     }
     this.defaults(namespace);
-    this.assignPositionals(loose, namespace);
+    const extras = this.assignPositionals(loose, namespace);
     const missing = this.options.filter((option) => option.required && !seen.has(option.dest));
     if (missing.length > 0) {
       throw new UsageError(this, "the following arguments are required: " + missing.map((option) => option.flags.join("/")).join(", "));
     }
+    return extras;
   }
 
-  private assignPositionals(values: string[], namespace: Namespace): void {
-    const flags = values.filter((value) => value.startsWith("-") && value !== "-" && !isNegativeNumber(value));
-    const rest = values.filter((value) => !flags.includes(value));
+  /** Fill the positionals; return what is left over, in order. */
+  private assignPositionals(values: string[], namespace: Namespace): string[] {
+    const isFlag = (value: string): boolean => value.startsWith("-") && value !== "-" && !isNegativeNumber(value);
+    const rest = values.filter((value) => !isFlag(value));
     const missing: string[] = [];
     for (const positional of this.positionals) {
       if (positional.nargs === "*") {
@@ -238,43 +241,93 @@ export class Parser {
       }
     }
     if (missing.length > 0) throw new UsageError(this, "the following arguments are required: " + missing.join(", "));
-    const extra = [...flags, ...rest];
-    if (extra.length > 0) throw new UsageError(this, "unrecognized arguments: " + extra.join(" "));
+    const left = [...rest];
+    return values.filter((value) => {
+      if (isFlag(value)) return true;
+      const index = left.indexOf(value);
+      if (index === -1) return false;
+      left.splice(index, 1);
+      return true;
+    });
   }
 
+  /** The usage line, wrapped like Python's HelpFormatter: options first, positionals on their own lines. */
   usage(): string {
-    const parts = ["usage: " + this.prog, "[-h]"];
+    const optionals = ["[-h]"];
     for (const option of this.options) {
       const flag = option.flags[0]!;
       const shown = option.kind === "flag" ? flag : flag + " " + metavarOf(option);
-      parts.push(option.required ? shown : "[" + shown + "]");
+      optionals.push(option.required ? shown : "[" + shown + "]");
     }
+    const positionals: string[] = [];
     for (const positional of this.positionals) {
       const shown = positional.choices ? "{" + positional.choices.join(",") + "}" : positional.dest;
-      parts.push(positional.nargs === "?" ? "[" + shown + "]" : positional.nargs === "*" ? "[" + shown + " ...]" : shown);
+      positionals.push(positional.nargs === "?" ? "[" + shown + "]" : positional.nargs === "*" ? "[" + shown + " ...]" : shown);
     }
-    if (this.commands.size > 0) parts.push("{" + [...this.commands.keys()].join(",") + "} ...");
-    return parts.join(" ");
+    if (this.commands.size > 0) positionals.push("{" + [...this.commands.keys()].join(",") + "} ...");
+    const prefix = "usage: ";
+    const width = textWidth();
+    const single = prefix + [this.prog, ...optionals, ...positionals].join(" ");
+    if (single.length <= width) return single;
+    const indent = " ".repeat(prefix.length + this.prog.length + 1);
+    const lines = (parts: string[], first: boolean): string[] => {
+      const out: string[] = [];
+      let line: string[] = [];
+      let lineLength = first ? prefix.length - 1 : indent.length - 1;
+      for (const part of parts) {
+        if (lineLength + 1 + part.length > width && line.length > 0) {
+          out.push(indent + line.join(" "));
+          line = [];
+          lineLength = indent.length - 1;
+        }
+        line.push(part);
+        lineLength += part.length + 1;
+      }
+      if (line.length > 0) out.push(indent + line.join(" "));
+      if (first) out[0] = out[0]!.slice(indent.length);
+      return out;
+    };
+    let wrapped: string[];
+    if (prefix.length + this.prog.length <= 0.75 * width) {
+      wrapped = [...lines([this.prog, ...optionals], true), ...(positionals.length > 0 ? lines(positionals, false) : [])];
+    } else {
+      wrapped = [this.prog, ...lines([...optionals, ...positionals], false)];
+    }
+    return prefix + wrapped.join("\n");
   }
 
+  /** Help text laid out like Python's HelpFormatter; subcommand epilogs stay raw (RawDescriptionHelpFormatter). */
   help(): string {
-    const lines = [this.usage(), ""];
-    if (this.description) lines.push(this.description, "");
-    if (this.commands.size > 0) {
-      lines.push("positional arguments:", "  {" + [...this.commands.keys()].join(",") + "}", "");
-    } else if (this.positionals.length > 0) {
-      lines.push("positional arguments:");
-      for (const positional of this.positionals) lines.push(row(positional.dest, positional.help));
-      lines.push("");
-    }
-    lines.push("options:", row("-h, --help", "show this help message and exit"));
+    const width = textWidth();
+    const rows: [string, string][] = [];
+    const positionalRows: [string, string][] = this.commands.size > 0
+      ? [["{" + [...this.commands.keys()].join(",") + "}", ""]]
+      : this.positionals.map((positional) => [positional.choices ? "{" + positional.choices.join(",") + "}" : positional.dest, positional.help]);
+    rows.push(["-h, --help", "show this help message and exit"]);
     for (const option of this.options) {
       const metavar = option.kind === "flag" ? "" : " " + metavarOf(option);
-      lines.push(row(option.flags.map((flag) => flag + metavar).join(", "), option.help));
+      rows.push([option.flags.map((flag) => flag + metavar).join(", "), option.help]);
     }
-    if (this.epilog) lines.push("", this.epilog);
+    const longest = Math.max(...[...positionalRows, ...rows].map(([name]) => name.length + 2));
+    const helpPosition = Math.min(longest + 2, Math.min(24, Math.max(width - 20, 4)));
+    const format = ([name, help]: [string, string]): string[] => {
+      const actionWidth = helpPosition - 4;
+      const helpLines = help ? fill(help, Math.max(width - helpPosition, 11)) : [];
+      const pad = " ".repeat(helpPosition);
+      if (!help) return ["  " + name];
+      if (name.length <= actionWidth) {
+        return ["  " + name.padEnd(actionWidth) + "  " + helpLines[0], ...helpLines.slice(1).map((line) => pad + line)];
+      }
+      return ["  " + name, ...helpLines.map((line) => pad + line)];
+    };
+    const lines = [this.usage(), ""];
+    if (this.description) lines.push(...fill(this.description, width), "");
+    if (positionalRows.length > 0) lines.push("positional arguments:", ...positionalRows.flatMap(format), "");
+    lines.push("options:", ...rows.flatMap(format));
+    if (this.epilog) lines.push("", ...(this.prog.includes(" ") ? [this.epilog] : fill(this.epilog, width)));
     return lines.join("\n") + "\n";
   }
+
 }
 
 /** argparse's default metavar: `{a,b}` for choices, else the dest in upper case. */
@@ -284,7 +337,30 @@ function metavarOf(option: Option): string {
   return option.dest.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase();
 }
 
-function row(name: string, help: string): string {
-  const left = "  " + name;
-  return left.length >= 24 ? left + "\n" + " ".repeat(24) + help : left.padEnd(24) + help;
+/** Python's argparse width: the terminal columns ($COLUMNS first, 80 without a terminal) minus 2. */
+function textWidth(): number {
+  const fromEnv = Number.parseInt(process.env.COLUMNS ?? "", 10);
+  const columns = Number.isInteger(fromEnv) && fromEnv > 0 ? fromEnv : process.stdout.columns || 80;
+  return Math.max(columns - 2, 11);
+}
+
+/** textwrap.fill after collapsing whitespace: greedy lines, breaks at spaces and after hyphens in words. */
+function fill(text: string, width: number): string[] {
+  const chunks: { text: string; space: boolean }[] = [];
+  for (const word of text.trim().split(/\s+/)) {
+    word.split(/(?<=[A-Za-z]{2}-)(?=[A-Za-z])/).forEach((piece, index) => chunks.push({ text: piece, space: index === 0 }));
+  }
+  const lines: string[] = [];
+  let line = "";
+  for (const chunk of chunks) {
+    const joined = line === "" ? chunk.text : line + (chunk.space ? " " : "") + chunk.text;
+    if (joined.length > width && line !== "") {
+      lines.push(line);
+      line = chunk.text;
+    } else {
+      line = joined;
+    }
+  }
+  if (line !== "") lines.push(line);
+  return lines;
 }
