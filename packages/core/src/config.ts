@@ -109,11 +109,15 @@ export interface SearchConfig {
 
 export interface ContextConfig {
   readonly routesFile: string;
+  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  readonly routesFileSet: boolean;
 }
 
 export interface LinksOptions {
   readonly output: string;
   readonly entitiesFile: string;
+  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  readonly entitiesFileSet: boolean;
   readonly minTopics: number;
   readonly allowOutside: readonly string[];
 }
@@ -365,8 +369,9 @@ function validate(config: Config): void {
 }
 
 /** Add the derived properties to the plain values from TOML and defaults. */
-function assemble(root: string, values: Record<string, unknown>): Config {
+function assemble(root: string, values: Record<string, unknown>, data: Record<string, unknown> = {}): Config {
   const raw = values as unknown as Omit<Config, "root">;
+  const set = (table: string, key: string): boolean => isTable(data[table]) && data[table][key] !== undefined;
   const repo = raw.repo as Omit<RepoConfig, "local">;
   const layout = raw.layout as Omit<LayoutConfig, "roots" | "flatRoots">;
   const scopes = raw.scopes as Omit<ScopesConfig, "choices">;
@@ -377,6 +382,8 @@ function assemble(root: string, values: Record<string, unknown>): Config {
     repo: { ...repo, local: !strip(repo.remote) },
     layout: { ...layout, roots: [layout.topics, layout.notes, layout.bookmarks], flatRoots: [layout.notes, layout.bookmarks] },
     scopes: { ...scopes, choices: [scopes.all, ...scopes.values] },
+    context: { ...raw.context, routesFileSet: set("context", "routes_file") },
+    links: { ...raw.links, entitiesFileSet: set("links", "entities_file") },
     frontmatter: {
       ...fm,
       mappedKeys: [fm.keyFact, fm.summary, fm.aliases, fm.updated, fm.status, fm.period, fm.entities, fm.scope],
@@ -388,7 +395,8 @@ function assemble(root: string, values: Record<string, unknown>): Config {
 
 /** A config with every default, for tests and tools that have no dummkopf.toml. */
 export function defaultConfig(root: string, overrides: Record<string, unknown> = {}): Config {
-  const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""));
+  const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""),
+                          overrides);
   validate(config);
   return config;
 }
@@ -412,7 +420,7 @@ export function loadConfig(rootPath: string): Config {
   // Python compares with ==, so 1.0 and true pass as version 1.
   const number = version instanceof TomlFloat ? version.value : typeof version === "boolean" ? Number(version) : version;
   if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this dummkopf reads version 1");
-  const config = assemble(root, build(SCHEMA, data, ""));
+  const config = assemble(root, build(SCHEMA, data, ""), data);
   validate(config);
   return config;
 }

@@ -19,6 +19,8 @@ All notable changes to this project are listed here. The format follows
   the line, and the JSON `match` value stays the same.
 - `check` prints issues as `path:line: message (severity)` when it knows the line, so editors can jump there.
   It still never names a link target.
+- `check` warns when `context.routes_file` or `links.entities_file` is set in `dummkopf.toml` but missing.
+  The default names stay silent, and `context` never warns.
 - The pre-commit hook prints one summary line instead of the full `meta report`, and nothing without findings.
 
 ### Removed

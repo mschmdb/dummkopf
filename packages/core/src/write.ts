@@ -4,10 +4,11 @@ import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 
 import { Access } from "./access.ts";
-import type { Config } from "./config.ts";
+import { CONFIG_NAME, type Config } from "./config.ts";
 import { AccessDenied, Rejected, SyncError } from "./errors.ts";
-import { type Issue, linkIssues } from "./links.ts";
+import { type Issue, issue, linkIssues } from "./links.ts";
 import { withRepositoryLock } from "./lock.ts";
+import { text as say } from "./messages.ts";
 import { exists, join, parent, sha256 } from "./pyos.ts";
 import { prepareRepository, syncLocked } from "./sync.ts";
 import { type Change, metadataIssues, type Plan, validatePacket } from "./validate.ts";
@@ -199,8 +200,18 @@ export function ingest(access: Access, packet: unknown, dryRun = false, sync = t
   }, config.limits.lockTimeoutS);
 }
 
+/** Files named explicitly in dummkopf.toml that are missing. A default name may be absent without notice. */
+function configIssues(config: Config): Issue[] {
+  const files: [boolean, string, string, string][] = [
+    [config.context.routesFileSet, config.context.routesFile, "routes-file-missing", "routes_file_missing"],
+    [config.links.entitiesFileSet, config.links.entitiesFile, "entities-file-missing", "entities_file_missing"],
+  ];
+  return files.filter(([set, file]) => set && !exists(join(config.root, file)))
+    .map(([, file, code, key]) => issue(CONFIG_NAME, code, say(key, "plain", { file }), "warning"));
+}
+
 export function check(access: Access, paths: readonly string[] | null = null): CheckResult {
-  const problems: Issue[] = [];
+  const problems: Issue[] = paths === null ? configIssues(access.config) : [];
   let checked = 0;
   for (const path of paths ?? access.paths()) {
     let note;
