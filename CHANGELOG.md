@@ -5,6 +5,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `pnpm pack:check` also lints both tarballs with publint and checks the types of `@dummkopf/core` with
+  arethetypeswrong.
+
 ### Fixed
 
 - `check` names the real line of every link. Before, each occurrence of a repeated link carried the line of
@@ -12,6 +17,8 @@ All notable changes to this project are listed here. The format follows
 - An edit next to a link that already crosses a scope or sensitivity barrier is saved with a warning instead
   of being rejected. A write that adds such a link is still rejected, and `check` still reports old ones
   as errors.
+- The published `@dummkopf/core` manifest no longer has a `source` export condition that pointed at `src/`,
+  which is not in the tarball.
 
 ## [0.3.1] - 2026-10-11
 
