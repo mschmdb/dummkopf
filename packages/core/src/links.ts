@@ -4,13 +4,15 @@ import type { Access, Note } from "./access.ts";
 import { AccessDenied } from "./errors.ts";
 import { insideWithoutSymlinks } from "./files.ts";
 import { text as say } from "./messages.ts";
-import { len, rstrip, splitlines, strip, WS, WS_CHARS } from "./py.ts";
+import { len, rstrip, sorted, strip, WS, WS_CHARS } from "./py.ts";
 import { isDir, isFile, join, parts, stem, suffix } from "./pyos.ts";
 import { dirname, isabs, joinPosix, normpath, unquote, UrlError, urlsplit } from "./pyurl.ts";
 
 export const ALLOWED_SCHEMES: readonly string[] = ["http", "https", "mailto"];
 /** Longer lines are skipped: link regexes are cheap per line, but a line of 80 000 `[` would make them crawl. */
 export const MAX_LINK_LINE = 10_000;
+/** An ambiguous wikilink names this many candidates and counts the rest. */
+const MAX_CANDIDATES = 3;
 
 export interface Issue {
   path: string;
@@ -18,6 +20,8 @@ export interface Issue {
   severity: string;
   message: string;
   line?: number;
+  /** For `link-ambiguous`: the readable notes a wikilink matches. */
+  candidates?: string[];
 }
 
 export function issue(path: string, code: string, message: string, severity = "error",
@@ -132,7 +136,18 @@ export function linkIssues(access: Access, note: Note, overlay: ReadonlyMap<stri
         if (overlay.has(candidate) || isFile(join(access.root, candidate))) candidates.add(candidate);
       }
       candidates = new Set([...candidates].filter((path) => readable(access, path, overlay)));
-      if (candidates.size !== 1) {
+      if (candidates.size > 1) {
+        // Only readable notes are left, so naming them reveals nothing hidden.
+        const names = sorted(candidates);
+        const shown = names.slice(0, MAX_CANDIDATES).join(", ");
+        const paths = names.length > MAX_CANDIDATES
+          ? say("link_ambiguous_more", "plain", { paths: shown, more: names.length - MAX_CANDIDATES }) : shown;
+        const severity = !old.has(reference) ? "error" : "warning";
+        problems.push({ ...issue(note.path, "link-ambiguous", say("link_ambiguous", "plain", { paths }), severity, line),
+          candidates: names });
+        continue;
+      }
+      if (candidates.size === 0) {
         problem("link-unavailable", "link_unavailable");
         continue;
       }

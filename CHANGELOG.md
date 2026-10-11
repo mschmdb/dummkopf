@@ -8,6 +8,9 @@ All notable changes to this project are listed here. The format follows
 ### Added
 
 - `pnpm bench` times `context`, `find` and `read` on generated brains of 200 and 2000 notes.
+- A wikilink that matches several readable notes reports `link-ambiguous` and names up to three of them
+  (`candidates` in `--json`). Before, it said "missing or not released". Hidden notes are never named or
+  counted.
 
 ### Changed
 

@@ -34,6 +34,8 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "link_scheme": "This link scheme is not allowed.",
   "link_escapes": "A local link leaves the brain.",
   "link_unavailable": "A link target is missing or not released.",
+  "link_ambiguous": "A wikilink matches several notes: {paths}. Link one path instead.",
+  "link_ambiguous_more": "{paths} and {more} more",
   "routes_file_missing": "Routes file {file} is missing; routes are off.",
   "entities_file_missing": "Entities file {file} is missing; entity links are off.",
   "link_scope": "A link crosses a sensitivity or scope boundary.",
