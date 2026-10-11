@@ -1,0 +1,305 @@
+/** Hooks: `hook agent` for Claude Code and Codex, `hook pre-commit`, and the installed Git hook in use. */
+
+import assert from "node:assert/strict";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { test } from "node:test";
+import { type Brain, type Env, type Result, Sandbox, type Synced, fullNote, md } from "./harness.ts";
+
+const FILLER = "---\nupdated: 2026-10-01\nstatus: active\nkey_fact: K.\nsummary: K.\naliases: []\nperiod: []\n"
+  + "entities: []\n---\n";
+
+function agent(sandbox: Sandbox, root: string, event: unknown,
+  { cwd, raw }: { cwd?: string; raw?: string } = {}): Result {
+  const stdin = raw ?? JSON.stringify(event);
+  return sandbox.run(["hook", "agent", "--root", root], { cwd: cwd ?? root, stdin });
+}
+
+function toolEvent(tool: string, cwd: string, toolInput: Record<string, string> = {}): Record<string, unknown> {
+  return { hook_event_name: "PostToolUse", tool_name: tool, cwd, tool_input: toolInput };
+}
+
+/** A brain with an uncommitted note, so a sync is visible on the remote. */
+function pending(): Synced {
+  const synced = new Sandbox().synced();
+  synced.brain.write("notes/pending.md", fullNote({ title: "Pending" }));
+  return synced;
+}
+
+function syncedToRemote(synced: Synced): boolean {
+  return synced.remoteFiles().includes("notes/pending.md");
+}
+
+// --- hook agent: never exit 2 ------------------------------------------------------------------------------------
+
+for (const raw of ["", "not json", "[]", "5", "null", '"text"', "{}", '{"tool_name": 5}',
+  '{"tool_name": "Bash", "cwd": 5}', '{"hook_event_name": "SessionEnd", "cwd": []}']) {
+  test("unusable event " + JSON.stringify(raw) + " exits 0 without output", () => {
+    const p = pending();
+    const result = agent(p.sandbox, p.brain.root, null, { raw });
+    assert.deepEqual([result.code, result.out, result.err], [0, "", ""]);
+    assert.ok(!syncedToRemote(p));
+  });
+}
+
+test("hook outside a brain exits 0", () => {
+  const sandbox = new Sandbox();
+  const result = sandbox.run(["hook", "agent"], { cwd: sandbox.tmp, stdin: JSON.stringify(toolEvent("Bash", sandbox.tmp)) });
+  assert.deepEqual([result.code, result.out, result.err], [0, "", ""]);
+});
+
+test("hook with a broken config exits 0", () => {
+  const brain = new Sandbox().brain();
+  fs.writeFileSync(path.join(brain.root, "dummkopf.toml"), "[repo\n", "utf-8");
+  const result = agent(brain.sandbox, brain.root, toolEvent("Bash", brain.root));
+  assert.deepEqual([result.code, result.err], [0, ""]);
+});
+
+test("unwatched tool does not sync", () => {
+  const p = pending();
+  const result = agent(p.sandbox, p.brain.root, toolEvent("Read", p.brain.root));
+  assert.equal(result.code, 0);
+  assert.ok(!syncedToRemote(p));
+});
+
+test("event from outside the brain does not sync", () => {
+  const p = pending();
+  const tmp = p.sandbox.tmp;
+  const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", path.join(tmp, "elsewhere")), { cwd: tmp });
+  assert.equal(result.code, 0);
+  assert.ok(!syncedToRemote(p));
+});
+
+// --- hook agent: syncing -----------------------------------------------------------------------------------------
+
+test("Bash event in the brain commits and pushes", () => {
+  const p = pending();
+  const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", p.brain.root, { command: "echo" }));
+  assert.deepEqual([result.code, result.out, result.err], [0, "", ""]);
+  assert.ok(syncedToRemote(p));
+  assert.equal(p.remoteLog()[0], "Update notes");
+});
+
+test("event from a nested folder of the brain syncs", () => {
+  const p = pending();
+  const nested = path.join(p.brain.root, "notes");
+  assert.equal(agent(p.sandbox, p.brain.root, toolEvent("Bash", nested)).code, 0);
+  assert.ok(syncedToRemote(p));
+});
+
+for (const tool of ["Bash", "Write", "Edit", "MultiEdit", "apply_patch", "exec_command"]) {
+  test("watched tool " + tool + " syncs when run in the brain", () => {
+    const p = pending();
+    assert.equal(agent(p.sandbox, p.brain.root, toolEvent(tool, p.brain.root)).code, 0);
+    assert.ok(syncedToRemote(p));
+  });
+}
+
+for (const tool of ["Write", "Edit", "MultiEdit"]) {
+  test("file tool " + tool + " on a brain file syncs even from another folder", () => {
+    const p = pending();
+    const tmp = p.sandbox.tmp;
+    const edited = path.join(p.brain.root, "notes", "pending.md");
+    const event = toolEvent(tool, tmp, { file_path: edited });
+    assert.equal(agent(p.sandbox, p.brain.root, event, { cwd: tmp }).code, 0);
+    assert.ok(syncedToRemote(p));
+  });
+}
+
+test("Bash event with a file path outside the brain does not sync", () => {
+  const p = pending();
+  const tmp = p.sandbox.tmp;
+  const event = toolEvent("Bash", tmp, { file_path: path.join(p.brain.root, "notes", "pending.md") });
+  assert.equal(agent(p.sandbox, p.brain.root, event, { cwd: tmp }).code, 0);
+  assert.ok(!syncedToRemote(p));
+});
+
+test("SessionEnd in the brain syncs", () => {
+  const p = pending();
+  const event = { hook_event_name: "SessionEnd", cwd: p.brain.root };
+  assert.equal(agent(p.sandbox, p.brain.root, event).code, 0);
+  assert.ok(syncedToRemote(p));
+});
+
+test("SessionEnd outside the brain does not sync", () => {
+  const p = pending();
+  const tmp = p.sandbox.tmp;
+  const event = { hook_event_name: "SessionEnd", cwd: tmp };
+  assert.equal(agent(p.sandbox, p.brain.root, event, { cwd: tmp }).code, 0);
+  assert.ok(!syncedToRemote(p));
+});
+
+test("agent hook uses the working folder when the event has no cwd", () => {
+  const p = pending();
+  const event = { hook_event_name: "PostToolUse", tool_name: "Bash" };
+  assert.equal(agent(p.sandbox, p.brain.root, event).code, 0);
+  assert.ok(syncedToRemote(p));
+});
+
+// --- hook agent: failures exit 1, never 2 -----------------------------------------------------------------------
+
+test("failed push exits 1 with a message", () => {
+  const p = pending();
+  const hook = path.join(p.remote, "hooks", "pre-receive");
+  fs.writeFileSync(hook, "#!/bin/sh\nexit 1\n", "utf-8");
+  fs.chmodSync(hook, 0o755);
+  const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", p.brain.root));
+  assert.equal(result.code, 1);
+  assert.equal(result.err, "dummkopf sync failed: Git step failed: push. Local data is kept.\n");
+});
+
+test("rejected sync state exits 1, not 2", () => {
+  const p = pending();
+  p.brain.git(["checkout", "-q", "-b", "other"]);
+  const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", p.brain.root));
+  assert.equal(result.code, 1);
+  assert.equal(result.err, "dummkopf sync failed: Sync needs branch main.\n");
+});
+
+// --- hook pre-commit ---------------------------------------------------------------------------------------------
+
+test("pre-commit outside a brain exits 0 silently", () => {
+  const sandbox = new Sandbox();
+  const result = sandbox.run(["hook", "pre-commit"], { cwd: sandbox.tmp });
+  assert.deepEqual([result.code, result.out, result.err], [0, "", ""]);
+});
+
+test("pre-commit without an index file does nothing", () => {
+  const brain = new Sandbox().brain();
+  brain.write("notes/secret.md", md({ body: "> SENSITIVE" }));
+  const result = brain.run(["hook", "pre-commit"]);
+  assert.deepEqual([result.code, result.out], [0, ""]);
+  assert.ok(!brain.read(".sensitive-paths").includes("secret.md"));
+});
+
+/** A Git brain with an INDEX.md. */
+function indexed(): Brain {
+  const brain = new Sandbox().brain();
+  brain.gitInit();
+  brain.write("INDEX.md", "# Index\n\n## Topics\n\n## Notes (flat)\n\n## Bookmarks\n");
+  return brain;
+}
+
+/** Python's str.splitlines() for LF text: no empty last line. */
+function splitlines(text: string): string[] {
+  return text === "" ? [] : text.replace(/\n$/, "").split("\n");
+}
+
+test("pre-commit regenerates the sensitive paths list", () => {
+  const b = indexed();
+  b.write("notes/secret.md", FILLER + "\n# Secret\n\n> SENSITIVE\n");
+  const result = b.run(["hook", "pre-commit"]);
+  assert.equal(result.code, 0);
+  assert.ok(result.out.startsWith(".sensitive-paths updated.\n"));
+  assert.equal(splitlines(b.read(".sensitive-paths")).at(-1), "notes/secret.md");
+  assert.equal(b.mode(".sensitive-paths"), 0o600);
+});
+
+test("pre-commit lists a whole folder when its README has the marker", () => {
+  const b = indexed();
+  b.write("topics/med/README.md", FILLER + "\n# Med\n\n> SENSITIVE\n");
+  b.write("topics/med/visit.md", FILLER + "\n# Visit\n");
+  b.run(["hook", "pre-commit"]);
+  assert.equal(splitlines(b.read(".sensitive-paths")).at(-1), "topics/med/");
+});
+
+test("pre-commit lists sensitive always paths", () => {
+  const b = indexed();
+  b.configure('[sensitive]\nalways = ["topics/health/"]\n');
+  b.run(["hook", "pre-commit"]);
+  assert.ok(splitlines(b.read(".sensitive-paths")).includes("topics/health/"));
+});
+
+test("pre-commit second run prints no paths update", () => {
+  const b = indexed();
+  b.write("notes/secret.md", FILLER + "\n# Secret\n\n> SENSITIVE\n");
+  b.run(["hook", "pre-commit"]);
+  assert.ok(!b.run(["hook", "pre-commit"]).out.includes(".sensitive-paths updated."));
+});
+
+test("pre-commit rebuilds the index tables", () => {
+  const b = indexed();
+  b.write("notes/visible.md", FILLER + "\n# Visible\n");
+  b.write("notes/secret.md", FILLER + "\n# Secret\n\n> SENSITIVE\n");
+  b.run(["hook", "pre-commit"]);
+  const index = b.read("INDEX.md");
+  assert.ok(index.includes("| `notes/visible.md` | K. |  |"));
+  assert.ok(!index.includes("secret.md"));
+});
+
+test("pre-commit reports findings on stdout and exits 0", () => {
+  const b = indexed();
+  b.write("notes/todo.md", FILLER.replace("key_fact: K.", "key_fact: TODO") + "\n# Todo\n");
+  const result = b.run(["hook", "pre-commit"]);
+  assert.equal(result.code, 0);
+  assert.ok(result.out.includes("### No key fact (`TODO`) (1)"));
+  assert.ok(result.out.includes("- `notes/todo.md`"));
+});
+
+// --- the installed Git hook, through a real commit ------------------------------------------------------------
+
+/** A brain made by `init` with `install` run, the `hooked` fixture. */
+function hooked(): { sandbox: Sandbox; root: string } {
+  const sandbox = new Sandbox();
+  const root = path.join(sandbox.tmp, "hooked");
+  assert.equal(sandbox.run(["init", root, "--serious", "--remote", path.join(sandbox.tmp, "r.git")],
+    { cwd: sandbox.tmp }).code, 0);
+  assert.equal(sandbox.run(["install", "--serious"], { cwd: root }).code, 0);
+  return { sandbox, root };
+}
+
+function commit(sandbox: Sandbox, root: string, env?: Env): SpawnSyncReturns<string> {
+  sandbox.git(root, ["add", "-A"]);
+  return spawnSync("git", ["commit", "-m", "Save"], { cwd: root, encoding: "utf-8", env: env ?? sandbox.env });
+}
+
+/** shutil.which: the first executable of that name on PATH, or null. */
+function which(name: string): string | null {
+  for (const folder of (process.env.PATH ?? "").split(path.delimiter)) {
+    const candidate = path.join(folder, name);
+    try {
+      fs.accessSync(candidate, fs.constants.X_OK);
+      if (fs.statSync(candidate).isFile()) return candidate;
+    } catch {
+      // not here
+    }
+  }
+  return null;
+}
+
+test("commit runs the hook and includes the regenerated paths list", () => {
+  const { sandbox, root } = hooked();
+  fs.writeFileSync(path.join(root, "notes", "secret.md"), FILLER + "\n# Secret\n\n> SENSITIVE\n", "utf-8");
+  assert.equal(commit(sandbox, root).status, 0);
+  assert.ok(splitlines(sandbox.git(root, ["show", "HEAD:.sensitive-paths"])).includes("notes/secret.md"));
+  assert.equal(sandbox.git(root, ["status", "--porcelain"]), "");
+});
+
+test("commit includes the rebuilt index", () => {
+  const { sandbox, root } = hooked();
+  fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
+  assert.equal(commit(sandbox, root).status, 0);
+  assert.ok(sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+});
+
+test("commit completes the frontmatter of a staged note", () => {
+  const { sandbox, root } = hooked();
+  fs.writeFileSync(path.join(root, "notes", "bare.md"), "# Bare\n\nno frontmatter\n", "utf-8");
+  assert.equal(commit(sandbox, root).status, 0);
+  const committed = sandbox.git(root, ["show", "HEAD:notes/bare.md"]);
+  assert.ok(committed.startsWith("---\nupdated: "));
+  assert.ok(committed.includes("status: active"));
+  assert.ok(committed.endsWith("# Bare\n\nno frontmatter"));
+});
+
+test("commit still succeeds when dummkopf is not on the PATH", () => {
+  const { sandbox, root } = hooked();
+  const gitFolder = path.dirname(which("git") ?? "/usr/bin/git");
+  const env = { ...sandbox.env, PATH: gitFolder + ":/bin" };
+  fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
+  const result = commit(sandbox, root, env);
+  assert.equal(result.status, 0);
+  assert.ok(result.stderr.includes("dummkopf not found on PATH; indexes not updated."));
+  assert.ok(!sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+});
