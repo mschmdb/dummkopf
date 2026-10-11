@@ -200,6 +200,13 @@ export function generate(config: Config, dryRun = false): string[] {
   return changed;
 }
 
+/** Rewrite the sensitive-paths file if it is stale (never through a symlink). Returns true if written. */
+export function refreshPathsFile(config: Config): boolean {
+  const pathsFile = join(config.root, config.sensitive.pathsFile);
+  const fresh = Sensitivity.generate(config);
+  return readRaw(pathsFile) !== fresh && writeGenerated(pathsFile, fresh, 0o600);
+}
+
 function isoDate(value: string): PyDate | null {
   try {
     return PyDate.fromIso(value);

@@ -2,9 +2,9 @@
 
 import {
   agentEvent, type Config, curator, DummkopfError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
-  loadConfig, LOCALES, message as say, metaReport, migrate, preCommit, renderAgents, requireExtra, Sensitivity,
+  loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, preCommit, refreshPathsFile, renderAgents,
+  requireExtra,
 } from "@dummkopf/core";
-import * as fs from "node:fs";
 
 import type { Namespace, Parser } from "./argparse.ts";
 import { err, out, readStdin } from "./io.ts";
@@ -65,7 +65,7 @@ export function runHook(args: Namespace, root: string, tone: string): number {
   if (args.kind === "pre-commit") return preCommit(config, output);
   let event: unknown;
   try {
-    event = JSON.parse(readStdin()) as unknown;
+    event = loadsJson(readStdin());
   } catch {
     return 0;
   }
@@ -96,10 +96,7 @@ export function runMeta(args: Namespace, config: Config, tone: string): number {
     changed.push(...migrate(config, dryRun, only.length > 0 ? only : null));
   } else {
     if (args.action === "index" && !dryRun) {
-      const pathsFile = config.root + "/" + config.sensitive.pathsFile;
-      const fresh = Sensitivity.generate(config);
-      const current = readRaw(pathsFile);
-      if (current !== fresh && writeGenerated(pathsFile, fresh, 0o600)) changed.push(config.sensitive.pathsFile);
+      if (refreshPathsFile(config)) changed.push(config.sensitive.pathsFile);
     }
     changed.push(...generate(config, dryRun));
   }
