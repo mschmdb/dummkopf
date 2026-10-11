@@ -36,6 +36,22 @@ jobs:
         run: pnpm test
       - name: Black-box suite against the built CLI
         run: pnpm test:blackbox:dist
+      - name: Pack, install and run the npm tarballs
+        run: pnpm pack:check
+
+  toml-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: TOML parser against the official toml-test suite
+        run: pnpm test:toml
 
   secrets:
     runs-on: ubuntu-latest

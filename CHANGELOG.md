@@ -5,18 +5,48 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-11
+
 ### Added
 
 - dummkopf is written in TypeScript now: the library `@dummkopf/core` and the CLI `dummkopf` for Node 22.18+.
-  Brains, config, frontmatter and hooks stay the same; output matches the Python release byte for byte.
+  Brains, config, frontmatter and hooks stay the same; output matches the Python release byte for byte,
+  except `--help` and usage errors (see Changed).
 - Local brains: without `repo.remote` dummkopf commits but never fetches, pushes or checks a remote.
   `dummkopf init` without `--remote` creates one. Only `schema_version` is required in `dummkopf.toml` now.
 - The black-box suite runs on `node:test` (`packages/cli/test/blackbox`), against any build via `DUMMKOPF_BIN`.
+- `pnpm test:toml` checks the TOML parser against the official toml-test suite (TOML 1.0 cases, pinned
+  release, fetched into `.cache/`). CI runs it once per push.
+- Release setup for npm: package metadata, `prepublishOnly` builds, `pnpm pack:check` (pack, install and run
+  the tarballs, also in CI) and a tag-triggered publish workflow with provenance. Nothing is published yet.
+
+### Changed
+
+- `context` no longer prints "Partial match": a whole question almost never matches every word. `find` keeps
+  the line, and the JSON `match` value stays the same.
+- `find` and `context` rank curator reports below the notes they summarize: their score counts
+  `search.weights.curator_report_percent` (default 25). A query naming the curator lifts the cut.
+- `check` prints issues as `path:line: message (severity)` when it knows the line, so editors can jump there.
+  It still never names a link target.
+- `check` warns when `context.routes_file` or `links.entities_file` is set in `dummkopf.toml` but missing.
+  The default names stay silent, and `context` never warns.
+- The pre-commit hook prints one summary line instead of the full `meta report`, and nothing without findings.
+- Shorter `--help` without argparse's layout (#21). `dummkopf --help` lists the commands with one line each,
+  grouped as Read, Write, Setup and maintenance, and Extras. `dummkopf <command> --help` shows a one-line
+  purpose, the examples, then the options grouped as Access, Output and the command's own options, one per
+  line, wrapped at 100 columns. Usage errors print the usage line, a short error naming the argument and a
+  pointer to `--help`; they still exit with code 2. Parsing is unchanged.
 
 ### Removed
 
 - The Python release (`src/`, `pyproject.toml`, `uv.lock`) and its pytest suite. Install with Node instead; see
   "Coming from the Python version" in the README.
+
+### Fixed
+
+- `dummkopf.toml` with an impossible date or time (`2006-02-30`, `24:00:00`, offset `+24:00`) is rejected
+  as unreadable instead of accepted.
+- An integer beyond 2^53 in `dummkopf.toml` is rejected instead of silently rounded.
 
 ### Security
 

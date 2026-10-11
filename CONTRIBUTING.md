@@ -23,6 +23,12 @@ pnpm typecheck && pnpm test && pnpm test:blackbox
 
 The black-box suite only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
 
+When you touch `packages/core/src/toml.ts`, also run `pnpm test:toml`. It fetches a pinned release of the
+official [toml-test](https://github.com/toml-lang/toml-test) suite into `.cache/` (needs network and Git) and
+runs the parser against its TOML 1.0 cases. Cases dummkopf leaves out on purpose are listed with a reason in
+`packages/core/test/toml-test-skip.txt`; a listed case that starts to pass fails the run. `pnpm test` skips
+the suite unless `TOML_TEST_DIR` points at a toml-test checkout.
+
 ## Layout
 
 - `packages/core` is the library `@dummkopf/core`: config, frontmatter, the read gate `Access`, search, writes,
@@ -48,6 +54,22 @@ The black-box suite only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` 
 
 Tests build real temporary brains and Git repositories, so `git` must be installed. No test touches the
 network or your home folder.
+
+## Releases
+
+`pnpm pack:check` packs both packages like `pnpm publish`, installs the tarballs with npm into a temporary
+folder and runs the installed CLI. CI runs it on every push.
+
+A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop:
+
+1. Once: create the npm organization `dummkopf` and store an npm automation token as the repository secret
+   `NPM_TOKEN`.
+2. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
+   `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.
+3. Merge, then tag the commit: `git tag v0.3.0 && git push origin v0.3.0`.
+
+The workflow checks that the tag matches both versions, runs all checks and publishes with npm provenance.
+pnpm turns the `workspace:*` dependency into the exact core version.
 
 ## Translations
 

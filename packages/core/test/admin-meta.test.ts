@@ -6,7 +6,7 @@ import * as path from "node:path";
 import { test } from "node:test";
 
 import { parseFrontmatter } from "../src/frontmatter.ts";
-import { generate, migrate, report, topicDirs } from "../src/meta.ts";
+import { generate, migrate, report, reportSummary, topicDirs } from "../src/meta.ts";
 import { PyDate } from "../src/pydate.ts";
 import { scrapeRows, splitRow } from "../src/tables.ts";
 import { type Brain, brain, german } from "./helpers.ts";
@@ -362,10 +362,11 @@ test("a German hub generates identical German tables", () => {
   assert.deepEqual([target.read("INDEX.md"), target.read("topics/t/README.md")], snapshot);
 });
 
-test("report can stay silent without findings", () => {
+test("the report summary stays silent without findings and counts them otherwise", () => {
   const target = repo();
   target.write("notes/ok.md", full(TODAY, "Good"));
-  assert.equal(report(target.config, null, true), "");
+  assert.equal(reportSummary(target.config), "");
   target.write("notes/todo.md", full(TODAY, "TODO"));
-  assert.ok(report(target.config, null, true).includes("notes/todo.md"));
+  assert.equal(reportSummary(target.config), "Report: 0 stale, 0 without date, 1 without key fact. "
+    + "Run `dummkopf meta report` for details.");
 });

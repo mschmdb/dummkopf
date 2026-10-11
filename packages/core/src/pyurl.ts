@@ -5,6 +5,8 @@
  * CPython 3.13 step by step, including the ValueError cases of urlsplit.
  */
 
+import { stripTrailingSlashes } from "./pyos.ts";
+
 const C0_CONTROL_OR_SPACE = /^[\x00-\x20]+/;
 const SCHEME_CHARS = /^[A-Za-z0-9+\-.]+$/;
 const HEX_PAIR = /^[0-9A-Fa-f]{2}/;
@@ -210,8 +212,8 @@ export function joinPosix(a: string, b: string): string {
 /** posixpath.dirname(path). */
 export function dirname(path: string): string {
   const head = path.slice(0, path.lastIndexOf("/") + 1);
-  if (head && !/^\/+$/.test(head)) return head.replace(/\/+$/, "");
-  return head;
+  const trimmed = stripTrailingSlashes(head);
+  return trimmed ? trimmed : head;
 }
 
 /** posixpath.isabs(path). */

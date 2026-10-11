@@ -5,7 +5,7 @@ import { test } from "node:test";
 
 import { Access } from "../src/access.ts";
 import { casefold } from "../src/py.ts";
-import { fnmatchRegExp, glob } from "../src/pyos.ts";
+import { fnmatchRegExp, glob, stripTrailingSlashes } from "../src/pyos.ts";
 import { markerPattern, pathKey } from "../src/sensitive.ts";
 import { PyDate } from "../src/pydate.ts";
 import { contextPacket } from "../src/search.ts";
@@ -77,4 +77,15 @@ test("table rows with Unicode digits count as dated rows, like Python's \\d", ()
   const text = packet.hits.flatMap((hit) => hit.lines.map((line) => line.text)).join("\n");
   assert.ok(text.includes("SOUP"));
   assert.ok(!text.includes("OUTSIDE-WEEK-SECRET"));
+});
+
+test("stripTrailingSlashes drops only trailing slashes, in linear time", () => {
+  assert.equal(stripTrailingSlashes("topics/curator///"), "topics/curator");
+  assert.equal(stripTrailingSlashes("a/b"), "a/b");
+  assert.equal(stripTrailingSlashes("///"), "");
+  // /\/+$/ backtracks quadratically on many slashes that are not at the end.
+  const hostile = "/".repeat(200_000) + "x";
+  const start = performance.now();
+  assert.equal(stripTrailingSlashes(hostile), hostile);
+  assert.ok(performance.now() - start < 200);
 });

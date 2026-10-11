@@ -1,7 +1,11 @@
 /**
- * A small argparse: subcommands, options before and after the subcommand, unique prefixes,
- * `--opt=value`, negative numbers as values, and argparse's error texts with exit code 2.
+ * A small argument parser: subcommands, options before and after the subcommand, unique prefixes,
+ * `--opt=value` and negative numbers as values. Usage errors exit with code 2; help.ts lays out --help.
  */
+
+import { message as say } from "@dummkopf/core";
+
+import { fill, type Group, type HelpCommand, type Page, render, usage, WIDTH } from "./help.ts";
 
 export type Namespace = Record<string, unknown>;
 
@@ -29,12 +33,13 @@ interface Option {
   readonly dest: string;
   readonly kind: Kind;
   readonly help: string;
+  readonly group: Group;
   readonly metavar?: string;
   readonly type?: "int";
   readonly choices?: readonly string[];
   readonly required?: boolean;
   readonly default?: unknown;
-  /** Leave the destination unset when the option is absent (argparse.SUPPRESS). */
+  /** Leave the destination unset when the option is absent. */
   readonly suppress?: boolean;
 }
 
@@ -49,12 +54,23 @@ export interface OptionSpec {
   dest?: string;
   kind?: Kind;
   help: string;
+  /** The help section; default: the command's own "options". */
+  group?: Group;
   metavar?: string;
   type?: "int";
   choices?: readonly string[];
   required?: boolean;
   default?: unknown;
   suppress?: boolean;
+}
+
+/** What --help says about a command besides its options. */
+export interface CommandInfo {
+  purpose: string;
+  examples?: string;
+  notes?: string;
+  /** The heading the top-level help lists the command under. */
+  group?: string;
 }
 
 function camel(flag: string): string {
@@ -65,25 +81,31 @@ function isNegativeNumber(value: string): boolean {
   return /^-\d+$|^-\d*\.\d+$/.test(value);
 }
 
+function usageText(key: string, params: Record<string, unknown>): string {
+  return say(key, "plain", params);
+}
+
+function label(option: Option): string {
+  return option.flags.join("/");
+}
+
 export class Parser {
   readonly prog: string;
-  readonly description: string;
-  readonly epilog: string;
+  readonly info: CommandInfo;
   private readonly options: Option[] = [];
   private readonly positionals: Positional[] = [];
   private readonly commands = new Map<string, Parser>();
   private commandDest = "";
 
-  constructor(prog: string, description = "", epilog = "") {
+  constructor(prog: string, info: CommandInfo) {
     this.prog = prog;
-    this.description = description;
-    this.epilog = epilog;
+    this.info = info;
   }
 
   option(flags: string | readonly string[], spec: OptionSpec): this {
     const list = typeof flags === "string" ? [flags] : flags;
     const long = list.find((flag) => flag.startsWith("--")) ?? list[0]!;
-    this.options.push({ flags: list, dest: spec.dest ?? camel(long), kind: spec.kind ?? "value", ...spec });
+    this.options.push({ flags: list, dest: spec.dest ?? camel(long), kind: spec.kind ?? "value", group: "options", ...spec });
     return this;
   }
 
@@ -92,8 +114,8 @@ export class Parser {
     return this;
   }
 
-  command(name: string, epilog: string): Parser {
-    const sub = new Parser(this.prog + " " + name, "", epilog);
+  command(name: string, info: CommandInfo): Parser {
+    const sub = new Parser(this.prog + " " + name, info);
     this.commands.set(name, sub);
     return sub;
   }
@@ -105,9 +127,9 @@ export class Parser {
 
   parse(argv: readonly string[]): Namespace {
     const namespace: Namespace = {};
-    const extras = this.parseInto(argv, namespace);
-    // Like parse_args: the top-level parser reports leftovers, also those after a subcommand.
-    if (extras.length > 0) throw new UsageError(this, "unrecognized arguments: " + extras.join(" "));
+    const [extras, leaf] = this.parseInto(argv, namespace);
+    // Leftovers count only once every parser has had its turn; the innermost one reports them.
+    if (extras.length > 0) throw new UsageError(leaf, usageText("usage_unexpected", { names: extras.join(" ") }));
     return namespace;
   }
 
@@ -130,28 +152,28 @@ export class Parser {
     const candidates = this.options.filter((option) => option.flags.some((name) => name.startsWith(flag)));
     if (candidates.length > 1) {
       const names = candidates.map((option) => option.flags.find((name) => name.startsWith(flag))!).join(", ");
-      throw new UsageError(this, "ambiguous option: " + flag + " could match " + names);
+      throw new UsageError(this, usageText("usage_ambiguous", { name: flag, choices: names }));
     }
     return candidates.length === 1 ? [candidates[0]!, inline] : null;
   }
 
+  private choice(name: string, choices: readonly string[], value: string): UsageError {
+    return new UsageError(this, usageText("usage_choice", { name, choices: choices.join(", "), value }));
+  }
+
   private convert(option: Option, value: string): unknown {
-    const label = "argument " + option.flags.join("/");
     if (option.type === "int") {
       if (!/^[-+]?\s*\d+\s*$/.test(value.replace(/_/g, ""))) {
-        throw new UsageError(this, label + ": invalid int value: '" + value + "'");
+        throw new UsageError(this, usageText("usage_int", { name: label(option), value }));
       }
       return Number.parseInt(value.replace(/[_\s]/g, ""), 10);
     }
-    if (option.choices && !option.choices.includes(value)) {
-      throw new UsageError(this, label + ": invalid choice: '" + value + "' (choose from "
-        + option.choices.map((choice) => "'" + choice + "'").join(", ") + ")");
-    }
+    if (option.choices && !option.choices.includes(value)) throw this.choice(label(option), option.choices, value);
     return value;
   }
 
-  /** Parse into `namespace`; return the arguments nobody recognized, in their order. */
-  private parseInto(argv: readonly string[], namespace: Namespace): string[] {
+  /** Parse into `namespace`; return the arguments nobody recognized, in their order, and the innermost parser. */
+  private parseInto(argv: readonly string[], namespace: Namespace): [string[], Parser] {
     const loose: string[] = [];
     const seen = new Set<string>();
     let i = 0;
@@ -173,7 +195,7 @@ export class Parser {
         const [option, inline] = found;
         seen.add(option.dest);
         if (option.kind === "flag") {
-          if (inline !== null) throw new UsageError(this, "argument " + option.flags.join("/") + ": ignored explicit argument '" + inline + "'");
+          if (inline !== null) throw new UsageError(this, usageText("usage_no_value", { name: label(option), value: inline }));
           namespace[option.dest] = true;
           continue;
         }
@@ -181,7 +203,7 @@ export class Parser {
         if (value === null) {
           const next = argv[i];
           if (next === undefined || (next.startsWith("-") && next !== "-" && !isNegativeNumber(next))) {
-            throw new UsageError(this, "argument " + option.flags.join("/") + ": expected one argument");
+            throw new UsageError(this, usageText("usage_needs_value", { name: label(option) }));
           }
           value = next;
           i++;
@@ -198,25 +220,25 @@ export class Parser {
       if (this.commands.size > 0) {
         const sub = this.commands.get(arg);
         if (!sub) {
-          throw new UsageError(this, "argument " + this.commandDest + ": invalid choice: '" + arg + "' (choose from "
-            + [...this.commands.keys()].map((name) => "'" + name + "'").join(", ") + ")");
+          throw new UsageError(this, usageText("usage_unknown_command", { value: arg, choices: [...this.commands.keys()].join(", ") }));
         }
         this.defaults(namespace);
         namespace[this.commandDest] = arg;
-        return [...loose, ...sub.parseInto(argv.slice(i), namespace)];
+        const [extras, leaf] = sub.parseInto(argv.slice(i), namespace);
+        return [[...loose, ...extras], leaf];
       }
       loose.push(arg);
     }
     if (this.commands.size > 0) {
-      throw new UsageError(this, "the following arguments are required: " + this.commandDest);
+      throw new UsageError(this, usageText("usage_missing", { names: "<" + this.commandDest + ">" }));
     }
     this.defaults(namespace);
     const extras = this.assignPositionals(loose, namespace);
     const missing = this.options.filter((option) => option.required && !seen.has(option.dest));
     if (missing.length > 0) {
-      throw new UsageError(this, "the following arguments are required: " + missing.map((option) => option.flags.join("/")).join(", "));
+      throw new UsageError(this, usageText("usage_missing", { names: missing.map(label).join(", ") }));
     }
-    return extras;
+    return [extras, this];
   }
 
   /** Fill the positionals; return what is left over, in order. */
@@ -232,15 +254,14 @@ export class Parser {
       } else if (rest.length > 0) {
         const value = rest.shift()!;
         if (positional.choices && !positional.choices.includes(value)) {
-          throw new UsageError(this, "argument " + positional.dest + ": invalid choice: '" + value + "' (choose from "
-            + positional.choices.map((choice) => "'" + choice + "'").join(", ") + ")");
+          throw this.choice("<" + positional.dest + ">", positional.choices, value);
         }
         namespace[positional.dest] = value;
       } else {
-        missing.push(positional.dest);
+        missing.push("<" + positional.dest + ">");
       }
     }
-    if (missing.length > 0) throw new UsageError(this, "the following arguments are required: " + missing.join(", "));
+    if (missing.length > 0) throw new UsageError(this, usageText("usage_missing", { names: missing.join(", ") }));
     const left = [...rest];
     return values.filter((value) => {
       if (isFlag(value)) return true;
@@ -251,116 +272,30 @@ export class Parser {
     });
   }
 
-  /** The usage line, wrapped like Python's HelpFormatter: options first, positionals on their own lines. */
+  private page(): Page {
+    const commands: HelpCommand[] = [...this.commands].map(([name, sub]) => ({
+      name, purpose: sub.info.purpose, group: sub.info.group ?? "",
+    }));
+    return {
+      prog: this.prog, purpose: this.info.purpose, examples: this.info.examples ?? "", notes: this.info.notes ?? "",
+      options: this.options, positionals: this.positionals, commands,
+    };
+  }
+
+  /** The one-line usage. */
   usage(): string {
-    const optionals = ["[-h]"];
-    for (const option of this.options) {
-      const flag = option.flags[0]!;
-      const shown = option.kind === "flag" ? flag : flag + " " + metavarOf(option);
-      optionals.push(option.required ? shown : "[" + shown + "]");
-    }
-    const positionals: string[] = [];
-    for (const positional of this.positionals) {
-      const shown = positional.choices ? "{" + positional.choices.join(",") + "}" : positional.dest;
-      positionals.push(positional.nargs === "?" ? "[" + shown + "]" : positional.nargs === "*" ? "[" + shown + " ...]" : shown);
-    }
-    if (this.commands.size > 0) positionals.push("{" + [...this.commands.keys()].join(",") + "} ...");
-    const prefix = "usage: ";
-    const width = textWidth();
-    const single = prefix + [this.prog, ...optionals, ...positionals].join(" ");
-    if (single.length <= width) return single;
-    const indent = " ".repeat(prefix.length + this.prog.length + 1);
-    const lines = (parts: string[], first: boolean): string[] => {
-      const out: string[] = [];
-      let line: string[] = [];
-      let lineLength = first ? prefix.length - 1 : indent.length - 1;
-      for (const part of parts) {
-        if (lineLength + 1 + part.length > width && line.length > 0) {
-          out.push(indent + line.join(" "));
-          line = [];
-          lineLength = indent.length - 1;
-        }
-        line.push(part);
-        lineLength += part.length + 1;
-      }
-      if (line.length > 0) out.push(indent + line.join(" "));
-      if (first) out[0] = out[0]!.slice(indent.length);
-      return out;
-    };
-    let wrapped: string[];
-    if (prefix.length + this.prog.length <= 0.75 * width) {
-      wrapped = [...lines([this.prog, ...optionals], true), ...(positionals.length > 0 ? lines(positionals, false) : [])];
-    } else {
-      wrapped = [this.prog, ...lines([...optionals, ...positionals], false)];
-    }
-    return prefix + wrapped.join("\n");
+    return usage(this.page());
   }
 
-  /** Help text laid out like Python's HelpFormatter; subcommand epilogs stay raw (RawDescriptionHelpFormatter). */
+  /** The --help text. */
   help(): string {
-    const width = textWidth();
-    const rows: [string, string][] = [];
-    const positionalRows: [string, string][] = this.commands.size > 0
-      ? [["{" + [...this.commands.keys()].join(",") + "}", ""]]
-      : this.positionals.map((positional) => [positional.choices ? "{" + positional.choices.join(",") + "}" : positional.dest, positional.help]);
-    rows.push(["-h, --help", "show this help message and exit"]);
-    for (const option of this.options) {
-      const metavar = option.kind === "flag" ? "" : " " + metavarOf(option);
-      rows.push([option.flags.map((flag) => flag + metavar).join(", "), option.help]);
-    }
-    const longest = Math.max(...[...positionalRows, ...rows].map(([name]) => name.length + 2));
-    const helpPosition = Math.min(longest + 2, Math.min(24, Math.max(width - 20, 4)));
-    const format = ([name, help]: [string, string]): string[] => {
-      const actionWidth = helpPosition - 4;
-      const helpLines = help ? fill(help, Math.max(width - helpPosition, 11)) : [];
-      const pad = " ".repeat(helpPosition);
-      if (!help) return ["  " + name];
-      if (name.length <= actionWidth) {
-        return ["  " + name.padEnd(actionWidth) + "  " + helpLines[0], ...helpLines.slice(1).map((line) => pad + line)];
-      }
-      return ["  " + name, ...helpLines.map((line) => pad + line)];
-    };
-    const lines = [this.usage(), ""];
-    if (this.description) lines.push(...fill(this.description, width), "");
-    if (positionalRows.length > 0) lines.push("positional arguments:", ...positionalRows.flatMap(format), "");
-    lines.push("options:", ...rows.flatMap(format));
-    if (this.epilog) lines.push("", ...(this.prog.includes(" ") ? [this.epilog] : fill(this.epilog, width)));
-    return lines.join("\n") + "\n";
+    return render(this.page());
   }
 
-}
-
-/** argparse's default metavar: `{a,b}` for choices, else the dest in upper case. */
-function metavarOf(option: Option): string {
-  if (option.metavar !== undefined) return option.metavar;
-  if (option.choices) return "{" + option.choices.join(",") + "}";
-  return option.dest.replace(/[A-Z]/g, (c) => "_" + c).toUpperCase();
-}
-
-/** Python's argparse width: the terminal columns ($COLUMNS first, 80 without a terminal) minus 2. */
-function textWidth(): number {
-  const fromEnv = Number.parseInt(process.env.COLUMNS ?? "", 10);
-  const columns = Number.isInteger(fromEnv) && fromEnv > 0 ? fromEnv : process.stdout.columns || 80;
-  return Math.max(columns - 2, 11);
-}
-
-/** textwrap.fill after collapsing whitespace: greedy lines, breaks at spaces and after hyphens in words. */
-function fill(text: string, width: number): string[] {
-  const chunks: { text: string; space: boolean }[] = [];
-  for (const word of text.trim().split(/\s+/)) {
-    word.split(/(?<=[A-Za-z]{2}-)(?=[A-Za-z])/).forEach((piece, index) => chunks.push({ text: piece, space: index === 0 }));
+  /** What a usage error prints: the usage line, the error and where to find help. */
+  error(message: string): string {
+    const [first = "", ...rest] = fill(usageText("usage_error", { message }), WIDTH - 2);
+    return [this.usage(), first, ...rest.map((line) => "  " + line), usageText("usage_hint", { prog: this.prog })]
+      .join("\n") + "\n";
   }
-  const lines: string[] = [];
-  let line = "";
-  for (const chunk of chunks) {
-    const joined = line === "" ? chunk.text : line + (chunk.space ? " " : "") + chunk.text;
-    if (joined.length > width && line !== "") {
-      lines.push(line);
-      line = chunk.text;
-    } else {
-      line = joined;
-    }
-  }
-  if (line !== "") lines.push(line);
-  return lines;
 }

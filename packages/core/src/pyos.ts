@@ -60,6 +60,13 @@ export function asPosix(value: string): string {
   return items.join("/");
 }
 
+/** `value` without trailing slashes. A loop, because /\/+$/ backtracks quadratically on long runs of "/". */
+export function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === "/") end--;
+  return value.slice(0, end);
+}
+
 export function isAbsolute(value: string): boolean {
   return value.startsWith("/");
 }

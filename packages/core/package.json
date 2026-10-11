@@ -1,8 +1,15 @@
 {
   "name": "@dummkopf/core",
-  "version": "0.3.0-dev",
+  "version": "0.3.0",
   "description": "Core of dummkopf: notes, scopes, the sensitivity gate, search and Git sync.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mschmdb/dummkopf.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/mschmdb/dummkopf#readme",
+  "bugs": "https://github.com/mschmdb/dummkopf/issues",
   "type": "module",
   "exports": {
     ".": {
@@ -13,9 +20,17 @@
   },
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "README.md"
   ],
   "engines": {
     "node": ">=22.18"
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b ."
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

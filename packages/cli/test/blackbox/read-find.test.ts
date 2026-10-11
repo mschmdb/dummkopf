@@ -165,6 +165,17 @@ test("context names the ignored filler words", () => {
   assert.ok(out.includes("Not found: thing"), out);
 });
 
+test("context leaves out the partial match line", () => {
+  const result = docker().run(["context", "What is the docker thing?"]);
+  assert.ok(result.out.includes("notes/docker.md"), result.out);
+  assert.ok(!result.out.includes("Partial match"), result.out);
+});
+
+test("context JSON still reports a partial match", () => {
+  const packet = JSON.parse(docker().run(["context", "What is the docker thing?", "--json"]).out);
+  assert.equal(packet.match, "partial");
+});
+
 test("context with only filler words finds nothing and exits 0", () => {
   const result = docker().run(["context", "the"]);
   assert.equal(result.code, 0);

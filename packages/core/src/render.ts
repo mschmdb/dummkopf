@@ -7,12 +7,17 @@ import type { Packet, SourceLine } from "./search.ts";
 
 export const SEARCH_LINE_BUDGET = 900;
 
-export function render(packet: Packet, asJson: boolean, tone: string): string {
+/** Text options. `context` searches a whole question, so a partial match is the norm there and goes unmentioned. */
+export interface RenderOptions {
+  notePartial?: boolean;
+}
+
+export function render(packet: Packet, asJson: boolean, tone: string, options: RenderOptions = {}): string {
   if (asJson) return dumpsCompact(packet) + "\n";
   const output: string[] = [];
   if (packet.period) output.push(say("out_period", tone, { start: packet.period.start, end: packet.period.end }));
   if (packet.hits.length === 0) output.push(say("no_results", tone));
-  if (packet.match === "partial") output.push(say("out_partial", tone));
+  if (packet.match === "partial" && options.notePartial !== false) output.push(say("out_partial", tone));
   if (packet.ignored?.length) output.push(say("out_ignored", tone, { terms: packet.ignored.join(", ") }));
   if (packet.missing?.length) output.push(say("out_not_found", tone, { terms: packet.missing.join(", ") }));
   for (const hit of packet.hits) {
@@ -28,7 +33,8 @@ export function render(packet: Packet, asJson: boolean, tone: string): string {
   return rstrip(output.join("\n")) + "\n";
 }
 
-export function bounded(original: Packet, maxChars: number, asJson: boolean, tone: string): string {
+export function bounded(original: Packet, maxChars: number, asJson: boolean, tone: string,
+                        options: RenderOptions = {}): string {
   const packet = structuredClone(original);
   for (const hit of packet.hits) {
     // Search hits stay short; direct reads use the whole requested budget.
@@ -49,7 +55,7 @@ export function bounded(original: Packet, maxChars: number, asJson: boolean, ton
     }
     hit.lines = kept;
   }
-  while (len(render(packet, asJson, tone)) > maxChars) {
+  while (len(render(packet, asJson, tone, options)) > maxChars) {
     packet.truncated = true;
     // Trim search hints before sources; the first term (or its start) stays visible.
     const ignored = packet.ignored ?? [];
@@ -81,7 +87,7 @@ export function bounded(original: Packet, maxChars: number, asJson: boolean, ton
       hit.lines.pop();
     } else if (hit.lines.length > 0 && len(hit.lines[0]!.text) > 30) {
       const text = hit.lines[0]!.text;
-      const excess = len(render(packet, asJson, tone)) - maxChars;
+      const excess = len(render(packet, asJson, tone, options)) - maxChars;
       hit.lines[0]!.text = slice(text, 0, Math.max(20, len(text) - Math.max(excess, 10) - 1)) + "…";
     } else if (hit.key_fact) {
       hit.key_fact = "";
@@ -92,5 +98,5 @@ export function bounded(original: Packet, maxChars: number, asJson: boolean, ton
       break;
     }
   }
-  return render(packet, asJson, tone);
+  return render(packet, asJson, tone, options);
 }

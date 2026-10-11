@@ -1,18 +1,32 @@
 {
   "name": "dummkopf",
-  "version": "0.3.0-dev",
+  "version": "0.3.0",
   "description": "Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mschmdb/dummkopf.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/mschmdb/dummkopf#readme",
+  "bugs": "https://github.com/mschmdb/dummkopf/issues",
   "type": "module",
   "bin": {
     "dummkopf": "bin/dummkopf",
     "dk": "bin/dk"
   },
-  "files": ["bin", "dist"],
+  "files": ["bin", "dist", "README.md"],
   "dependencies": {
     "@dummkopf/core": "workspace:*"
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b ."
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

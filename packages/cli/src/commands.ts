@@ -76,7 +76,9 @@ export function outputResult(value: Result, asJson: boolean, limit: number, tone
     }
     if (result.status) lines.push(say("sync_ok", tone));
     for (const problem of (result.issues ?? []) as Record<string, unknown>[]) {
-      lines.push(say("out_issue", tone, { path: problem.path, message: problem.message, severity: problem.severity }));
+      // `path:line:` lets editors and terminals jump to the issue; the line never names a link target.
+      const path = problem.line === undefined ? problem.path : problem.path + ":" + String(problem.line);
+      lines.push(say("out_issue", tone, { path, message: problem.message, severity: problem.severity }));
     }
     if (result.truncated) lines.push(say("out_write_truncated", tone));
     return lines.join("\n") + "\n";

@@ -5,7 +5,7 @@ import { AccessDenied, Rejected } from "./errors.ts";
 import { getLocale } from "./locale.ts";
 import { compare, lstrip, slice, splitlines, strip, unique, WS } from "./py.ts";
 import { PyDate } from "./pydate.ts";
-import { parts } from "./pyos.ts";
+import { parts, stripTrailingSlashes } from "./pyos.ts";
 import { planLines, select } from "./routes.ts";
 import { words } from "./text.ts";
 
@@ -143,6 +143,10 @@ export function find(access: Access, query: string, limit = 3, natural = false):
     terms = terms.filter((term) => !stopwords.has(term));
   }
   if (terms.length === 0) throw new Rejected("search_needs_term");
+  const reports = stripTrailingSlashes(config.curator.reportDir) + "/";
+  // A question about the curator wants its reports; otherwise they rank below the notes they summarize.
+  const curatorWords = new Set(["curator", ...words(parts(reports).at(-1) ?? "")]);
+  const lowerReports = !terms.some((term) => curatorWords.has(term));
   const ranked: [number, number, Note][] = [];
   const found = new Set<string>();
   for (const path of access.paths()) {
@@ -171,6 +175,7 @@ export function find(access: Access, query: string, limit = 3, natural = false):
         && words(items[1]!).every((word) => terms.includes(word))) {
       score += weights.topicReadmeBonus;
     }
+    if (lowerReports && note.path.startsWith(reports)) score = score * weights.curatorReportPercent / 100;
     ranked.push([matched.length, score, note]);
   }
   ranked.sort((a, b) => (natural ? b[1] - a[1] || b[0] - a[0] : b[0] - a[0] || b[1] - a[1])

@@ -38,7 +38,8 @@ export function runRead(args: Namespace, config: Config, tone: string): number {
       if (section !== null) [start, end] = headingRange(note.text, section);
       packet = { hits: [sourceHit(note, start, end)], match: "direct", more: false, truncated: false };
     }
-    out(bounded(packet, args.maxChars as number, args.json as boolean, tone));
+    out(bounded(packet, args.maxChars as number, args.json as boolean, tone,
+                { notePartial: args.command !== "context" }));
   }, config.limits.lockTimeoutS);
   return 0;
 }

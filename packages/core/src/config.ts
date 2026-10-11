@@ -2,7 +2,8 @@
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
-import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve } from "./pyos.ts";
+import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readText, resolve,
+  stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
 export const CONFIG_NAME = "dummkopf.toml";
@@ -101,6 +102,8 @@ export interface SearchWeights {
   readonly path: number;
   readonly body: number;
   readonly topicReadmeBonus: number;
+  /** Curator reports repeat the terms of many notes; their score counts this many percent. */
+  readonly curatorReportPercent: number;
 }
 
 export interface SearchConfig {
@@ -109,11 +112,15 @@ export interface SearchConfig {
 
 export interface ContextConfig {
   readonly routesFile: string;
+  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  readonly routesFileSet: boolean;
 }
 
 export interface LinksOptions {
   readonly output: string;
   readonly entitiesFile: string;
+  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  readonly entitiesFileSet: boolean;
   readonly minTopics: number;
   readonly allowOutside: readonly string[];
 }
@@ -184,7 +191,7 @@ const SCHEMA: Section = {
   search: {
     weights: {
       title: ["int", 8], aliases: ["int", 12], key_fact: ["int", 4], path: ["int", 3], body: ["int", 1],
-      topic_readme_bonus: ["int", 30],
+      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25],
     },
   },
   context: { routes_file: ["str", "routes.json"] },
@@ -253,7 +260,7 @@ function coerce(spec: Leaf | Section, raw: unknown, key: string): unknown {
 
 /** Relative, normalized (no `./`, no `//`), inside the brain. Prefix matching relies on the exact form. */
 function relativePath(value: string, key: string, allowDir = false, written = false): void {
-  const plain = allowDir ? value.replace(/\/+$/, "") : value;
+  const plain = allowDir ? stripTrailingSlashes(value) : value;
   const items = parts(plain);
   if (!plain || isAbsolute(plain) || items.includes("..") || value.includes("\\") || items.length === 0
       || value.startsWith("~") || asPosix(plain) !== plain
@@ -346,6 +353,9 @@ function validate(config: Config): void {
   }
   if (limits.maxChars > 20000) throw invalid("limits.max_chars", "must be at most 20000");
   if (limits.findLimit > 10) throw invalid("limits.find_limit", "must be at most 10");
+  if (config.search.weights.curatorReportPercent > 100) {
+    throw invalid("search.weights.curator_report_percent", "must be at most 100");
+  }
 
   relativePath(config.context.routesFile, "context.routes_file");
   relativePath(config.links.output, "links.output", false, true);
@@ -357,7 +367,7 @@ function validate(config: Config): void {
   relativePath(config.curator.reportDir, "curator.report_dir", true, true);
   for (const folder of config.links.allowOutside) {
     relativePath(folder, "links.allow_outside", true, true);
-    if ((layout.roots as readonly string[]).includes(parts(folder.replace(/\/+$/, ""))[0]!)) {
+    if ((layout.roots as readonly string[]).includes(parts(stripTrailingSlashes(folder))[0]!)) {
       throw invalid("links.allow_outside", "note folders are always allowed; list only folders outside them");
     }
   }
@@ -365,8 +375,9 @@ function validate(config: Config): void {
 }
 
 /** Add the derived properties to the plain values from TOML and defaults. */
-function assemble(root: string, values: Record<string, unknown>): Config {
+function assemble(root: string, values: Record<string, unknown>, data: Record<string, unknown> = {}): Config {
   const raw = values as unknown as Omit<Config, "root">;
+  const set = (table: string, key: string): boolean => isTable(data[table]) && data[table][key] !== undefined;
   const repo = raw.repo as Omit<RepoConfig, "local">;
   const layout = raw.layout as Omit<LayoutConfig, "roots" | "flatRoots">;
   const scopes = raw.scopes as Omit<ScopesConfig, "choices">;
@@ -377,6 +388,8 @@ function assemble(root: string, values: Record<string, unknown>): Config {
     repo: { ...repo, local: !strip(repo.remote) },
     layout: { ...layout, roots: [layout.topics, layout.notes, layout.bookmarks], flatRoots: [layout.notes, layout.bookmarks] },
     scopes: { ...scopes, choices: [scopes.all, ...scopes.values] },
+    context: { ...raw.context, routesFileSet: set("context", "routes_file") },
+    links: { ...raw.links, entitiesFileSet: set("links", "entities_file") },
     frontmatter: {
       ...fm,
       mappedKeys: [fm.keyFact, fm.summary, fm.aliases, fm.updated, fm.status, fm.period, fm.entities, fm.scope],
@@ -388,7 +401,8 @@ function assemble(root: string, values: Record<string, unknown>): Config {
 
 /** A config with every default, for tests and tools that have no dummkopf.toml. */
 export function defaultConfig(root: string, overrides: Record<string, unknown> = {}): Config {
-  const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""));
+  const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""),
+                          overrides);
   validate(config);
   return config;
 }
@@ -412,7 +426,7 @@ export function loadConfig(rootPath: string): Config {
   // Python compares with ==, so 1.0 and true pass as version 1.
   const number = version instanceof TomlFloat ? version.value : typeof version === "boolean" ? Number(version) : version;
   if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this dummkopf reads version 1");
-  const config = assemble(root, build(SCHEMA, data, ""));
+  const config = assemble(root, build(SCHEMA, data, ""), data);
   validate(config);
   return config;
 }

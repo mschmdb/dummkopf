@@ -8,7 +8,7 @@
 import type { Config } from "./config.ts";
 import { iterNoteFiles } from "./files.ts";
 import { casefold, ignoreCase, sorted, splitlines, splitWhitespace, strip } from "./py.ts";
-import { isFile, join, parent, parts, readText } from "./pyos.ts";
+import { isFile, join, parent, parts, readText, stripTrailingSlashes } from "./pyos.ts";
 
 /** Horizontal whitespace: Python's `[^\S\r\n]`. */
 const HSPACE = "[\\t\\x0b\\f\\x1c-\\x1f \\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
@@ -49,7 +49,7 @@ function splitEntries(entries: readonly string[]): [Set<string>, Set<string>] {
   for (const raw of entries) {
     const line = strip(raw);
     if (!line || line.startsWith("#")) continue;
-    if (line.endsWith("/") || !line.endsWith(".md")) dirs.add(line.replace(/\/+$/, ""));
+    if (line.endsWith("/") || !line.endsWith(".md")) dirs.add(stripTrailingSlashes(line));
     else files.add(line);
   }
   return [files, dirs];

@@ -228,13 +228,38 @@ test("pre-commit rebuilds the index tables", () => {
   assert.ok(!index.includes("secret.md"));
 });
 
-test("pre-commit reports findings on stdout and exits 0", () => {
+/** Today's date, so a note never turns stale while the suite ages. */
+const TODAY = new Date().toISOString().slice(0, 10);
+const FRESH = FILLER.replace("updated: 2026-10-01", "updated: " + TODAY);
+
+test("pre-commit sums up findings in one line and exits 0", () => {
   const b = indexed();
-  b.write("notes/todo.md", FILLER.replace("key_fact: K.", "key_fact: TODO") + "\n# Todo\n");
+  b.write("notes/todo.md", FRESH.replace("key_fact: K.", "key_fact: TODO") + "\n# Todo\n");
+  b.write("notes/old.md", FILLER.replace("updated: 2026-10-01", "updated: 2020-01-01") + "\n# Old\n");
+  b.write("notes/undated.md", FRESH.replace("updated: " + TODAY + "\n", "") + "\n# Undated\n");
   const result = b.run(["hook", "pre-commit"]);
   assert.equal(result.code, 0);
-  assert.ok(result.out.includes("### No key fact (`TODO`) (1)"));
-  assert.ok(result.out.includes("- `notes/todo.md`"));
+  const summary = result.out.split("\n").filter((line) => line.startsWith("Report:"));
+  assert.deepEqual(summary, ["Report: 1 stale, 1 without date, 1 without key fact. "
+    + "Run `dummkopf meta report` for details."]);
+  assert.ok(!result.out.includes("###"), result.out);
+  assert.ok(!result.out.includes("notes/todo.md"), result.out);
+});
+
+test("pre-commit prints no report line without findings", () => {
+  const b = indexed();
+  b.write("notes/fine.md", FRESH + "\n# Fine\n");
+  const result = b.run(["hook", "pre-commit"]);
+  assert.equal(result.code, 0);
+  assert.ok(!result.out.includes("Report"), result.out);
+});
+
+test("meta report keeps the full list", () => {
+  const b = indexed();
+  b.write("notes/todo.md", FRESH.replace("key_fact: K.", "key_fact: TODO") + "\n# Todo\n");
+  const out = b.run(["meta", "report"]).out;
+  assert.ok(out.includes("### No key fact (`TODO`) (1)"), out);
+  assert.ok(out.includes("- `notes/todo.md`"), out);
 });
 
 // --- the installed Git hook, through a real commit ------------------------------------------------------------
