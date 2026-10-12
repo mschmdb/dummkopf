@@ -173,6 +173,20 @@ test("Markdown has a closing count line", () => {
   assert.ok(text.includes("sensitive files and") && text.includes("sensitive topics skipped"));
 });
 
+test("Markdown lists each note once and names its other findings", () => {
+  const result: CuratorScan = {
+    open_loops: [{ path: "notes/a.md", updated: "2026-01-01", lines: ["TODO: check"] }],
+    stale_topics: [],
+    conflicting_dates: [],
+    stale_active: [{ path: "notes/a.md", updated: "2026-01-01" }, { path: "notes/b.md", updated: "2026-01-02" }],
+    sensitive_files: 0, sensitive_topics: 0,
+  };
+  const text = renderMarkdown(result);
+  assert.equal(text.split("`notes/a.md`").length - 1, 1, text);
+  assert.ok(text.includes("- `notes/a.md` (2026-01-01). Also: Stale active notes\n  - TODO: check\n"), text);
+  assert.ok(text.includes("- `notes/b.md` (2026-01-02)\n"), text);
+});
+
 test("the prompt uses config values", () => {
   const text = prompt(hub().config);
   assert.ok(text.includes("topics/kurator/"));

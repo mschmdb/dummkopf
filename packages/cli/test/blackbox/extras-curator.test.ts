@@ -78,8 +78,16 @@ for (const word of ["open question", "to check", "unverified", "TBD", "not yet"]
 
 test("open loop text shows the matching lines", () => {
   const b = brain();
-  b.write("notes/loop.md", doc("Loop", "TODO call back", { updated: "2020-01-01" }));
+  b.write("notes/loop.md", doc("Loop", "TODO call back", { updated: "2020-01-01", status: "archived" }));
   assert.ok(b.run(["curator"]).out.includes("- `notes/loop.md` (2020-01-01)\n  - TODO call back\n"));
+});
+
+test("a note with several findings appears once and names the others", () => {
+  const b = brain();
+  b.write("notes/loop.md", doc("Loop", "TODO call back", { updated: "2020-01-01" }));
+  const out = b.run(["curator"]).out;
+  assert.equal(out.split("`notes/loop.md`").length - 1, 1, out);
+  assert.ok(out.includes("- `notes/loop.md` (2020-01-01). Also: Stale active notes\n  - TODO call back\n"), out);
 });
 
 test("--open-days moves the open loop cutoff", () => {

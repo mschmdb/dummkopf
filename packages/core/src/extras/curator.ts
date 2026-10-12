@@ -120,22 +120,41 @@ export function scan(config: Config, openDays: number | null = null, staleDays: 
   };
 }
 
+interface Section {
+  title: string;
+  entries: { path: string; head: string; details: string[] }[];
+}
+
+/** Each note appears once, under its first finding; its later findings are named on that line. */
 export function renderMarkdown(result: CuratorScan): string {
-  const none = say("curator_none", "plain");
-  const orNone = (lines: string[]): string[] => (lines.length > 0 ? lines : [none]);
-  const lines = ["# " + say("curator_title", "plain"), "", "## " + say("curator_open_loops", "plain"), ""];
-  for (const loop of result.open_loops) {
-    lines.push("- `" + loop.path + "` (" + loop.updated + ")");
-    lines.push(...loop.lines.map((line) => "  - " + line));
-  }
-  if (result.open_loops.length === 0) lines.push(none);
-  lines.push("", "## " + say("curator_stale_topics", "plain"), "");
-  lines.push(...orNone(result.stale_topics.map((item) => "- `" + item.path + "` (" + item.updated + ")")));
-  lines.push("", "## " + say("curator_conflicts", "plain"), "");
-  lines.push(...orNone(result.conflicting_dates.map((item) =>
-    "- `" + item.path + "` (" + item.updated + "): " + item.dates.join(", "))));
-  lines.push("", "## " + say("curator_stale_active", "plain"), "");
-  lines.push(...orNone(result.stale_active.map((item) => "- `" + item.path + "` (" + item.updated + ")")));
+  const sections: Section[] = [
+    { title: say("curator_open_loops", "plain"), entries: result.open_loops.map((loop) => ({
+      path: loop.path, head: "- `" + loop.path + "` (" + loop.updated + ")", details: loop.lines.map((line) => "  - " + line),
+    })) },
+    { title: say("curator_stale_topics", "plain"), entries: result.stale_topics.map((item) => ({
+      path: item.path, head: "- `" + item.path + "` (" + item.updated + ")", details: [],
+    })) },
+    { title: say("curator_conflicts", "plain"), entries: result.conflicting_dates.map((item) => ({
+      path: item.path, head: "- `" + item.path + "` (" + item.updated + "): " + item.dates.join(", "), details: [],
+    })) },
+    { title: say("curator_stale_active", "plain"), entries: result.stale_active.map((item) => ({
+      path: item.path, head: "- `" + item.path + "` (" + item.updated + ")", details: [],
+    })) },
+  ];
+  const listed = new Set<string>();
+  const lines = ["# " + say("curator_title", "plain")];
+  sections.forEach((section, index) => {
+    lines.push("", "## " + section.title, "");
+    const shown = section.entries.filter((entry) => !listed.has(entry.path));
+    for (const entry of shown) {
+      listed.add(entry.path);
+      const later = sections.slice(index + 1)
+        .filter((other) => other.entries.some((item) => item.path === entry.path)).map((other) => other.title);
+      lines.push(entry.head + (later.length > 0 ? ". " + say("curator_also", "plain", { sections: later.join(", ") }) : ""));
+      lines.push(...entry.details);
+    }
+    if (shown.length === 0) lines.push(say("curator_none", "plain"));
+  });
   lines.push("", say("curator_skipped", "plain", { files: result.sensitive_files, topics: result.sensitive_topics }));
   return lines.join("\n") + "\n";
 }
