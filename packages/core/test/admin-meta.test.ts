@@ -222,6 +222,23 @@ test("generate replaces the files block", () => {
   assert.ok(text.indexOf("topics/t/b.md") < text.indexOf("topics/t/a.md"), "newest first");
 });
 
+// The nearest README owns a file: a sub-folder README lists its own files, the parent lists the sub-folder README.
+test("a sub-folder README lists its own files", () => {
+  const target = repo();
+  seedBrain(target);
+  target.write("topics/t/reports/README.md", "---\nkey_fact: Reports\n---\n\n# Reports\n");
+  target.write("topics/t/reports/week-1.md", "---\nkey_fact: Week one\n---\n\n# Week 1\n");
+  target.write("topics/t/loose/c.md", "---\nkey_fact: Fact C\n---\n\n# C\n");
+  generate(target.config);
+  const parent = target.read("topics/t/README.md");
+  assert.ok(parent.includes("| `topics/t/reports/README.md` | Reports |"), parent);
+  assert.ok(parent.includes("| `topics/t/loose/c.md` | Fact C |"), parent);
+  assert.ok(!parent.includes("week-1.md"), parent);
+  const child = target.read("topics/t/reports/README.md");
+  assert.ok(child.includes("## Files") && child.includes("| `topics/t/reports/week-1.md` | Week one |"), child);
+  assert.ok(!child.includes("topics/t/a.md"), child);
+});
+
 test("generate appends a files block", () => {
   const target = repo();
   seedBrain(target);
