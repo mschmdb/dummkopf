@@ -9,10 +9,10 @@
 import type { Config } from "../config.ts";
 import { getLocale } from "../locale.ts";
 import { text as say } from "../messages.ts";
-import { BOUNDARY, compare, ignoreCase, len, rstrip, slice, splitlines, strip, unique } from "../py.ts";
+import { BOUNDARY, compare, ignoreCase, len, rstrip, slice, splitlines, strip } from "../py.ts";
 import { PyDate } from "../pydate.ts";
 import { template } from "../scaffold.ts";
-import { age, openNotes, readNote, require, topicFolders } from "./common.ts";
+import { age, openNotes, parseDate, readNote, require, topicFolders } from "./common.ts";
 
 export const MAX_LINES = 3;
 export const LINE_WIDTH = 120;
@@ -28,8 +28,11 @@ export interface Dated {
   updated: string;
 }
 
+/** A note whose text names a newer as-of date than its own date (`updated`, else the Git date). */
 export interface Conflict {
   path: string;
+  updated: string;
+  /** The as-of dates in the text, one per calendar day, as first written. */
   dates: string[];
 }
 
@@ -45,6 +48,19 @@ export interface CuratorScan {
 export function openPattern(config: Config): RegExp {
   const words = getLocale(config.ui.locale).openWords;
   return new RegExp(BOUNDARY + "(?:" + words.map(ignoreCase).join("|") + ")" + BOUNDARY, "u");
+}
+
+/**
+ * The as-of dates in a body, one per calendar day. Only the body: the frontmatter date field would
+ * otherwise count as an as-of date.
+ */
+function asOfDates(config: Config, body: string, labels: RegExp): [PyDate, string][] {
+  const days = new Map<string, [PyDate, string]>();
+  for (const match of body.matchAll(labels)) {
+    const parsed = parseDate(match[1]!, config);
+    if (parsed !== null && !days.has(parsed.isoformat())) days.set(parsed.isoformat(), [parsed, match[1]!]);
+  }
+  return [...days.values()];
 }
 
 function byPath<T extends { path: string }>(items: T[]): T[] {
@@ -79,9 +95,11 @@ export function scan(config: Config, openDays: number | null = null, staleDays: 
       }
       loops.push({ path: rel, updated: resolved[1], lines });
     }
-    // Only the body: the frontmatter date field would otherwise count as a second "as of" date.
-    const dates = unique([...body.matchAll(labels)].map((match) => match[1]!));
-    if (dates.length >= 2) conflicts.push({ path: rel, dates });
+    // A history of as-of dates up to the note's date is normal; a newer one means the date lags behind.
+    const dates = asOfDates(config, body, labels);
+    if (resolved && dates.some(([day]) => day.compare(resolved[0]) > 0)) {
+      conflicts.push({ path: rel, updated: resolved[1], dates: dates.map(([, written]) => written) });
+    }
     const updated = data.get(config.frontmatter.updated);
     if (data.get(config.frontmatter.status) === config.status.active && typeof updated === "string"
         && resolved && resolved[1] === updated && resolved[0].compare(staleLimit) < 0) {
@@ -114,7 +132,8 @@ export function renderMarkdown(result: CuratorScan): string {
   lines.push("", "## " + say("curator_stale_topics", "plain"), "");
   lines.push(...orNone(result.stale_topics.map((item) => "- `" + item.path + "` (" + item.updated + ")")));
   lines.push("", "## " + say("curator_conflicts", "plain"), "");
-  lines.push(...orNone(result.conflicting_dates.map((item) => "- `" + item.path + "`: " + item.dates.join(", "))));
+  lines.push(...orNone(result.conflicting_dates.map((item) =>
+    "- `" + item.path + "` (" + item.updated + "): " + item.dates.join(", "))));
   lines.push("", "## " + say("curator_stale_active", "plain"), "");
   lines.push(...orNone(result.stale_active.map((item) => "- `" + item.path + "` (" + item.updated + ")")));
   lines.push("", say("curator_skipped", "plain", { files: result.sensitive_files, topics: result.sensitive_topics }));
