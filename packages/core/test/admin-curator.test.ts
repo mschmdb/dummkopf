@@ -145,6 +145,43 @@ test("stale active notes", () => {
   assert.deepEqual(paths(run(target, 0, null, 56), "stale_active"), ["topics/foo/old.md"]);
 });
 
+// A "keep" verdict must stick, or the same false alarm returns every week.
+test("curator_keep with a future date hides a note from every finding until then", () => {
+  const target = repo();
+  const future = PyDate.today().addDays(30).isoformat();
+  const keep = (date: string): string => "---\nstatus: active\nupdated: " + ago(90) + "\ncurator_keep: " + date
+    + "\n---\n\n# Foo\n\nTODO later. As of " + ago(10) + ".\n";
+  target.write("topics/foo/kept.md", keep(future));
+  target.write("topics/foo/today.md", keep(PyDate.today().isoformat()));
+  target.write("topics/foo/expired.md", keep(ago(1)));
+  const data = run(target, 0, null, 56);
+  for (const key of ["open_loops", "conflicting_dates", "stale_active"] as const) {
+    assert.deepEqual(paths(data, key), ["topics/foo/expired.md"], key);
+  }
+});
+
+test("a kept topic README hides the quiet topic", () => {
+  const target = repo();
+  target.write("topics/quiet/README.md", "---\nupdated: " + ago(90) + "\ncurator_keep: "
+    + PyDate.today().addDays(30).isoformat() + "\n---\n\n# Quiet\n");
+  target.write("topics/other/README.md", "---\nupdated: " + ago(90) + "\n---\n\n# Other\n");
+  assert.deepEqual(paths(run(target, 0, null, 56), "stale_topics"), ["topics/other/"]);
+});
+
+test("the keep date follows the locale's date formats", () => {
+  const de = hub();
+  de.write("topics/foo/alt.md", "---\nstatus: aktiv\nstand: " + ago(90) + "\nkurator_bleibt: 31.12.2099\n---\n\n# Foo\n");
+  assert.deepEqual(paths(run(de, 0, null, 56), "stale_active"), []);
+});
+
+test("curator.keep_key renames the keep field", () => {
+  const target = repo();
+  target.configure('[curator]\nkeep_key = "review_after"\n');
+  target.write("topics/foo/a.md", "---\nstatus: active\nupdated: " + ago(90) + "\nreview_after: 2099-12-31\n---\n\n# A\n");
+  target.write("topics/foo/b.md", "---\nstatus: active\nupdated: " + ago(90) + "\ncurator_keep: 2099-12-31\n---\n\n# B\n");
+  assert.deepEqual(paths(run(target, 0, null, 56), "stale_active"), ["topics/foo/b.md"]);
+});
+
 test("a sensitive folder and the paths file are excluded", () => {
   const target = repo();
   target.write("topics/hidden/README.md", "> SENSITIVE\n\n# Hidden\n");

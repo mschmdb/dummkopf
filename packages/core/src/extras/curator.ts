@@ -63,6 +63,13 @@ function asOfDates(config: Config, body: string, labels: RegExp): [PyDate, strin
   return [...days.values()];
 }
 
+/** A "keep" verdict: the note's keep date is today or later. */
+function kept(config: Config, data: ReadonlyMap<string, unknown>, today: PyDate): boolean {
+  const value = data.get(config.curator.keepKey);
+  const until = typeof value === "string" ? parseDate(value, config) : null;
+  return until !== null && until.compare(today) >= 0;
+}
+
 function byPath<T extends { path: string }>(items: T[]): T[] {
   return items.sort((a, b) => compare(a.path, b.path));
 }
@@ -81,9 +88,20 @@ export function scan(config: Config, openDays: number | null = null, staleDays: 
   const conflicts: Conflict[] = [];
   const staleActive: Dated[] = [];
   const newest = new Map<string, [PyDate, string]>();
+  const keptTopics = new Set<string>();
+  const topicReadme = (rel: string): string => rel.split("/").slice(0, 2).join("/") + "/" + config.layout.topicReadme;
   for (const rel of notes.files) {
     const [data, body] = readNote(config, rel);
     const resolved = age(config, rel, data);
+    if (rel.startsWith(config.layout.topics + "/") && resolved) {
+      const topic = rel.split("/").slice(0, 2).join("/");
+      const seen = newest.get(topic);
+      if (seen === undefined || resolved[0].compare(seen[0]) > 0) newest.set(topic, resolved);
+    }
+    if (kept(config, data, today)) {
+      if (rel === topicReadme(rel)) keptTopics.add(rel.split("/").slice(0, 2).join("/"));
+      continue;
+    }
     if (pattern.test(body) && resolved && resolved[0].compare(openLimit) < 0) {
       const lines: string[] = [];
       for (const line of splitlines(body)) {
@@ -105,14 +123,9 @@ export function scan(config: Config, openDays: number | null = null, staleDays: 
         && resolved && resolved[1] === updated && resolved[0].compare(staleLimit) < 0) {
       staleActive.push({ path: rel, updated });
     }
-    if (rel.startsWith(config.layout.topics + "/") && resolved) {
-      const topic = rel.split("/").slice(0, 2).join("/");
-      const seen = newest.get(topic);
-      if (seen === undefined || resolved[0].compare(seen[0]) > 0) newest.set(topic, resolved);
-    }
   }
   const staleTopics = topicFolders(config)
-    .filter((topic) => newest.has(topic) && newest.get(topic)![0].compare(staleLimit) < 0)
+    .filter((topic) => !keptTopics.has(topic) && newest.has(topic) && newest.get(topic)![0].compare(staleLimit) < 0)
     .map((topic) => ({ path: topic + "/", updated: newest.get(topic)![1] }));
   return {
     open_loops: byPath(loops), stale_topics: staleTopics, conflicting_dates: byPath(conflicts),

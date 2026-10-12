@@ -135,6 +135,8 @@ export interface CuratorOptions {
   readonly openDays: number;
   readonly staleDays: number;
   readonly reportDir: string;
+  /** Frontmatter key whose date hides a note from the curator until that day. */
+  readonly keepKey: string;
 }
 
 export interface ExtrasConfig {
@@ -208,7 +210,10 @@ const SCHEMA: Section = {
     output: ["str", "LINKS.md"], entities_file: ["str", "entities.txt"], min_topics: ["int", 2],
     allow_outside: ["list", []],
   },
-  curator: { open_days: ["int", 28], stale_days: ["int", 56], report_dir: ["str", "topics/curator"] },
+  curator: {
+    open_days: ["int", 28], stale_days: ["int", 56], report_dir: ["str", "topics/curator"],
+    keep_key: ["str", "curator_keep"],
+  },
 };
 
 function camel(key: string): string {

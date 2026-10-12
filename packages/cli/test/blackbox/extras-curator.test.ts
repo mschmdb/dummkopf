@@ -76,6 +76,15 @@ for (const word of ["open question", "to check", "unverified", "TBD", "not yet"]
   });
 }
 
+test("curator_keep hides a note until its date", () => {
+  const b = brain();
+  b.write("notes/kept.md", doc("Kept", "TODO later", { updated: "2020-01-01", extra: "curator_keep: 2099-12-31\n" }));
+  b.write("notes/due.md", doc("Due", "TODO later", { updated: "2020-01-01", extra: "curator_keep: 2020-06-01\n" }));
+  const data = curatorJson(b);
+  assert.deepEqual(data.open_loops.map((item: Json) => item.path), ["notes/due.md"]);
+  assert.deepEqual(data.stale_active.map((item: Json) => item.path), ["notes/due.md"]);
+});
+
 test("open loop text shows the matching lines", () => {
   const b = brain();
   b.write("notes/loop.md", doc("Loop", "TODO call back", { updated: "2020-01-01", status: "archived" }));
