@@ -6,6 +6,7 @@ Working directory: the root of this brain. Run these steps in order.
 2. Run `dummkopf curator` and `dummkopf links`.
 3. Read the curator report and `{links_file}`. For each finding, propose one action with a one-line reason.
    Allowed actions: `update`, `write conclusion`, `archive`, `delete`, `keep`.
+   Do not copy from earlier reports. Give every finding its own reason from this week's scan.
 4. Write the result to `{report_dir}YYYY-WW.md` (ISO calendar week, e.g. `2026-40.md`) with one
    `dummkopf ingest` package. On the first run `{report_dir}{readme}` does not exist yet: add it to the same
    package with a `{scope_key}` from your scopes, because a new topic needs its README. The report content:
@@ -23,7 +24,8 @@ Working directory: the root of this brain. Run these steps in order.
      ```
    - The count line on top: open loops, topics without movement, conflicting dates, stale active notes.
    - The list of proposals, one per finding.
-   - The three most striking links from `{links_file}`, each with one line on why.
+   - The three most striking links from `{links_file}`, each with one line on why. Pick them from
+     `{links_entities}` and `{links_collisions}`. Skip `{links_time}`: sharing a month is no relation.
 5. **Change no note, delete nothing, archive nothing.** Only the report is written. A proposal is a proposal,
    not an action. The human decides from the report.
 6. Open and name no sensitive paths (see `{paths_file}` and the `{marker}` marker). Both commands already

@@ -163,6 +163,8 @@ export function renderMarkdown(result: CuratorScan): string {
 export function prompt(config: Config): string {
   let text = template("curator-prompt.md");
   const fm = config.frontmatter;
+  const locale = getLocale(config.ui.locale);
+  const heading = (value: string): string => value.replace(/^#+\s*/u, "");
   const values: [string, string][] = [
     ["report_dir", rstrip(config.curator.reportDir, "/") + "/"],
     ["links_file", config.links.output],
@@ -171,6 +173,8 @@ export function prompt(config: Config): string {
     ["active", config.status.active], ["marker", config.sensitive.marker],
     ["paths_file", config.sensitive.pathsFile],
     ["readme", config.layout.topicReadme], ["scope_key", fm.scope],
+    ["links_entities", heading(locale.linksEntities)], ["links_collisions", heading(locale.linksCollisions)],
+    ["links_time", heading(locale.linksTime)],
   ];
   for (const [key, value] of values) text = text.replaceAll("{" + key + "}", () => value);
   return text;

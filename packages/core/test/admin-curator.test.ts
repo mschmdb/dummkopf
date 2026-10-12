@@ -212,6 +212,18 @@ test("the frontmatter date is not an as-of date", () => {
   assert.deepEqual(entry.dates, ["2026-02-02"]);
 });
 
+test("the prompt picks links by entity or collision, never by month alone", () => {
+  const text = prompt(hub().config);
+  assert.ok(text.includes("`Entitäts-Kanten`") && text.includes("`Kollisionen`"), text);
+  assert.ok(text.includes("Skip `Zeit-Kanten`"), text);
+});
+
+test("the prompt asks for fresh reasons instead of last week's report", () => {
+  const text = prompt(repo().config);
+  assert.ok(text.includes("Do not copy from earlier reports"), text);
+  assert.ok(text.includes("Give every finding its own reason from this week's scan"), text);
+});
+
 test("the prompt creates the report topic with ingest", () => {
   const text = prompt(repo().config);
   assert.ok(text.includes("dummkopf ingest"));
