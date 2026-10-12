@@ -127,6 +127,7 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "curator_conflicts": "Conflicting dates",
   "curator_stale_active": "Stale active notes",
   "curator_none": "None found.",
+  "curator_also": "Also: {sections}",
   "curator_skipped": "{files} sensitive files and {topics} sensitive topics skipped.",
   "out_init": "New brain created in {path}. It stays local: dummkopf commits, but never pushes. Next: `dummkopf install`.",
   "usage_error": "error: {message}",

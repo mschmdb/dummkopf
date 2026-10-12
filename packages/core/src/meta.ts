@@ -127,17 +127,42 @@ export function newestFirst(entries: readonly Entry[]): Entry[] {
   return [...entries].sort((a, b) => compare(a.rel, b.rel)).sort((a, b) => compare(b.updated, a.updated));
 }
 
+/** The folders under topics/ that hold a README, the topic folders and any sub-folder with its own. */
+function readmeFolders(config: Config, notes: readonly string[]): Set<string> {
+  const suffix = "/" + config.layout.topicReadme;
+  return new Set(notes.filter((rel) => rel.startsWith(config.layout.topics + "/") && rel.endsWith(suffix))
+    .map((rel) => rel.slice(0, -suffix.length)));
+}
+
+/** The nearest README folder above a file; a README belongs to the folder above its own. */
+function owner(config: Config, rel: string, folders: ReadonlySet<string>): string {
+  let folder = rel.slice(0, rel.lastIndexOf("/"));
+  if (rel.endsWith("/" + config.layout.topicReadme)) folder = folder.slice(0, folder.lastIndexOf("/"));
+  while (folder.includes("/") && !folders.has(folder)) folder = folder.slice(0, folder.lastIndexOf("/"));
+  return folder;
+}
+
+/** Sub-folders of a topic with their own README, relative to topics/ like "topic/reports". */
+function subTopicDirs(config: Config, notes: readonly string[]): string[] {
+  const base = config.layout.topics + "/";
+  return sorted([...readmeFolders(config, notes)].filter((folder) => count(folder, "/") >= 2)
+    .map((folder) => folder.slice(base.length)));
+}
+
+/** `topic` is a topic folder or a sub-folder with its own README, relative to topics/. */
 export function renderReadme(config: Config, topic: string, text: string, notes: readonly string[],
                              sensitivity: Sensitivity): string {
   const locale = getLocale(config.ui.locale);
   const prefix = config.layout.topics + "/" + topic + "/";
   const readme = prefix + config.layout.topicReadme;
+  const folders = readmeFolders(config, notes);
   // A protected topic may list its own files. In an open topic every individually
   // sensitive file stays out, so a glance at the README reveals nothing.
   const isProtected = sensitivity.isSensitive(readme);
   // The README is readable in its own scope only; listing other scopes there would leak them.
   const scope = effectiveScope(config, readme);
   const entries = notes.filter((rel) => rel.startsWith(prefix) && rel !== readme
+    && owner(config, rel, folders) === prefix.slice(0, -1)
     && (isProtected || !sensitivity.isSensitive(rel)) && effectiveScope(config, rel) === scope)
     .map((rel) => entry(config, rel));
   const rows = newestFirst(entries).map((item) => ["`" + item.rel + "`", item.keyFact, item.aliases]);
@@ -190,7 +215,7 @@ export function generate(config: Config, dryRun = false): string[] {
     }
   };
 
-  for (const name of topicDirs(config)) {
+  for (const name of [...topicDirs(config), ...subTopicDirs(config, notes)]) {
     const rel = config.layout.topics + "/" + name + "/" + config.layout.topicReadme;
     const text = readRaw(join(config.root, rel));
     if (text !== null) put(rel, text, renderReadme(config, name, text, notes, sensitivity)); // unreadable or symlinked READMEs stay untouched

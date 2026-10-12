@@ -145,6 +145,43 @@ test("stale active notes", () => {
   assert.deepEqual(paths(run(target, 0, null, 56), "stale_active"), ["topics/foo/old.md"]);
 });
 
+// A "keep" verdict must stick, or the same false alarm returns every week.
+test("curator_keep with a future date hides a note from every finding until then", () => {
+  const target = repo();
+  const future = PyDate.today().addDays(30).isoformat();
+  const keep = (date: string): string => "---\nstatus: active\nupdated: " + ago(90) + "\ncurator_keep: " + date
+    + "\n---\n\n# Foo\n\nTODO later. As of " + ago(10) + ".\n";
+  target.write("topics/foo/kept.md", keep(future));
+  target.write("topics/foo/today.md", keep(PyDate.today().isoformat()));
+  target.write("topics/foo/expired.md", keep(ago(1)));
+  const data = run(target, 0, null, 56);
+  for (const key of ["open_loops", "conflicting_dates", "stale_active"] as const) {
+    assert.deepEqual(paths(data, key), ["topics/foo/expired.md"], key);
+  }
+});
+
+test("a kept topic README hides the quiet topic", () => {
+  const target = repo();
+  target.write("topics/quiet/README.md", "---\nupdated: " + ago(90) + "\ncurator_keep: "
+    + PyDate.today().addDays(30).isoformat() + "\n---\n\n# Quiet\n");
+  target.write("topics/other/README.md", "---\nupdated: " + ago(90) + "\n---\n\n# Other\n");
+  assert.deepEqual(paths(run(target, 0, null, 56), "stale_topics"), ["topics/other/"]);
+});
+
+test("the keep date follows the locale's date formats", () => {
+  const de = hub();
+  de.write("topics/foo/alt.md", "---\nstatus: aktiv\nstand: " + ago(90) + "\nkurator_bleibt: 31.12.2099\n---\n\n# Foo\n");
+  assert.deepEqual(paths(run(de, 0, null, 56), "stale_active"), []);
+});
+
+test("curator.keep_key renames the keep field", () => {
+  const target = repo();
+  target.configure('[curator]\nkeep_key = "review_after"\n');
+  target.write("topics/foo/a.md", "---\nstatus: active\nupdated: " + ago(90) + "\nreview_after: 2099-12-31\n---\n\n# A\n");
+  target.write("topics/foo/b.md", "---\nstatus: active\nupdated: " + ago(90) + "\ncurator_keep: 2099-12-31\n---\n\n# B\n");
+  assert.deepEqual(paths(run(target, 0, null, 56), "stale_active"), ["topics/foo/b.md"]);
+});
+
 test("a sensitive folder and the paths file are excluded", () => {
   const target = repo();
   target.write("topics/hidden/README.md", "> SENSITIVE\n\n# Hidden\n");
@@ -173,6 +210,20 @@ test("Markdown has a closing count line", () => {
   assert.ok(text.includes("sensitive files and") && text.includes("sensitive topics skipped"));
 });
 
+test("Markdown lists each note once and names its other findings", () => {
+  const result: CuratorScan = {
+    open_loops: [{ path: "notes/a.md", updated: "2026-01-01", lines: ["TODO: check"] }],
+    stale_topics: [],
+    conflicting_dates: [],
+    stale_active: [{ path: "notes/a.md", updated: "2026-01-01" }, { path: "notes/b.md", updated: "2026-01-02" }],
+    sensitive_files: 0, sensitive_topics: 0,
+  };
+  const text = renderMarkdown(result);
+  assert.equal(text.split("`notes/a.md`").length - 1, 1, text);
+  assert.ok(text.includes("- `notes/a.md` (2026-01-01). Also: Stale active notes\n  - TODO: check\n"), text);
+  assert.ok(text.includes("- `notes/b.md` (2026-01-02)\n"), text);
+});
+
 test("the prompt uses config values", () => {
   const text = prompt(hub().config);
   assert.ok(text.includes("topics/kurator/"));
@@ -196,6 +247,18 @@ test("the frontmatter date is not an as-of date", () => {
   target.write("topics/foo/bar.md", "---\nupdated: 2026-01-01\n---\n\n# Bar\n\nAs of 2026-02-02 all good.\n");
   const entry = run(target).conflicting_dates.find((item) => item.path === "topics/foo/bar.md")!;
   assert.deepEqual(entry.dates, ["2026-02-02"]);
+});
+
+test("the prompt picks links by entity or collision, never by month alone", () => {
+  const text = prompt(hub().config);
+  assert.ok(text.includes("`Entitäts-Kanten`") && text.includes("`Kollisionen`"), text);
+  assert.ok(text.includes("Skip `Zeit-Kanten`"), text);
+});
+
+test("the prompt asks for fresh reasons instead of last week's report", () => {
+  const text = prompt(repo().config);
+  assert.ok(text.includes("Do not copy from earlier reports"), text);
+  assert.ok(text.includes("Give every finding its own reason from this week's scan"), text);
 });
 
 test("the prompt creates the report topic with ingest", () => {

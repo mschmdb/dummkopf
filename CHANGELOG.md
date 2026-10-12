@@ -5,7 +5,20 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `curator_keep: <date>` in a note's frontmatter keeps it out of the `curator` scan until that day, so a "keep"
+  verdict stops coming back every week. On a topic README it also hides the quiet topic. `curator.keep_key`
+  renames the field.
+
 ### Changed
+
+- The `curator` Markdown report lists each note once, under its first finding, and names its other findings on
+  the same line. `--json` is unchanged.
+- The curator prompt picks striking links from entity links and collisions, skips links that only share a
+  month, and asks for fresh reasons instead of copying earlier reports.
+- A README in a sub-folder of a topic gets its own file table. The topic README lists that sub-folder README
+  instead of the files below it.
 
 - `curator` reports a date conflict only when the text names a newer "as of" day than the note's own date
   (`updated`, else the Git date). A dated history up to that day is no conflict anymore. Each entry in

@@ -94,3 +94,4 @@ allow_outside = []                     # folders outside the note folders that l
 open_days = 28
 stale_days = 56
 report_dir = "topics/curator"
+keep_key = "curator_keep"               # frontmatter date that hides a note from the scan until that day

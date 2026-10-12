@@ -245,7 +245,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
 | `[extras]` | `links`, `curator`, `codex_sync` | Switch each extra on or off. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
-| `[curator]` | `open_days`, `stale_days`, `report_dir` | Options of the curator extra. |
+| `[curator]` | `open_days`, `stale_days`, `report_dir`, `keep_key` | Options of the curator extra. |
 
 **An existing brain in another language** runs on ˈdʊmkɔpf through configuration alone.
 [examples/config-german-hub.toml](examples/config-german-hub.toml) maps German keys (`kernfakt`, `stand`, …),
@@ -260,8 +260,11 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   sides of a scope barrier are busy. Entities come from `entities.txt`: one per line, `Name|alias|alias`,
   prefix `i:` for case-insensitive matching.
 - **curator**: `dummkopf curator` lists open loops, quiet topics, conflicting "as of" dates and stale active
-  notes. A date conflicts when the text names a newer "as of" day than the note's own date. `dummkopf curator --prompt` prints a weekly LLM prompt that turns the scan into a proposal report
-  under `curator.report_dir`. The prompt proposes; it never changes notes.
+  notes. A date conflicts when the text names a newer "as of" day than the note's own date. `dummkopf curator --prompt`
+  prints a weekly LLM prompt that turns the scan into a proposal report under `curator.report_dir`. The prompt
+  proposes; it never changes notes. To keep a note out of the scan after a "keep" verdict, give it
+  `curator_keep: <date>` in its frontmatter (`curator.keep_key` renames the field); it returns after that day. On a
+  topic README it also hides the quiet topic.
 - **codex_sync**: installs the Codex hook.
 - **routes**: a `routes.json` entry like
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`

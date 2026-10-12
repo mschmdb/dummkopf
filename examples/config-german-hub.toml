@@ -53,3 +53,4 @@ entities_file = "entitaeten.txt"
 
 [curator]
 report_dir = "topics/kurator"
+keep_key = "kurator_bleibt"
