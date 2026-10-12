@@ -260,7 +260,7 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   sides of a scope barrier are busy. Entities come from `entities.txt`: one per line, `Name|alias|alias`,
   prefix `i:` for case-insensitive matching.
 - **curator**: `dummkopf curator` lists open loops, quiet topics, conflicting "as of" dates and stale active
-  notes. `dummkopf curator --prompt` prints a weekly LLM prompt that turns the scan into a proposal report
+  notes. A date conflicts when the text names a newer "as of" day than the note's own date. `dummkopf curator --prompt` prints a weekly LLM prompt that turns the scan into a proposal report
   under `curator.report_dir`. The prompt proposes; it never changes notes.
 - **codex_sync**: installs the Codex hook.
 - **routes**: a `routes.json` entry like

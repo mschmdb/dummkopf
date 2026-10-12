@@ -5,6 +5,16 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `curator` reports a date conflict only when the text names a newer "as of" day than the note's own date
+  (`updated`, else the Git date). A dated history up to that day is no conflict anymore. Each entry in
+  `--json` gains `updated`.
+
+### Fixed
+
+- `curator` compares "as of" dates by calendar day, so `2026-09-25` and `25.09.2026` are the same date.
+
 ## [0.4.1] - 2026-10-11
 
 ### Added

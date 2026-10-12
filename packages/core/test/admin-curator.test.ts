@@ -101,17 +101,40 @@ test("stale topic uses frontmatter and any recent file", () => {
   assert.ok(!paths(run(target, 0, null, 56), "stale_topics").includes("topics/bar/"));
 });
 
-test("conflicting dates", () => {
+// A conflict is text that claims a newer state than the note's own date: the metadata lags behind.
+test("conflicting dates: the text names a newer as-of date than the frontmatter", () => {
   const de = hub();
-  de.write("topics/foo/bar.md", "Stand: 06.08.2026\n\nSpäter: Stand 2026-09-25\n");
-  de.write("topics/foo/one.md", "Stand: 06.08.2026\n");
+  de.write("topics/foo/bar.md", "---\nstand: 2026-08-06\n---\n\nStand: 06.08.2026\n\nSpäter: Stand 2026-09-25\n");
+  de.write("topics/foo/one.md", "---\nstand: 2026-08-06\n---\n\nStand: 06.08.2026\n");
   const data = run(de);
   const entry = data.conflicting_dates.find((item) => item.path === "topics/foo/bar.md")!;
-  assert.deepEqual(new Set(entry.dates), new Set(["06.08.2026", "2026-09-25"]));
+  assert.deepEqual(entry, { path: "topics/foo/bar.md", updated: "2026-08-06", dates: ["06.08.2026", "2026-09-25"] });
   assert.ok(!paths(data, "conflicting_dates").includes("topics/foo/one.md"));
   const en = repo();
-  en.write("topics/foo/bar.md", "As of 2026-08-06.\n\nUpdated: 2026-09-25\n");
+  en.write("topics/foo/bar.md", "---\nupdated: 2026-08-06\n---\n\nAs of 2026-08-06.\n\nUpdated: 2026-09-25\n");
   assert.ok(paths(run(en), "conflicting_dates").includes("topics/foo/bar.md"));
+});
+
+test("the same day in two spellings is one date", () => {
+  const de = hub();
+  de.write("topics/foo/bar.md", "---\nstand: 2026-07-01\n---\n\nStand 2026-07-15\n\nStand: 15.07.2026\n");
+  const entry = run(de).conflicting_dates.find((item) => item.path === "topics/foo/bar.md")!;
+  assert.deepEqual(entry.dates, ["2026-07-15"]);
+});
+
+test("a documented history up to the note's date is no conflict", () => {
+  const de = hub();
+  de.write("topics/foo/bar.md", "---\nstand: 2026-09-25\n---\n\nStand: 06.08.2026\n\nSpäter: Stand 25.09.2026\n");
+  de.write("topics/foo/newer.md", "---\nstand: 2026-10-10\n---\n\nStand: 06.08.2026\n\nStand: 25.09.2026\n");
+  const data = run(de);
+  assert.deepEqual(paths(data, "conflicting_dates"), []);
+});
+
+test("without a frontmatter date the Git date is the note's date", () => {
+  const de = hub();
+  de.write("topics/foo/old.md", "Stand: " + ago(30) + "\n");
+  de.write("topics/foo/ahead.md", "Stand: " + ago(5) + "\n");
+  assert.deepEqual(paths(run(de, 10), "conflicting_dates"), ["topics/foo/ahead.md"]);
 });
 
 test("stale active notes", () => {
@@ -171,7 +194,8 @@ test("CLI", () => {
 test("the frontmatter date is not an as-of date", () => {
   const target = repo();
   target.write("topics/foo/bar.md", "---\nupdated: 2026-01-01\n---\n\n# Bar\n\nAs of 2026-02-02 all good.\n");
-  assert.ok(!paths(run(target), "conflicting_dates").includes("topics/foo/bar.md"));
+  const entry = run(target).conflicting_dates.find((item) => item.path === "topics/foo/bar.md")!;
+  assert.deepEqual(entry.dates, ["2026-02-02"]);
 });
 
 test("the prompt creates the report topic with ingest", () => {

@@ -123,14 +123,15 @@ test("stale topic is a topic whose newest note is old", () => {
   assert.deepEqual(curatorJson(b).stale_topics, [{ path: "topics/quiet/", updated: "2020-01-01" }]);
 });
 
-test("conflicting dates name notes with two as-of dates", () => {
+test("conflicting dates name notes whose text is newer than their date", () => {
   const b = brain();
   b.write("notes/conflict.md", doc("Conflict", "As of 2025-01-01 it is x.\n\nAs of 2025-02-02 it is y.",
+    { updated: "2025-01-01" }));
+  b.write("notes/history.md", doc("History", "As of 2025-01-01 it is x.\n\nAs of 2025-02-02 it is y.",
     { updated: "2025-02-02" }));
   b.write("notes/single.md", doc("Single", "As of 2025-01-01 it is x.", { updated: "2025-01-01" }));
-  const conflicts = curatorJson(b).conflicting_dates;
-  assert.deepEqual(conflicts.map((item: Json) => item.path), ["notes/conflict.md"]);
-  assert.deepEqual(new Set(conflicts[0].dates), new Set(["2025-01-01", "2025-02-02"]));
+  assert.deepEqual(curatorJson(b).conflicting_dates,
+    [{ path: "notes/conflict.md", updated: "2025-01-01", dates: ["2025-01-01", "2025-02-02"] }]);
 });
 
 test("repeating the same as-of date is no conflict", () => {
