@@ -209,6 +209,9 @@ Codex reads `AGENTS.md` directly. `dummkopf install` adds:
 - `.codex/hooks.json` (with `extras.codex_sync`): the same hook for Codex tools. Check that your Codex
   version has hooks enabled.
 
+- `permissions` in `.claude/settings.json`: `allow` rules for `Bash(dummkopf *)` and `Bash(dk *)`, and `ask`
+  rules for any call with `--allow-sensitive`. See [Headless agents](#headless-agents).
+
 Existing settings stay; `install` only adds its own entries and can run again safely. Moving from an older
 sync setup? `dummkopf install --replace-command old_sync.py` removes hook commands containing that text first,
 so two sync paths never run side by side.
@@ -223,6 +226,31 @@ Long-term memory lives in ~/brain. Before answering questions about earlier deci
 
 `DUMMKOPF_ROOT=~/brain` in your shell profile saves the `--root`. The hooks ignore it: they always get
 `--root` from the hook command, so they never act on a brain you did not install them into.
+
+### Headless agents
+
+`claude -p` and the Claude Code GitHub Action never ask before a Bash command. They deny every command that
+needs approval and no rule allows, and report the denial only in their result. Without a rule, an agent there
+cannot call `dummkopf` at all. Claude Code on the web applies the rules from the repository's
+`.claude/settings.json`, too.
+
+Inside the brain, `dummkopf install` writes the rules. From other projects, add them yourself, for example
+to `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(dummkopf *)", "Bash(dk *)"],
+    "ask": ["Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"]
+  }
+}
+```
+
+`ask` wins over `allow`. In a terminal, Claude Code asks you before it opens a sensitive note. Headless, nobody
+can confirm, so the call fails. That matches the rule in `AGENTS.md`: only the user opens a sensitive topic.
+These rules match the command as the agent writes it. They are not a security boundary: an agent can still
+read the files directly with `cat`. For the GitHub Action, pass the same rules through its `settings` input
+or `claude_args: --allowedTools`.
 
 ## Configuration reference
 
