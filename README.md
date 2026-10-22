@@ -9,6 +9,23 @@ write through one CLI. Hooks commit every change. With a remote, they also push 
 to every machine. Without one, the brain stays on your machine. Notes carry a scope (`private`, `work`, or
 your own) and can be marked sensitive. Agents never see sensitive notes unless the user names the topic.
 
+## Why not built-in memory?
+
+Claude Code and Codex remember things on their own. Use that first. It needs no setup, and Claude Code loads its
+memory into every session, while ˈdʊmkɔpf answers only when the agent asks. If you work on one project on one
+machine, built-in memory is enough.
+
+| | Built-in | ˈdʊmkɔpf |
+|---|---|---|
+| Claude Code auto memory | One folder per Git repository in `~/.claude/projects/`, on this machine only | One brain for every project, on every machine with a synced brain |
+| Codex memories | Off by default, kept in `~/.codex/memories/` | The same brain for Codex and Claude Code |
+| `CLAUDE.md`, `AGENTS.md` | Rules loaded into every session | Notes with a key fact, aliases and a search that cites the file |
+| Notion memory (MCP) | Hosted by Notion, needs a Notion account | Markdown in your own Git repository, local or synced |
+| Private and work | Separated by project at most, no hidden notes | Scopes, and sensitive notes agents open only when you name the topic |
+
+Sources: [Claude Code memory](https://code.claude.com/docs/en/memory),
+[Codex memories](https://developers.openai.com/codex/memories), as of October 2026.
+
 ## Quickstart (5 minutes)
 
 You need Node.js 22.18 or newer, Git, and macOS or Linux.
