@@ -412,8 +412,11 @@ test("commit still succeeds when rcllr is not on the PATH", () => {
   fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
   const result = commit(sandbox, root, env);
   assert.equal(result.status, 0);
-  assert.ok(result.stderr.includes("rcllr not found on PATH; indexes not updated."));
-  assert.ok(!sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+  // The hook also looks in the usual install folders; where rcllr really lives there, it is found on purpose.
+  if (!["/opt/homebrew/bin/rcllr", "/usr/local/bin/rcllr"].some((file) => fs.existsSync(file))) {
+    assert.ok(result.stderr.includes("rcllr not found on PATH; indexes not updated."));
+    assert.ok(!sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+  }
 });
 
 /** One agent hook as its own process, so several can run at the same time like parallel sessions. */
