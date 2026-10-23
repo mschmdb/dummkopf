@@ -46,8 +46,10 @@ export function claudeProjectFolder(project: string): string {
 
 /** A listed project as an absolute path: `~/` means the home folder, a trailing slash does not count. */
 export function projectPath(project: string, home = os.homedir()): string {
-  const expanded = project === "~" ? home : project.startsWith("~/") ? home + project.slice(1) : project;
-  return expanded.replace(/\/+$/, "") || "/";
+  let expanded = project === "~" ? home : project.startsWith("~/") ? home + project.slice(1) : project;
+  // A loop, not a regex: a pattern like /\/+$/ backtracks badly on a long run of slashes.
+  while (expanded.length > 1 && expanded.endsWith("/")) expanded = expanded.slice(0, -1);
+  return expanded;
 }
 
 /** The folder name inside the topic: the project path without its leading separators, in lower case. */
@@ -66,7 +68,7 @@ function parseMemory(file: string, text: string): Memory {
   const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
   const head = match ? match[1]! : "";
   const field = (key: string): string => {
-    const line = new RegExp("^\\s*" + key + ":\\s*(.*)$", "m").exec(head);
+    const line = new RegExp("^[ \\t]*" + key + ":[ \\t]*(.*)$", "m").exec(head);
     return line ? line[1]!.trim().replace(/^(["'])(.*)\1$/, "$2") : "";
   };
   return {

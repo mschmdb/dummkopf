@@ -151,6 +151,7 @@ test("imported memory ranks below the user's own note on the same words", () => 
 test("a listed project may start with ~/ and end with a slash", () => {
   assert.equal(projectPath("~/Sites/shop/", "/Users/me"), "/Users/me/Sites/shop");
   assert.equal(projectPath("/srv/app", "/Users/me"), "/srv/app");
+  assert.equal(projectPath("/" + "/".repeat(100_000), "/Users/me"), "/");
 });
 
 test("odd or symlinked memory files are skipped, the rest still imports", () => {
