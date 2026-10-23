@@ -56,8 +56,39 @@ test("install is idempotent and keeps foreign settings", () => {
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.equal(target.read(".claude/settings.json"), first);
   const settings = JSON.parse(first);
-  assert.deepEqual(settings.permissions, { allow: ["Bash(ls)"] });
+  assert.deepEqual(settings.permissions.allow, ["Bash(ls)", "Bash(dummkopf *)", "Bash(dk *)"]);
   assert.equal(settings.hooks.PostToolUse.length, 2);
+});
+
+test("install lets headless agents call dummkopf, but asks before sensitive reads", () => {
+  const target = repo();
+  assert.equal(invoke(target, ["install"]).code, 0);
+  assert.deepEqual(json(target, ".claude/settings.json").permissions, {
+    allow: ["Bash(dummkopf *)", "Bash(dk *)"],
+    ask: ["Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+  });
+});
+
+test("install keeps foreign permission rules and adds its own once", () => {
+  const target = repo();
+  target.write(".claude/settings.json", JSON.stringify({
+    permissions: { allow: ["Bash(dk *)"], ask: ["Bash(rm *)"], deny: ["Bash(dummkopf *)"] },
+  }));
+  assert.equal(invoke(target, ["install"]).code, 0);
+  assert.deepEqual(json(target, ".claude/settings.json").permissions, {
+    allow: ["Bash(dk *)", "Bash(dummkopf *)"],
+    ask: ["Bash(rm *)", "Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+    deny: ["Bash(dummkopf *)"],
+  });
+});
+
+test("install rejects permissions that are not lists and changes nothing", () => {
+  const target = repo();
+  const broken = JSON.stringify({ permissions: { allow: "Bash(ls)" } });
+  target.write(".claude/settings.json", broken);
+  assert.equal(invoke(target, ["install", "--serious"]).code, 2);
+  assert.equal(target.read(".claude/settings.json"), broken);
+  assert.ok(!fs.existsSync(hookPath(target)));
 });
 
 test("install skips Codex when disabled", () => {

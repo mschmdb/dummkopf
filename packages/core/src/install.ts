@@ -30,6 +30,13 @@ export const CLAUDE_COMMAND = USER_BIN + ' dummkopf --root "$CLAUDE_PROJECT_DIR"
 export const CODEX_COMMAND = USER_BIN + ' dummkopf --root "$(git rev-parse --show-toplevel)" hook agent';
 export const CLAUDE_MATCHER = "Write|Edit|MultiEdit|Bash";
 export const CODEX_MATCHER = "Bash|apply_patch|Edit|Write";
+// Headless agents (`claude -p`, the GitHub Action, cloud sessions) deny every Bash command nobody allowed,
+// and say so only in their result. `ask` beats `allow`, so a sensitive read still prompts in a terminal
+// and is denied headless, where no user named the topic.
+export const PERMISSIONS: Readonly<Record<"allow" | "ask", readonly string[]>> = {
+  allow: ["Bash(dummkopf *)", "Bash(dk *)"],
+  ask: ["Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+};
 
 export type Settings = JsonObject;
 
@@ -153,6 +160,30 @@ export function removeHooks(settings: Settings, patterns: readonly string[]): nu
   return removed;
 }
 
+/** The permissions object, after checking it and the lists we touch have the expected shape. */
+function permissionsOf(settings: Settings, path: string): JsonObject {
+  const permissions = setdefault(settings, "permissions", {});
+  if (!isObject(permissions)) {
+    throw new Rejected("settings_invalid", { path: name(path), key: "permissions", expected: "an object" });
+  }
+  for (const key of Object.keys(PERMISSIONS)) {
+    const rules = permissions[key];
+    if (rules !== undefined && !(Array.isArray(rules) && rules.every((rule) => typeof rule === "string"))) {
+      throw new Rejected("settings_invalid", { path: name(path), key: "permissions." + key, expected: "a list of strings" });
+    }
+  }
+  return permissions;
+}
+
+/** Add our permission rules once; foreign rules, including a deny on dummkopf, stay untouched. */
+export function addPermissions(settings: Settings, path: string): void {
+  const permissions = permissionsOf(settings, path);
+  for (const [key, ours] of Object.entries(PERMISSIONS)) {
+    const rules = setdefault(permissions, key, []) as Json[];
+    for (const rule of ours) if (!rules.includes(rule)) rules.push(rule);
+  }
+}
+
 export function writeJson(path: string, data: Settings): void {
   fs.mkdirSync(parent(path), { recursive: true });
   writeText(path, JSON.stringify(data, null, 2) + "\n");
@@ -166,6 +197,7 @@ export function installClaude(config: Config, replace: readonly string[] = []): 
   const command: JsonObject = { type: "command", command: CLAUDE_COMMAND };
   addHook(settings, "PostToolUse", command, CLAUDE_MATCHER);
   addHook(settings, "SessionEnd", command, null);
+  addPermissions(settings, path);
   writeJson(path, settings);
   return [path, removed];
 }
@@ -191,7 +223,8 @@ export function installCodex(config: Config, replace: readonly string[] = []): [
  */
 export function install(config: Config, replace: readonly string[] = []): [string[], number] {
   gitHookPath(config);
-  loadJson(join(config.root, ".claude", "settings.json"));
+  const claudeSettings = join(config.root, ".claude", "settings.json");
+  permissionsOf(loadJson(claudeSettings), claudeSettings);
   if (config.extras.codexSync) loadJson(join(config.root, ".codex", "hooks.json"));
   const [claude, removedClaude] = installClaude(config, replace);
   let removed = removedClaude;

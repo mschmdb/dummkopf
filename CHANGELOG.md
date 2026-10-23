@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
+- `dummkopf install` adds permission rules to `.claude/settings.json`: `allow` for `dummkopf` and `dk`, `ask` for
+  any call with `--allow-sensitive`. Headless agents (`claude -p`, the GitHub Action) can call dummkopf without
+  a prompt, but never open a sensitive note.
 - `curator_keep: <date>` in a note's frontmatter keeps it out of the `curator` scan until that day, so a "keep"
   verdict stops coming back every week. On a topic README it also hides the quiet topic. `curator.keep_key`
   renames the field.
