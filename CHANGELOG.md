@@ -5,6 +5,13 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `rcllr import-memory` mirrors Claude Code's auto memory of the projects listed in `[claude_memory]` into the brain,
+  in a topic and scope of its own (extra `claude_memory`, off by default). It runs one way, marks every note as not an
+  instruction, turns links into plain text, archives memories Claude deleted, and with `--from-hook` imports only the
+  project a session ran in. Imported notes rank below the user's own (`search.weights.imported_percent`, 25).
+
 ## [0.5.1] - 2026-10-23
 
 ### Fixed

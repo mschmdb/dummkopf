@@ -75,6 +75,7 @@ path = 3
 body = 1
 topic_readme_bonus = 30
 curator_report_percent = 25            # reports under curator.report_dir score this share, unless the query names the curator
+imported_percent = 25                  # imported agent memory (claude_memory.topic) scores this share
 
 [context]
 routes_file = "routes.json"            # optional; when set here, `check` warns if the file is missing
@@ -83,6 +84,7 @@ routes_file = "routes.json"            # optional; when set here, `check` warns 
 links = true                           # cross-reference map (was: kanten)
 curator = true                         # curation scan + LLM prompt template
 codex_sync = true                      # Codex PostToolUse hook
+claude_memory = false                  # mirror Claude Code auto memory with `rcllr import-memory`
 
 [links]                                # options for the links extra
 output = "LINKS.md"
@@ -95,3 +97,8 @@ open_days = 28
 stale_days = 56
 report_dir = "topics/curator"
 keep_key = "curator_keep"               # frontmatter date that hides a note from the scan until that day
+
+[claude_memory]                        # options for the claude_memory extra
+projects = []                          # project folders to import, e.g. ["~/Sites/shop"]; nothing else is read
+scope = "memory-claude"                # must be listed in scopes.values
+topic = "claude-memory"                # topic folder that holds the mirror

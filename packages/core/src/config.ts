@@ -113,6 +113,8 @@ export interface SearchWeights {
   readonly topicReadmeBonus: number;
   /** Curator reports repeat the terms of many notes; their score counts this many percent. */
   readonly curatorReportPercent: number;
+  /** Imported agent memory ranks below the user's own notes; its score counts this many percent. */
+  readonly importedPercent: number;
 }
 
 export interface SearchConfig {
@@ -142,10 +144,18 @@ export interface CuratorOptions {
   readonly keepKey: string;
 }
 
+export interface ClaudeMemoryOptions {
+  /** Project folders whose Claude Code auto memory gets mirrored. Nothing else is imported. */
+  readonly projects: readonly string[];
+  readonly scope: string;
+  readonly topic: string;
+}
+
 export interface ExtrasConfig {
   readonly links: boolean;
   readonly curator: boolean;
   readonly codexSync: boolean;
+  readonly claudeMemory: boolean;
 }
 
 export interface Config {
@@ -164,6 +174,7 @@ export interface Config {
   readonly extras: ExtrasConfig;
   readonly links: LinksOptions;
   readonly curator: CuratorOptions;
+  readonly claudeMemory: ClaudeMemoryOptions;
 }
 
 /** A leaf type and its default, or a nested section. TOML keys stay snake_case. */
@@ -204,11 +215,11 @@ const SCHEMA: Section = {
   search: {
     weights: {
       title: ["int", 8], aliases: ["int", 12], key_fact: ["int", 4], path: ["int", 3], body: ["int", 1],
-      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25],
+      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25], imported_percent: ["int", 25],
     },
   },
   context: { routes_file: ["str", "routes.json"] },
-  extras: { links: ["bool", true], curator: ["bool", true], codex_sync: ["bool", true] },
+  extras: { links: ["bool", true], curator: ["bool", true], codex_sync: ["bool", true], claude_memory: ["bool", false] },
   links: {
     output: ["str", "LINKS.md"], entities_file: ["str", "entities.txt"], min_topics: ["int", 2],
     allow_outside: ["list", []],
@@ -217,6 +228,7 @@ const SCHEMA: Section = {
     open_days: ["int", 28], stale_days: ["int", 56], report_dir: ["str", "topics/curator"],
     keep_key: ["str", "curator_keep"],
   },
+  claude_memory: { projects: ["list", []], scope: ["str", "memory-claude"], topic: ["str", "claude-memory"] },
 };
 
 function camel(key: string): string {
@@ -384,6 +396,11 @@ function validate(config: Config): void {
   }
   relativePath(config.links.entitiesFile, "links.entities_file");
   relativePath(config.curator.reportDir, "curator.report_dir", true, true);
+  const memory = config.claudeMemory;
+  if (config.extras.claudeMemory && !scopes.values.includes(memory.scope)) {
+    throw invalid("claude_memory.scope", "must be one of scopes.values; add '" + memory.scope + "' there");
+  }
+  if (!/^[\p{L}\p{N}_-]+$/u.test(memory.topic)) throw invalid("claude_memory.topic", "use letters, digits, - and _ only");
   for (const folder of config.links.allowOutside) {
     relativePath(folder, "links.allow_outside", true, true);
     if ((layout.roots as readonly string[]).includes(parts(stripTrailingSlashes(folder))[0]!)) {

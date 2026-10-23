@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Sandbox } from "./harness.ts";
 import type { Result } from "./harness.ts";
 
-const COMMANDS = ["context", "find", "read", "ingest", "write", "check", "sync", "init", "install", "migrate-name", "hook", "meta",
+const COMMANDS = ["context", "find", "read", "ingest", "write", "check", "sync", "init", "install", "import-memory", "migrate-name", "hook", "meta",
   "links", "curator"];
 const WIDTH = 100;
 
