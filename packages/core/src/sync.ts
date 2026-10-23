@@ -170,10 +170,27 @@ export function syncLocked(config: Config, refreshRemote = false, message: strin
     }
   }
   if (!pushes(config)) return;
-  if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) {
+  if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) pushLatest(config);
+}
+
+/** How often a sync fetches and pushes again when another machine pushed first. */
+export const PUSH_ATTEMPTS = 3;
+
+/**
+ * Catch up with the remote, then push. Another machine may push between our fetch and our push; then the
+ * push fails and we fetch, rebase and push again. A refused login fails at once, retrying cannot fix it.
+ */
+function pushLatest(config: Config): void {
+  const [remote, branch] = remoteAndBranch(config);
+  for (let attempt = 1; ; attempt++) {
     refresh(config);
-    const [remote, branch] = remoteAndBranch(config);
-    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--", remote, branch]);
+    if (!count(config, remoteRef(config) + "..HEAD")) return;
+    try {
+      git(config, ["push", "--", remote, branch]);
+      return;
+    } catch (error) {
+      if (!(error instanceof SyncError) || error.key !== "git_failed" || attempt === PUSH_ATTEMPTS) throw error;
+    }
   }
 }
 

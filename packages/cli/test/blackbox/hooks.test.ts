@@ -1,11 +1,11 @@
 /** Hooks: `hook agent` for Claude Code and Codex, `hook pre-commit`, and the installed Git hook in use. */
 
 import assert from "node:assert/strict";
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
-import { type Brain, type Env, type Result, Sandbox, type Synced, fullNote, md } from "./harness.ts";
+import { binary, type Brain, type Env, type Result, Sandbox, type Synced, fullNote, md } from "./harness.ts";
 
 const FILLER = "---\nupdated: 2026-10-01\nstatus: active\nkey_fact: K.\nsummary: K.\naliases: []\nperiod: []\n"
   + "entities: []\n---\n";
@@ -414,4 +414,46 @@ test("commit still succeeds when dummkopf is not on the PATH", () => {
   assert.equal(result.status, 0);
   assert.ok(result.stderr.includes("dummkopf not found on PATH; indexes not updated."));
   assert.ok(!sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+});
+
+/** One agent hook as its own process, so several can run at the same time like parallel sessions. */
+function agentProcess(synced: Synced, event: unknown, root = synced.brain.root): Promise<{ code: number | null; err: string }> {
+  return new Promise((resolve) => {
+    const child = spawn(binary(), ["hook", "agent", "--root", root], { cwd: root, env: synced.sandbox.env });
+    let err = "";
+    child.stderr.on("data", (chunk) => { err += String(chunk); });
+    child.on("close", (code) => resolve({ code, err }));
+    child.stdin.end(JSON.stringify(event));
+  });
+}
+
+test("parallel sessions in one brain sync every note exactly once", async () => {
+  const synced = new Sandbox().synced();
+  const names = ["one", "two", "three", "four"];
+  for (const name of names) synced.brain.write("notes/" + name + ".md", fullNote({ title: name }));
+  const done = await Promise.all(names.map(() => agentProcess(synced, toolEvent("Write", synced.brain.root))));
+  assert.deepEqual(done, names.map(() => ({ code: 0, err: "" })));
+  assert.equal(synced.brain.git(["status", "--porcelain"]), "");
+  const files = synced.remoteFiles();
+  for (const name of names) assert.ok(files.includes("notes/" + name + ".md"), name);
+  assert.equal(synced.remoteLog().length, 2);
+});
+
+test("two machines syncing at the same time both push without an error", async () => {
+  const synced = new Sandbox().synced();
+  const other = path.join(synced.base, "machine-b");
+  synced.sandbox.git(synced.base, ["clone", "-q", "-b", "main", synced.remote, other]);
+  for (let round = 0; round < 5; round++) {
+    synced.brain.write("notes/a" + round + ".md", fullNote({ title: "A" + round }));
+    fs.writeFileSync(path.join(other, "notes", "b" + round + ".md"), fullNote({ title: "B" + round }), "utf-8");
+    const done = await Promise.all([
+      agentProcess(synced, toolEvent("Write", synced.brain.root)),
+      agentProcess(synced, toolEvent("Write", other), other),
+    ]);
+    assert.deepEqual(done, [{ code: 0, err: "" }, { code: 0, err: "" }], "round " + round);
+  }
+  const files = synced.remoteFiles();
+  for (let round = 0; round < 5; round++) {
+    assert.ok(files.includes("notes/a" + round + ".md") && files.includes("notes/b" + round + ".md"), "round " + round);
+  }
 });
