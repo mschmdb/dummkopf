@@ -148,7 +148,8 @@ export function find(access: Access, query: string, limit = 3, natural = false):
   const curatorWords = new Set(["curator", ...words(parts(reports).at(-1) ?? "")]);
   const lowerReports = !terms.some((term) => curatorWords.has(term));
   // Agent memory repeats what the user's own notes say; it ranks below them.
-  const imported = config.extras.claudeMemory ? config.layout.topics + "/" + config.claudeMemory.topic + "/" : "";
+  const imported = [[config.extras.claudeMemory, config.claudeMemory.topic], [config.extras.codexMemory, config.codexMemory.topic]]
+    .filter(([on]) => on).map(([, topic]) => config.layout.topics + "/" + topic + "/");
   const ranked: [number, number, Note][] = [];
   const found = new Set<string>();
   for (const path of access.paths()) {
@@ -178,7 +179,7 @@ export function find(access: Access, query: string, limit = 3, natural = false):
       score += weights.topicReadmeBonus;
     }
     if (lowerReports && note.path.startsWith(reports)) score = score * weights.curatorReportPercent / 100;
-    if (imported && note.path.startsWith(imported)) score = score * weights.importedPercent / 100;
+    if (imported.some((prefix) => note.path.startsWith(prefix))) score = score * weights.importedPercent / 100;
     ranked.push([matched.length, score, note]);
   }
   ranked.sort((a, b) => (natural ? b[1] - a[1] || b[0] - a[0] : b[0] - a[0] || b[1] - a[1])

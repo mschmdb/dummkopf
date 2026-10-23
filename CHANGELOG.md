@@ -11,6 +11,8 @@ All notable changes to this project are listed here. The format follows
   in a topic and scope of its own (extra `claude_memory`, off by default). It runs one way, marks every note as not an
   instruction, turns links into plain text, archives memories Claude deleted, and with `--from-hook` imports only the
   project a session ran in. Imported notes rank below the user's own (`search.weights.imported_percent`, 25).
+- The extra `codex_memory` imports Codex memory the same way: the rollout summaries under
+  `~/.codex/memories/rollout_summaries/` whose session ran in a listed project, into their own scope `memory-codex`.
 
 ## [0.5.1] - 2026-10-23
 

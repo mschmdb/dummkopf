@@ -85,6 +85,7 @@ links = true                           # cross-reference map (was: kanten)
 curator = true                         # curation scan + LLM prompt template
 codex_sync = true                      # Codex PostToolUse hook
 claude_memory = false                  # mirror Claude Code auto memory with `rcllr import-memory`
+codex_memory = false                   # mirror Codex memory (rollout summaries) the same way
 
 [links]                                # options for the links extra
 output = "LINKS.md"
@@ -102,3 +103,8 @@ keep_key = "curator_keep"               # frontmatter date that hides a note fro
 projects = []                          # project folders to import, e.g. ["~/Sites/shop"]; nothing else is read
 scope = "memory-claude"                # must be listed in scopes.values
 topic = "claude-memory"                # topic folder that holds the mirror
+
+[codex_memory]                         # options for the codex_memory extra
+projects = []                          # folders whose Codex sessions get imported, e.g. ["~/Sites/shop"]
+scope = "memory-codex"                 # must be listed in scopes.values
+topic = "codex-memory"                 # topic folder that holds the mirror

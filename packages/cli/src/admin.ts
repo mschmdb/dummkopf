@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import {
-  Access, agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, importClaudeMemory, init,
+  Access, agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, importMemory, init,
   install, linksExtra, sessionProject,
   loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, migrateName, preCommit, refreshPathsFile,
   renderAgents, requireExtra,
@@ -26,6 +26,7 @@ export function register(add: (name: string) => Parser): void {
   command.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
   command.option("--from-hook", { kind: "flag", help: HELP.import_from_hook! });
   command.option("--claude-home", { metavar: "PATH", help: HELP.import_claude_home! });
+  command.option("--codex-home", { metavar: "PATH", help: HELP.import_codex_home! });
   command = add("migrate-name");
   command.option("--apply", { kind: "flag", help: HELP.migrate_apply! });
   command = add("hook");
@@ -93,9 +94,10 @@ export function runInstall(args: Namespace, config: Config, tone: string): numbe
 export function runImportMemory(args: Namespace, config: Config, tone: string): number {
   const claudeHome = (args.claudeHome as string | null) ?? process.env.CLAUDE_CONFIG_DIR
     ?? path.join(os.homedir(), ".claude");
-  const options = { claudeHome, dryRun: Boolean(args.dryRun), sync: true };
+  const codexHome = (args.codexHome as string | null) ?? process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex");
+  const options = { claudeHome, codexHome, dryRun: Boolean(args.dryRun), sync: true };
   if (!args.fromHook) {
-    const result = importClaudeMemory(new Access(config), options);
+    const result = importMemory(new Access(config), options);
     out(say("out_imported", tone, { count: result.changed.length, sync: result.sync }) + "\n");
     return 0;
   }
@@ -103,8 +105,8 @@ export function runImportMemory(args: Namespace, config: Config, tone: string): 
   try {
     const event = loadsJson(readStdin());
     const cwd = typeof event === "object" && event !== null && "cwd" in event ? (event as { cwd: unknown }).cwd : null;
-    if (!config.extras.claudeMemory || typeof cwd !== "string") return 0;
-    importClaudeMemory(new Access(config), { ...options, project: sessionProject(cwd) });
+    if ((!config.extras.claudeMemory && !config.extras.codexMemory) || typeof cwd !== "string") return 0;
+    importMemory(new Access(config), { ...options, project: sessionProject(cwd) });
     return 0;
   } catch (error) {
     err(say("hook_sync_failed", "plain", { reason: error instanceof Error ? error.message : String(error) }) + "\n");

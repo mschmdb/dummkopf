@@ -7,7 +7,7 @@ import { test } from "node:test";
 
 import { Access } from "../src/access.ts";
 import { find } from "../src/search.ts";
-import { claudeProjectFolder, importClaudeMemory, projectPath } from "../src/memory.ts";
+import { claudeProjectFolder, importMemory, projectPath } from "../src/memory.ts";
 import { type Brain, brain, invoke, runGit, tempDir } from "./helpers.ts";
 
 const PROJECT = "/Users/me/Sites/shop";
@@ -39,7 +39,7 @@ function enabled(): Brain {
 }
 
 function run(target: Brain, home: string, dryRun = false) {
-  return importClaudeMemory(new Access(target.config), { claudeHome: home, dryRun, sync: true });
+  return importMemory(new Access(target.config), { claudeHome: home, dryRun, sync: true });
 }
 
 test("the project folder name follows Claude Code's own naming", () => {

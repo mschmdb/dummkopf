@@ -234,7 +234,7 @@ Write rules rcllr enforces:
 | `meta migrate\|generate\|report\|index\|agents` | Maintain frontmatter and indexes; print rendered `AGENTS.md`. |
 | `links` | Build the links map (extra). |
 | `curator` | Run the curation scan or print its weekly LLM prompt (extra). |
-| `import-memory` | Mirror Claude Code auto memory of the listed projects into the brain (extra). |
+| `import-memory` | Mirror Claude Code and Codex memory of the listed projects into the brain (extra). |
 
 **What gets committed.** `write`, `ingest`, `sync` and the agent hooks commit only what rcllr manages: the
 note folders (`topics/`, `notes/`, `bookmarks/`), `sources/`, `archive/`, `INDEX.md`, `.sensitive-paths`, the
@@ -331,10 +331,10 @@ typo never switches a rule off silently. The full file with every default is in
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
 | `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent`, `imported_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator; imported agent memory scores 25 percent. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
-| `[extras]` | `links`, `curator`, `codex_sync`, `claude_memory` | Switch each extra on or off. `claude_memory` is off by default. |
+| `[extras]` | `links`, `curator`, `codex_sync`, `claude_memory`, `codex_memory` | Switch each extra on or off. The two memory imports are off by default. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
 | `[curator]` | `open_days`, `stale_days`, `report_dir`, `keep_key` | Options of the curator extra. |
-| `[claude_memory]` | `projects`, `scope`, `topic` | Options of the claude_memory extra. |
+| `[claude_memory]`, `[codex_memory]` | `projects`, `scope`, `topic` | Options of the two memory imports. |
 
 **An existing brain in another language** runs on rcllr through configuration alone.
 [examples/config-german-hub.toml](examples/config-german-hub.toml) maps German keys (`kernfakt`, `stand`, …),
@@ -375,7 +375,12 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   plain text, and it ranks below your own notes (`imported_percent`). To import after every Claude Code session,
   add a `SessionEnd` hook to `~/.claude/settings.json` that runs
   `rcllr --root ~/brain import-memory --from-hook`. It imports only the project the session ran in and never
-  blocks the session. Codex memories are not imported yet.
+  blocks the session.
+- **codex_memory**: the same for Codex. Codex keeps one memory for all projects and writes a summary per session
+  under `~/.codex/memories/rollout_summaries/`, each naming the folder the session ran in. rcllr imports only the
+  summaries whose folder lies in a listed project, into `topics/codex-memory/` with the scope `memory-codex`. Codex
+  memories are off by default; turn them on in `~/.codex/config.toml` with `memories = true` under `[features]`.
+  `--codex-home` (default `$CODEX_HOME` or `~/.codex`) points elsewhere.
 - **routes**: a `routes.json` entry like
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`
   lets `context "meal plan next week"` open exactly the plan files named `plan-2026-10-05-to-11.md` that
