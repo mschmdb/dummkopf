@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mschmdb/dummkopf.git",
+    "url": "git+https://github.com/mschmdb/rcllr.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/mschmdb/dummkopf#readme",
-  "bugs": "https://github.com/mschmdb/dummkopf/issues",
+  "homepage": "https://github.com/mschmdb/rcllr#readme",
+  "bugs": "https://github.com/mschmdb/rcllr/issues",
   "type": "module",
   "bin": {
     "rcllr": "bin/rcllr",

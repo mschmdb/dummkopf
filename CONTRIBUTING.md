@@ -73,7 +73,7 @@ since both packages are ESM-only). CI runs it on every push. The `source` condit
 
 A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop. It uses npm
 Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm token exists. On npmjs.com, both
-`rcllr` and `@rcllr/core` name `mschmdb/dummkopf` and `release.yml` as their Trusted Publisher.
+`rcllr` and `@rcllr/core` name `mschmdb/rcllr` and `release.yml` as their Trusted Publisher.
 
 1. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
    `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.

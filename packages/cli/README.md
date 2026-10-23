@@ -8,4 +8,4 @@ rcllr init ~/brain
 ```
 
 Needs Node.js 22.18 or newer and Git. The full guide lives in the
-[repository README](https://github.com/mschmdb/dummkopf#readme).
+[repository README](https://github.com/mschmdb/rcllr#readme).
