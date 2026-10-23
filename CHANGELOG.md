@@ -32,6 +32,8 @@ All notable changes to this project are listed here. The format follows
 
 ### Fixed
 
+- Two machines that sync at the same moment no longer report "Git step failed: push". A push that loses the
+  race fetches, rebases and pushes again, up to three times.
 - `curator` compares "as of" dates by calendar day, so `2026-09-25` and `25.09.2026` are the same date.
 
 ## [0.4.1] - 2026-10-11

@@ -341,7 +341,8 @@ answers in 0.16 s. To measure your own machine, run `pnpm bench` in a checkout.
 the note folders. ˈdʊmkɔpf gives the same answer in all three cases, on purpose.
 
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
-change based on an old revision.
+change based on an old revision. Across machines, a push that loses the race against another machine fetches,
+rebases and pushes again, up to three times.
 
 **Can I build my own frontend?** Yes. `@dummkopf/core` (`npm install @dummkopf/core`) is the library behind
 the CLI. Read notes through its `Access` class: it applies the same scope, sensitivity and path rules as the
