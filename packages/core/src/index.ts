@@ -44,3 +44,4 @@ export * as linksExtra from "./extras/links.ts";
 export * as curator from "./extras/curator.ts";
 
 export const VERSION = "0.4.1";
+export { migrateName, type NameMigration } from "./migrate.ts";

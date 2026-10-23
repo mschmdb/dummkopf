@@ -6,7 +6,9 @@
 
 import { type Config, DummkopfError, findRoot, HELP, loadConfig, VERSION } from "@dummkopf/core";
 
-import { register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta } from "./admin.ts";
+import {
+  register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta, runMigrateName,
+} from "./admin.ts";
 import { HelpRequested, type Namespace, Parser, UsageError } from "./argparse.ts";
 import { register as registerCommands, run as runCommand } from "./commands.ts";
 import { err, out } from "./io.ts";
@@ -19,7 +21,7 @@ export type NoConfigHandler = (args: Namespace, root: string, tone: string) => n
 /** The heading each command is listed under in `dummkopf --help`. */
 const GROUPS: Readonly<Record<string, string>> = {
   context: "read", find: "read", read: "read", ingest: "write", write: "write", check: "write", sync: "write",
-  init: "setup", install: "setup", hook: "setup", meta: "setup", links: "extras", curator: "extras",
+  init: "setup", install: "setup", "migrate-name": "setup", hook: "setup", meta: "setup", links: "extras", curator: "extras",
 };
 
 export function parser(): Parser {
@@ -56,7 +58,7 @@ function handlers(): [Record<string, Handler>, Record<string, NoConfigHandler>] 
   const withConfig: Record<string, Handler> = {
     context: runRead, find: runRead, read: runRead,
     ingest: runCommand, write: runCommand, check: runCommand, sync: runCommand,
-    install: runInstall, meta: runMeta, links: runLinks, curator: runCurator,
+    install: runInstall, "migrate-name": runMigrateName, meta: runMeta, links: runLinks, curator: runCurator,
   };
   return [withConfig, { init: runInit, hook: runHook }];
 }
