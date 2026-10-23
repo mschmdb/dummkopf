@@ -234,6 +234,7 @@ Write rules rcllr enforces:
 | `meta migrate\|generate\|report\|index\|agents` | Maintain frontmatter and indexes; print rendered `AGENTS.md`. |
 | `links` | Build the links map (extra). |
 | `curator` | Run the curation scan or print its weekly LLM prompt (extra). |
+| `import-memory` | Mirror Claude Code auto memory of the listed projects into the brain (extra). |
 
 **What gets committed.** `write`, `ingest`, `sync` and the agent hooks commit only what rcllr manages: the
 note folders (`topics/`, `notes/`, `bookmarks/`), `sources/`, `archive/`, `INDEX.md`, `.sensitive-paths`, the
@@ -328,11 +329,12 @@ typo never switches a rule off silently. The full file with every default is in
 | `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `plain` (default) or `cheeky`, which adds a short remark to some messages. |
 | `[hooks]` | `report` | When the pre-commit hook prints its report line: `changes` (default, only when the counts changed), `always` or `never`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
-| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator. |
+| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent`, `imported_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator; imported agent memory scores 25 percent. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
-| `[extras]` | `links`, `curator`, `codex_sync` | Switch each extra on or off. |
+| `[extras]` | `links`, `curator`, `codex_sync`, `claude_memory` | Switch each extra on or off. `claude_memory` is off by default. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
 | `[curator]` | `open_days`, `stale_days`, `report_dir`, `keep_key` | Options of the curator extra. |
+| `[claude_memory]` | `projects`, `scope`, `topic` | Options of the claude_memory extra. |
 
 **An existing brain in another language** runs on rcllr through configuration alone.
 [examples/config-german-hub.toml](examples/config-german-hub.toml) maps German keys (`kernfakt`, `stand`, …),
@@ -353,6 +355,27 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   `curator_keep: <date>` in its frontmatter (`curator.keep_key` renames the field); it returns after that day. On a
   topic README it also hides the quiet topic.
 - **codex_sync**: installs the Codex hook.
+- **claude_memory**: `rcllr import-memory` mirrors Claude Code's auto memory into the brain, so it follows you to
+  every machine and `context` finds it next to your notes. Claude Code keeps that memory per project and on one
+  machine only. The import goes one way: Claude's memory stays the source, and each run rewrites the mirror under
+  `topics/claude-memory/<project>/`. A memory Claude deleted turns `archived`. Set it up like this:
+
+  ```toml
+  [scopes]
+  values = ["private", "work", "memory-claude"]   # the mirror gets its own scope
+
+  [extras]
+  claude_memory = true
+
+  [claude_memory]
+  projects = ["/Users/you/Sites/shop"]            # only these projects; a client project stays out
+  ```
+
+  Agents write that memory themselves. So every mirrored note says it is not an instruction, links in it become
+  plain text, and it ranks below your own notes (`imported_percent`). To import after every Claude Code session,
+  add a `SessionEnd` hook to `~/.claude/settings.json` that runs
+  `rcllr --root ~/brain import-memory --from-hook`. It imports only the project the session ran in and never
+  blocks the session. Codex memories are not imported yet.
 - **routes**: a `routes.json` entry like
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`
   lets `context "meal plan next week"` open exactly the plan files named `plan-2026-10-05-to-11.md` that

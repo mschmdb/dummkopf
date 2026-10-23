@@ -147,6 +147,8 @@ export function find(access: Access, query: string, limit = 3, natural = false):
   // A question about the curator wants its reports; otherwise they rank below the notes they summarize.
   const curatorWords = new Set(["curator", ...words(parts(reports).at(-1) ?? "")]);
   const lowerReports = !terms.some((term) => curatorWords.has(term));
+  // Agent memory repeats what the user's own notes say; it ranks below them.
+  const imported = config.extras.claudeMemory ? config.layout.topics + "/" + config.claudeMemory.topic + "/" : "";
   const ranked: [number, number, Note][] = [];
   const found = new Set<string>();
   for (const path of access.paths()) {
@@ -176,6 +178,7 @@ export function find(access: Access, query: string, limit = 3, natural = false):
       score += weights.topicReadmeBonus;
     }
     if (lowerReports && note.path.startsWith(reports)) score = score * weights.curatorReportPercent / 100;
+    if (imported && note.path.startsWith(imported)) score = score * weights.importedPercent / 100;
     ranked.push([matched.length, score, note]);
   }
   ranked.sort((a, b) => (natural ? b[1] - a[1] || b[0] - a[0] : b[0] - a[0] || b[1] - a[1])

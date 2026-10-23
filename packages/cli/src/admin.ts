@@ -1,9 +1,11 @@
 /** Setup and maintenance commands: init, install, migrate-name, hook, meta, links, curator. Port of admin.py. */
 
 import * as os from "node:os";
+import * as path from "node:path";
 
 import {
-  agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
+  Access, agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, importClaudeMemory, init,
+  install, linksExtra, sessionProject,
   loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, migrateName, preCommit, refreshPathsFile,
   renderAgents, requireExtra,
 } from "@rcllr/core";
@@ -20,6 +22,10 @@ export function register(add: (name: string) => Parser): void {
   command.option("--locale", { choices: LOCALES, default: "en", help: HELP.init_locale! });
   command = add("install");
   command.option("--replace-command", { kind: "append", metavar: "TEXT", help: HELP.install_replace! });
+  command = add("import-memory");
+  command.option("--dry-run", { kind: "flag", help: HELP.dry_run! });
+  command.option("--from-hook", { kind: "flag", help: HELP.import_from_hook! });
+  command.option("--claude-home", { metavar: "PATH", help: HELP.import_claude_home! });
   command = add("migrate-name");
   command.option("--apply", { kind: "flag", help: HELP.migrate_apply! });
   command = add("hook");
@@ -82,6 +88,28 @@ export function runInstall(args: Namespace, config: Config, tone: string): numbe
   if (replace.length > 0) out(say("out_removed_hooks", tone, { count: removed }) + "\n");
   for (const path of written) out(say("out_installed", tone, { what: path }) + "\n");
   return 0;
+}
+
+export function runImportMemory(args: Namespace, config: Config, tone: string): number {
+  const claudeHome = (args.claudeHome as string | null) ?? process.env.CLAUDE_CONFIG_DIR
+    ?? path.join(os.homedir(), ".claude");
+  const options = { claudeHome, dryRun: Boolean(args.dryRun), sync: true };
+  if (!args.fromHook) {
+    const result = importClaudeMemory(new Access(config), options);
+    out(say("out_imported", tone, { count: result.changed.length, sync: result.sync }) + "\n");
+    return 0;
+  }
+  // A hook: import only the session's project, and never block the session (Claude Code treats exit 2 as one).
+  try {
+    const event = loadsJson(readStdin());
+    const cwd = typeof event === "object" && event !== null && "cwd" in event ? (event as { cwd: unknown }).cwd : null;
+    if (!config.extras.claudeMemory || typeof cwd !== "string") return 0;
+    importClaudeMemory(new Access(config), { ...options, project: sessionProject(cwd) });
+    return 0;
+  } catch (error) {
+    err(say("hook_sync_failed", "plain", { reason: error instanceof Error ? error.message : String(error) }) + "\n");
+    return 1;
+  }
 }
 
 export function runMigrateName(args: Namespace, config: Config, tone: string): number {

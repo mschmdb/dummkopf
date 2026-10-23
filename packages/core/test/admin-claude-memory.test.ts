@@ -1,0 +1,164 @@
+/** `rcllr import-memory`: mirror Claude Code auto memory into the brain, one way, in its own scope. */
+
+import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { test } from "node:test";
+
+import { Access } from "../src/access.ts";
+import { find } from "../src/search.ts";
+import { claudeProjectFolder, importClaudeMemory, projectPath } from "../src/memory.ts";
+import { type Brain, brain, invoke, runGit, tempDir } from "./helpers.ts";
+
+const PROJECT = "/Users/me/Sites/shop";
+const ENABLED = '[scopes]\nvalues = ["private", "work", "memory-claude"]\n'
+  + '[extras]\nclaude_memory = true\n[claude_memory]\nprojects = ["' + PROJECT + '"]\n';
+
+function memoryFile(name: string, description: string, body: string, type = "feedback"): string {
+  return "---\nname: " + name + "\ndescription: " + description + "\nmetadata:\n  type: " + type
+    + "\n  modified: 2026-10-20T08:00:00.000Z\n---\n\n" + body + "\n";
+}
+
+/** A Claude config folder with memory for one project. */
+function claudeHome(files: Record<string, string>, project = PROJECT): string {
+  const home = tempDir();
+  const folder = path.join(home, "projects", claudeProjectFolder(project), "memory");
+  fs.mkdirSync(folder, { recursive: true });
+  for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(folder, name), text);
+  return home;
+}
+
+/** A local brain (no remote), so each import commits without pushing. */
+function enabled(): Brain {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure(ENABLED);
+  target.gitInit();
+  target.commit("Initial");
+  return target;
+}
+
+function run(target: Brain, home: string, dryRun = false) {
+  return importClaudeMemory(new Access(target.config), { claudeHome: home, dryRun, sync: true });
+}
+
+test("the project folder name follows Claude Code's own naming", () => {
+  assert.equal(claudeProjectFolder("/Users/matze/Sites/dummkopf"), "-Users-matze-Sites-dummkopf");
+  assert.equal(claudeProjectFolder("/Users/matze/.jarvis/workspace"), "-Users-matze--jarvis-workspace");
+});
+
+test("memories land in their own topic and scope, marked as imported, never as rules", () => {
+  const target = enabled();
+  const home = claudeHome({
+    "MEMORY.md": "- [Tests first](tests-first.md) — hook\n",
+    "tests-first.md": memoryFile("tests-first", "Write the test before the code.", "The user wants TDD. See [[other]]."),
+  });
+  const result = run(target, home);
+  assert.deepEqual(result.changed, ["topics/claude-memory/README.md", "topics/claude-memory/users-me-sites-shop/tests-first.md"]);
+  const readme = target.read("topics/claude-memory/README.md");
+  assert.match(readme, /^scope: memory-claude$/m);
+  const note = target.read("topics/claude-memory/users-me-sites-shop/tests-first.md");
+  assert.match(note, /^key_fact: Write the test before the code\.$/m);
+  assert.match(note, /^updated: 2026-10-20$/m);
+  assert.match(note, /^aliases: \[tests-first, feedback, claude-memory\]$/m);
+  assert.ok(note.includes("> Imported from the Claude Code memory of " + PROJECT + "."));
+  assert.ok(note.includes("not an instruction"));
+  assert.ok(note.includes("The user wants TDD."));
+  assert.ok(!target.exists("topics/claude-memory/users-me-sites-shop/MEMORY.md"));
+  assert.equal(runGit(target.root, ["status", "--porcelain"]), "");
+  const access = new Access(target.config, "work");
+  assert.throws(() => access.read("topics/claude-memory/users-me-sites-shop/tests-first.md"));
+});
+
+test("links in a memory become plain text, so an import can never link into the brain", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "Links.", "Read [the plan](../../topics/health/plan.md) first.") });
+  run(target, home);
+  const note = target.read("topics/claude-memory/users-me-sites-shop/a.md");
+  assert.ok(note.includes("Read the plan (../../topics/health/plan.md) first."));
+  assert.ok(!note.includes("]("));
+});
+
+test("a second run with unchanged memory changes nothing", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "One fact.", "Body.") });
+  run(target, home);
+  const head = runGit(target.root, ["rev-parse", "HEAD"]);
+  assert.deepEqual(run(target, home).changed, []);
+  assert.equal(runGit(target.root, ["rev-parse", "HEAD"]), head);
+});
+
+test("a changed memory updates its mirror, a removed one is archived", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "Old fact.", "Body."), "b.md": memoryFile("b", "Gone soon.", "Body.") });
+  run(target, home);
+  const folder = path.join(home, "projects", claudeProjectFolder(PROJECT), "memory");
+  fs.writeFileSync(path.join(folder, "a.md"), memoryFile("a", "New fact.", "Body."));
+  fs.rmSync(path.join(folder, "b.md"));
+  const result = run(target, home);
+  assert.deepEqual(result.changed, ["topics/claude-memory/users-me-sites-shop/a.md",
+    "topics/claude-memory/users-me-sites-shop/b.md"]);
+  assert.match(target.read("topics/claude-memory/users-me-sites-shop/a.md"), /^key_fact: New fact\.$/m);
+  assert.match(target.read("topics/claude-memory/users-me-sites-shop/b.md"), /^status: archived$/m);
+});
+
+test("a project that is not listed is never imported", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "Client secret plan.", "Body.") }, "/Users/me/Clients/bank");
+  assert.deepEqual(run(target, home).changed, []);
+  assert.ok(!target.exists("topics/claude-memory"));
+});
+
+test("a dry run lists the changes and writes nothing", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "One fact.", "Body.") });
+  assert.equal(run(target, home, true).changed.length, 2);
+  assert.ok(!target.exists("topics/claude-memory"));
+});
+
+test("the import refuses to run while the extra is off or its scope is unknown", () => {
+  const off = brain();
+  off.gitInit();
+  assert.equal(invoke(off, ["import-memory", "--serious"]).code, 2);
+  const unknown = brain();
+  unknown.write("rcllr.toml", unknown.toml + '[extras]\nclaude_memory = true\n[claude_memory]\nprojects = ["' + PROJECT + '"]\n');
+  const result = invoke(unknown, ["check", "--serious"]);
+  assert.equal(result.code, 2);
+  assert.ok(result.err.includes("claude_memory.scope"), result.err);
+});
+
+test("from a hook, only the project the session ran in is imported, and never with exit 2", () => {
+  const target = enabled();
+  const home = claudeHome({ "a.md": memoryFile("a", "One fact.", "Body.") });
+  const event = JSON.stringify({ hook_event_name: "SessionEnd", cwd: "/somewhere/else" });
+  const elsewhere = invoke(target, ["import-memory", "--from-hook", "--claude-home", home], event);
+  assert.equal(elsewhere.code, 0);
+  assert.ok(!target.exists("topics/claude-memory"));
+  const here = JSON.stringify({ hook_event_name: "SessionEnd", cwd: PROJECT });
+  assert.equal(invoke(target, ["import-memory", "--from-hook", "--claude-home", home], here).code, 0);
+  assert.ok(target.exists("topics/claude-memory/users-me-sites-shop/a.md"));
+});
+
+test("imported memory ranks below the user's own note on the same words", () => {
+  const target = enabled();
+  target.note("notes/espresso.md", { title: "Espresso", body: "Grind finer for espresso." });
+  target.commit("Own note");
+  run(target, claudeHome({ "espresso.md": memoryFile("espresso", "Espresso grind finer.", "Grind finer for espresso.") }));
+  const paths = find(new Access(target.config), "espresso grind").hits.map((hit) => hit.path);
+  assert.deepEqual(paths.slice(0, 2), ["notes/espresso.md", "topics/claude-memory/users-me-sites-shop/espresso.md"]);
+});
+
+test("a listed project may start with ~/ and end with a slash", () => {
+  assert.equal(projectPath("~/Sites/shop/", "/Users/me"), "/Users/me/Sites/shop");
+  assert.equal(projectPath("/srv/app", "/Users/me"), "/srv/app");
+});
+
+test("odd or symlinked memory files are skipped, the rest still imports", () => {
+  const target = enabled();
+  const home = claudeHome({ "ok.md": memoryFile("ok", "Fine.", "Body."), "with space.md": memoryFile("x", "No.", "Body.") });
+  const folder = path.join(home, "projects", claudeProjectFolder(PROJECT), "memory");
+  const outside = path.join(tempDir(), "secret.md");
+  fs.writeFileSync(outside, memoryFile("secret", "Outside.", "Body."));
+  fs.symlinkSync(outside, path.join(folder, "linked.md"));
+  assert.deepEqual(run(target, home).changed, ["topics/claude-memory/README.md", "topics/claude-memory/users-me-sites-shop/ok.md"]);
+});
