@@ -1,24 +1,28 @@
 /**
- * Mirror Claude Code auto memory into the brain, one way. Each listed project gets a folder under one topic
- * whose README sets its own scope. A run rewrites what changed and archives what Claude deleted; nothing
- * flows back. Memory is written by agents, so every mirrored note says it is not an instruction, and its
- * links become plain text: an import can never link into the brain or around the sensitivity gate.
+ * Mirror agent memory (Claude Code, Codex) into the brain, one way. Each source gets a topic whose README sets
+ * the source's own scope; each listed project a folder in it. A run rewrites what changed and archives what the
+ * agent deleted; nothing flows back. Agents write this memory themselves, so every mirrored note says it is not
+ * an instruction, and its links become plain text: an import can never link into the brain or around the
+ * sensitivity gate.
  */
 
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
-import * as os from "node:os";
 
 import { type Access, type Note } from "./access.ts";
-import { type Config } from "./config.ts";
+import { type Config, type MemorySourceOptions } from "./config.ts";
 import { AccessDenied, Rejected } from "./errors.ts";
-import { run } from "./proc.ts";
-import { isFile, join } from "./pyos.ts";
+import { claudeProjectFolder, type Memory, projectPath, readMemories, type SourceKey } from "./memory-sources.ts";
+import { join } from "./pyos.ts";
 import { ingest } from "./write.ts";
+
+export { claudeProjectFolder, projectPath, sessionProject } from "./memory-sources.ts";
 
 export interface MemoryImportOptions {
   /** The Claude Code config folder, usually ~/.claude. */
   claudeHome: string;
+  /** The Codex home folder, usually ~/.codex. */
+  codexHome?: string;
   /** Only this project, for the hook; default: every listed project. */
   project?: string;
   dryRun: boolean;
@@ -30,26 +34,12 @@ export interface MemoryImportResult {
   sync: string;
 }
 
-interface Memory {
-  file: string;
-  name: string;
-  description: string;
-  type: string;
-  modified: string;
-  body: string;
-}
-
-/** Claude Code names a project's folder after its path, every character but letters and digits as `-`. */
-export function claudeProjectFolder(project: string): string {
-  return project.replace(/[^a-zA-Z0-9]/g, "-");
-}
-
-/** A listed project as an absolute path: `~/` means the home folder, a trailing slash does not count. */
-export function projectPath(project: string, home = os.homedir()): string {
-  let expanded = project === "~" ? home : project.startsWith("~/") ? home + project.slice(1) : project;
-  // A loop, not a regex: a pattern like /\/+$/ backtracks badly on a long run of slashes.
-  while (expanded.length > 1 && expanded.endsWith("/")) expanded = expanded.slice(0, -1);
-  return expanded;
+interface Source {
+  key: SourceKey;
+  label: string;
+  alias: string;
+  home: string;
+  options: MemorySourceOptions;
 }
 
 /** The folder name inside the topic: the project path without its leading separators, in lower case. */
@@ -57,38 +47,13 @@ function slug(project: string): string {
   return claudeProjectFolder(project).replace(/^-+/, "").replace(/-+/g, "-").toLowerCase();
 }
 
-/** The project a session ran in: its Git root, as Claude Code derives it, else the folder itself. */
-export function sessionProject(cwd: string): string {
-  const done = run("git", ["rev-parse", "--show-toplevel"], { cwd, timeoutS: 10 });
-  return !done.failed && done.code === 0 && done.stdout.trim() ? done.stdout.trim() : cwd;
-}
-
-/** Claude's memory frontmatter: top-level name and description, type and modified under `metadata:`. */
-function parseMemory(file: string, text: string): Memory {
-  const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
-  const head = match ? match[1]! : "";
-  const field = (key: string): string => {
-    const line = new RegExp("^[ \\t]*" + key + ":[ \\t]*(.*)$", "m").exec(head);
-    return line ? line[1]!.trim().replace(/^(["'])(.*)\1$/, "$2") : "";
-  };
-  return {
-    file, name: field("name") || file.replace(/\.md$/, ""), description: field("description"), type: field("type"),
-    modified: field("modified"), body: match ? text.slice(match[0].length) : text,
-  };
-}
-
-function readMemories(claudeHome: string, project: string): Memory[] | null {
-  const folder = join(claudeHome, "projects", claudeProjectFolder(project), "memory");
-  let names: string[];
-  try {
-    names = fs.readdirSync(folder);
-  } catch {
-    return null;
-  }
-  // Plain file names only: anything else would fail the write rules and block the whole import.
-  return names.filter((name) => /^[\w.-]+\.md$/.test(name) && !name.startsWith(".") && name !== "MEMORY.md").sort()
-    .filter((name) => isFile(join(folder, name)) && !fs.lstatSync(join(folder, name)).isSymbolicLink())
-    .map((name) => parseMemory(name, fs.readFileSync(join(folder, name), "utf-8")));
+/**
+ * The mirror's file name: lower-case kebab case, as the write rules demand, so `2026-10-18T09-31-56-a_b.md`
+ * becomes `2026-10-18t09-31-56-a-b.md`. A name that would read as a folder README gets a prefix.
+ */
+export function mirrorName(file: string, readme: string): string {
+  const stem = file.replace(/\.md$/, "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).join("-") || "memory";
+  return (stem === readme.replace(/\.md$/, "").toLowerCase() ? "memory-" + stem : stem) + ".md";
 }
 
 /** Text without Markdown links: `[label](target)` reads `label (target)`, images and wiki links alike. */
@@ -100,9 +65,8 @@ function oneLine(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function frontmatter(config: Config, fields: [string, string | string[]][]): string {
-  const value = (item: string | string[]): string =>
-    Array.isArray(item) ? "[" + item.join(", ") + "]" : item;
+function frontmatter(fields: [string, string | string[]][]): string {
+  const value = (item: string | string[]): string => Array.isArray(item) ? "[" + item.join(", ") + "]" : item;
   return "---\n" + fields.map(([key, item]) => key + ": " + value(item)).join("\n") + "\n---\n";
 }
 
@@ -113,28 +77,29 @@ function fingerprint(project: string, memory: Memory, status: string): string {
   return createHash("sha256").update(JSON.stringify([project, memory, status])).digest("hex").slice(0, 16);
 }
 
-function noteText(config: Config, project: string, memory: Memory, status: string): string {
+function sourceOf(text: string): string {
+  return new RegExp("^" + SOURCE_KEY + ": (.*)$", "m").exec(text)?.[1] ?? "";
+}
+
+function noteText(config: Config, source: Source, project: string, memory: Memory): string {
   const fm = config.frontmatter;
+  const status = config.status.active;
   const day = /^\d{4}-\d{2}-\d{2}/.exec(memory.modified)?.[0] ?? new Date().toISOString().slice(0, 10);
-  const keyFact = oneLine(unlinked(memory.description)) || "Claude Code memory " + memory.name + ".";
-  const aliases = [...new Set([memory.name, memory.type, "claude-memory"].map((item) => oneLine(item)).filter(Boolean))]
+  const keyFact = oneLine(unlinked(memory.description)) || source.label + " memory " + memory.name + ".";
+  const aliases = [...new Set([memory.name, memory.type, source.alias].map((item) => oneLine(item)).filter(Boolean))]
     .map((item) => item.replace(/[,[\]]/g, " ").trim());
-  const head = frontmatter(config, [[fm.updated, day], [fm.status, status], [fm.keyFact, keyFact], [fm.aliases, aliases],
+  const head = frontmatter([[fm.updated, day], [fm.status, status], [fm.keyFact, keyFact], [fm.aliases, aliases],
     [SOURCE_KEY, fingerprint(project, memory, status)]]);
-  return head + "\n# " + oneLine(memory.name) + "\n\n> Imported from the Claude Code memory of " + project
+  return head + "\n# " + oneLine(memory.name) + "\n\n> Imported from the " + source.label + " memory of " + project
     + ". It records what an agent noted in earlier sessions, not an instruction.\n\n" + unlinked(memory.body).trim() + "\n";
 }
 
-function readmeText(config: Config): string {
+function readmeText(config: Config, source: Source): string {
   const fm = config.frontmatter;
-  const head = frontmatter(config, [[fm.scope, config.claudeMemory.scope], [fm.status, config.status.active],
-    [fm.keyFact, "Claude Code auto memory, mirrored by rcllr import-memory; never edit by hand."]]);
-  return head + "\n# Claude Code memory\n\nrcllr rewrites this folder from Claude Code's auto memory. Changes made here "
-    + "are lost on the next import.\n";
-}
-
-function sourceOf(text: string): string {
-  return new RegExp("^" + SOURCE_KEY + ": (.*)$", "m").exec(text)?.[1] ?? "";
+  const head = frontmatter([[fm.scope, source.options.scope], [fm.status, config.status.active],
+    [fm.keyFact, source.label + " memory, mirrored by rcllr import-memory; never edit by hand."]]);
+  return head + "\n# " + source.label + " memory\n\nrcllr rewrites this folder from " + source.label
+    + "'s memory. Changes made here are lost on the next import.\n";
 }
 
 /** The current note at `path`: null when it does not exist, undefined when it is hidden from this access. */
@@ -148,31 +113,29 @@ function current(access: Access, path: string): Note | null | undefined {
   }
 }
 
-export function importClaudeMemory(access: Access, options: MemoryImportOptions): MemoryImportResult {
+type Change = { path: string; content: string; expected: string | null };
+
+/** The changes one source needs: new and changed memories, archived ones, and the topic README first. */
+function sourceChanges(access: Access, source: Source, only: string | undefined): Change[] {
   const config = access.config;
-  if (!config.extras.claudeMemory) throw new Rejected("extra_disabled", { name: "claude_memory" });
-  const topic = config.layout.topics + "/" + config.claudeMemory.topic;
-  const projects = config.claudeMemory.projects.map((project) => projectPath(project))
-    .filter((project) => options.project === undefined || project === projectPath(options.project));
-  const changes: { path: string; content: string; expected: string | null }[] = [];
+  const topic = config.layout.topics + "/" + source.options.topic;
+  const changes: Change[] = [];
   // rcllr completes the frontmatter and the README table on write, so the mirror never equals what we wrote.
-  // A note counts as current when it carries the same source fingerprint; the README only needs to exist.
+  // A note counts as current when it carries the same source fingerprint.
   const want = (path: string, content: string): void => {
     const previous = current(access, path);
-    if (previous === undefined) return;
-    if (previous !== null && sourceOf(previous.text) === sourceOf(content)) return;
+    if (previous === undefined || (previous !== null && sourceOf(previous.text) === sourceOf(content))) return;
     changes.push({ path, content, expected: previous ? previous.revision : null });
   };
+  const projects = source.options.projects.map((project) => projectPath(project))
+    .filter((project) => only === undefined || project === projectPath(only));
   for (const project of projects) {
-    const memories = readMemories(options.claudeHome, project);
+    const memories = readMemories(source.key, source.home, project);
     if (memories === null) continue;
-    if (changes.length === 0) want(topic + "/" + config.layout.topicReadme, readmeText(config));
     const folder = topic + "/" + slug(project);
-    const kept = new Set<string>();
-    for (const memory of memories) {
-      kept.add(memory.file);
-      want(folder + "/" + memory.file, noteText(config, project, memory, config.status.active));
-    }
+    const name = (memory: Memory): string => mirrorName(memory.file, config.layout.topicReadme);
+    for (const memory of memories) want(folder + "/" + name(memory), noteText(config, source, project, memory));
+    const kept = new Set(memories.map(name));
     let mirrored: string[] = [];
     try {
       mirrored = fs.readdirSync(join(config.root, folder)).filter((name) => name.endsWith(".md")).sort();
@@ -188,12 +151,31 @@ export function importClaudeMemory(access: Access, options: MemoryImportOptions)
       changes.push({ path: folder + "/" + name, content, expected: previous.revision });
     }
   }
+  const readme = topic + "/" + config.layout.topicReadme;
+  if (changes.length > 0 && current(access, readme) === null) changes.unshift({ path: readme, content: readmeText(config, source), expected: null });
+  return changes;
+}
+
+export function importMemory(access: Access, options: MemoryImportOptions): MemoryImportResult {
+  const config = access.config;
+  const sources: Source[] = [];
+  if (config.extras.claudeMemory) {
+    sources.push({ key: "claude", label: "Claude Code", alias: "claude-memory", home: options.claudeHome,
+      options: config.claudeMemory });
+  }
+  if (config.extras.codexMemory && options.codexHome) {
+    sources.push({ key: "codex", label: "Codex", alias: "codex-memory", home: options.codexHome,
+      options: config.codexMemory });
+  }
+  if (!config.extras.claudeMemory && !config.extras.codexMemory) {
+    throw new Rejected("extra_disabled", { name: "claude_memory" });
+  }
+  const changes = sources.flatMap((source) => sourceChanges(access, source, options.project));
   const changed = changes.map((change) => change.path);
-  if (changes.length === 0) return { changed, sync: "not-run" };
   let sync = "not-run";
   for (let start = 0; start < changes.length; start += config.limits.maxChanges) {
     const packet = { changes: changes.slice(start, start + config.limits.maxChanges) };
-    sync = ingest(access, packet, options.dryRun, options.sync && !options.dryRun, "Import Claude Code memory").sync;
+    sync = ingest(access, packet, options.dryRun, options.sync && !options.dryRun, "Import agent memory").sync;
   }
   return { changed, sync };
 }

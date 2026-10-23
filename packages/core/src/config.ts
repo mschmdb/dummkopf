@@ -144,8 +144,8 @@ export interface CuratorOptions {
   readonly keepKey: string;
 }
 
-export interface ClaudeMemoryOptions {
-  /** Project folders whose Claude Code auto memory gets mirrored. Nothing else is imported. */
+export interface MemorySourceOptions {
+  /** Project folders whose agent memory gets mirrored. Nothing else is imported. */
   readonly projects: readonly string[];
   readonly scope: string;
   readonly topic: string;
@@ -156,6 +156,7 @@ export interface ExtrasConfig {
   readonly curator: boolean;
   readonly codexSync: boolean;
   readonly claudeMemory: boolean;
+  readonly codexMemory: boolean;
 }
 
 export interface Config {
@@ -174,7 +175,8 @@ export interface Config {
   readonly extras: ExtrasConfig;
   readonly links: LinksOptions;
   readonly curator: CuratorOptions;
-  readonly claudeMemory: ClaudeMemoryOptions;
+  readonly claudeMemory: MemorySourceOptions;
+  readonly codexMemory: MemorySourceOptions;
 }
 
 /** A leaf type and its default, or a nested section. TOML keys stay snake_case. */
@@ -219,7 +221,8 @@ const SCHEMA: Section = {
     },
   },
   context: { routes_file: ["str", "routes.json"] },
-  extras: { links: ["bool", true], curator: ["bool", true], codex_sync: ["bool", true], claude_memory: ["bool", false] },
+  extras: { links: ["bool", true], curator: ["bool", true], codex_sync: ["bool", true], claude_memory: ["bool", false],
+    codex_memory: ["bool", false] },
   links: {
     output: ["str", "LINKS.md"], entities_file: ["str", "entities.txt"], min_topics: ["int", 2],
     allow_outside: ["list", []],
@@ -229,6 +232,7 @@ const SCHEMA: Section = {
     keep_key: ["str", "curator_keep"],
   },
   claude_memory: { projects: ["list", []], scope: ["str", "memory-claude"], topic: ["str", "claude-memory"] },
+  codex_memory: { projects: ["list", []], scope: ["str", "memory-codex"], topic: ["str", "codex-memory"] },
 };
 
 function camel(key: string): string {
@@ -396,11 +400,13 @@ function validate(config: Config): void {
   }
   relativePath(config.links.entitiesFile, "links.entities_file");
   relativePath(config.curator.reportDir, "curator.report_dir", true, true);
-  const memory = config.claudeMemory;
-  if (config.extras.claudeMemory && !scopes.values.includes(memory.scope)) {
-    throw invalid("claude_memory.scope", "must be one of scopes.values; add '" + memory.scope + "' there");
+  for (const [name, on, memory] of [["claude_memory", config.extras.claudeMemory, config.claudeMemory],
+    ["codex_memory", config.extras.codexMemory, config.codexMemory]] as const) {
+    if (on && !scopes.values.includes(memory.scope)) {
+      throw invalid(name + ".scope", "must be one of scopes.values; add '" + memory.scope + "' there");
+    }
+    if (!/^[\p{L}\p{N}_-]+$/u.test(memory.topic)) throw invalid(name + ".topic", "use letters, digits, - and _ only");
   }
-  if (!/^[\p{L}\p{N}_-]+$/u.test(memory.topic)) throw invalid("claude_memory.topic", "use letters, digits, - and _ only");
   for (const folder of config.links.allowOutside) {
     relativePath(folder, "links.allow_outside", true, true);
     if ((layout.roots as readonly string[]).includes(parts(stripTrailingSlashes(folder))[0]!)) {

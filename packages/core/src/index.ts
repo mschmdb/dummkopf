@@ -45,4 +45,4 @@ export * as curator from "./extras/curator.ts";
 
 export const VERSION = "0.5.1";
 export { migrateName, type NameMigration } from "./migrate.ts";
-export { importClaudeMemory, sessionProject, type MemoryImportResult } from "./memory.ts";
+export { importMemory, sessionProject, type MemoryImportResult } from "./memory.ts";
