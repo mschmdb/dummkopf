@@ -248,15 +248,15 @@ export const HELP: Readonly<Record<string, string>> = {
 
 
 export const CHEEKY: Readonly<Record<string, string>> = {
-  "path_denied": "Dummkopf! {plain}",
-  "busy": "Easy, Dummkopf. {plain}",
-  "version_conflict": "Someone else touched this note. Read it again, Dummkopf. {plain}",
-  "new_sensitive": "Dummkopf! {plain}",
-  "marker_removal": "Dummkopf! {plain}",
-  "config_missing": "No brain here, Dummkopf. {plain}",
-  "git_dirty": "Dummkopf, clean up first. {plain}",
+  "path_denied": "Nice try. {plain}",
+  "busy": "One thought at a time. {plain}",
+  "version_conflict": "Someone else touched this note. Read it again. {plain}",
+  "new_sensitive": "Not so fast. {plain}",
+  "marker_removal": "Not so fast. {plain}",
+  "config_missing": "No brain here. {plain}",
+  "git_dirty": "Tidy up first. {plain}",
   "sync_failed_after_save": "Half a brain is better than none. {plain}",
-  "no_results": "{plain} Even a Dummkopf knows when it doesn't know.",
+  "no_results": "{plain} Knowing what you don't know is a start.",
   "sync_ok": "Brain synced.",
 };
 

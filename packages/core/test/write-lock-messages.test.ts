@@ -65,8 +65,12 @@ describe("messages", () => {
   test("plain tone never jokes", () => {
     for (const [key, template] of Object.entries(PLAIN)) {
       assert.ok(!template.toLowerCase().includes("rcllr!"), key);
-      assert.ok(!template.replaceAll("rcllr.toml", "").includes("Dummkopf"), key);
+      assert.ok(!template.includes("Dummkopf"), key);
     }
+  });
+
+  test("no tone calls the user names", () => {
+    for (const [key, template] of Object.entries(CHEEKY)) assert.ok(!template.includes("Dummkopf"), key);
   });
 
   test("cheeky uses no extra parameters", () => {
@@ -82,17 +86,16 @@ describe("messages", () => {
     test("tone switch: " + key, () => {
       const plain = text(key, "plain", params);
       const cheeky = text(key, "cheeky", params);
-      assert.ok(!plain.includes("Dummkopf"));
       assert.notEqual(plain, cheeky);
-      assert.ok(cheeky.includes("Dummkopf") || key === "sync_ok");
+      assert.ok(cheeky.includes(plain) || key === "sync_ok");
     });
   }
 
   test("brief examples", () => {
-    assert.ok(text("no_results", "cheeky").endsWith("Even a Dummkopf knows when it doesn't know."));
+    assert.ok(text("no_results", "cheeky").endsWith("Knowing what you don't know is a start."));
     assert.equal(text("sync_ok", "cheeky"), "Brain synced.");
     const conflict = text("version_conflict", "cheeky", { rev: "abc123abc123" });
-    assert.ok(conflict.startsWith("Someone else touched this note. Read it again, Dummkopf."));
+    assert.ok(conflict.startsWith("Someone else touched this note. Read it again."));
     assert.ok(conflict.includes("rev=abc123abc123"));
   });
 

@@ -2,7 +2,7 @@
 
 Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.
 
-*Without memory, every agent is a Dummkopf.*
+*Agents forget. rcllr recalls.*
 
 rcllr turns a folder of Markdown notes into a memory that Claude Code, Codex and other agents can query and
 write through one CLI. Hooks commit every change. With a remote, they also push it, so the memory follows you
@@ -322,7 +322,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[status]` | `active`, `archived` | Status values; stale checks look at `active` notes. |
 | `[sensitive]` | `marker`, `paths_file`, `always` | Marker line, generated list, and path prefixes that are always sensitive. |
 | `[frontmatter]` | `key_fact`, `summary`, `aliases`, `updated`, `status`, `period`, `entities`, `scope`, `todo_placeholder`, `summary_max` | Maps each field to the key used in your files. |
-| `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `cheeky` or `plain`. |
+| `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `plain` (default) or `cheeky`, which adds a short remark to some messages. |
 | `[hooks]` | `report` | When the pre-commit hook prints its report line: `changes` (default, only when the counts changed), `always` or `never`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
 | `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator. |
@@ -362,8 +362,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
 **Can I keep my notes off GitHub?** Yes. Create the brain without `--remote`. A local brain commits every
 change, but nothing ever leaves your machine. Back it up like any other folder.
 
-**Can I use it at work?** Yes. Set `tone = "plain"` in `[ui]` and every message stays neutral. `--serious`
-does the same for a single call. Error messages are equally precise in both tones.
+**Can I use it at work?** Yes. Messages are plain by default. `tone = "cheeky"` in `[ui]` adds a short remark to
+some of them; `--serious` turns it off for a single call. Error messages are equally precise in both tones.
 
 **Does it send my notes anywhere?** Only to your own Git remote, by `git push`, and only in a synced brain.
 rcllr has no other network code and no runtime dependencies beyond Node.js.

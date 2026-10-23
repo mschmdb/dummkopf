@@ -21,10 +21,10 @@ function synced(): Synced {
 
 // --- the three messages named in the README ---------------------------------------------------------------------
 
-test("denied path is cheeky by default", () => {
+test("denied path is cheeky when the config says so", () => {
   const result = filled().cheeky(["read", "notes/absent.md"]);
   assert.deepEqual([result.code, result.out], [2, ""]);
-  assert.equal(result.err, "Dummkopf! " + DENIED_PLAIN + "\n");
+  assert.equal(result.err, "Nice try. " + DENIED_PLAIN + "\n");
 });
 
 test("denied path is plain with --serious", () => {
@@ -37,11 +37,11 @@ test("hidden and missing paths stay identical in the cheeky tone", () => {
   assert.deepEqual(target.cheeky(["read", "notes/marked.md"]), target.cheeky(["read", "notes/absent.md"]));
 });
 
-test("no results is cheeky by default", () => {
+test("no results is cheeky when the config says so", () => {
   const result = filled().cheeky(["find", "zzz"]);
   assert.equal(result.code, 0);
   assert.equal(result.out, "Nothing found in released sources. "
-    + "Even a Dummkopf knows when it doesn't know.\nNot found: zzz\n");
+    + "Knowing what you don't know is a start.\nNot found: zzz\n");
 });
 
 test("no results is plain with --serious", () => {
@@ -73,13 +73,17 @@ test("--serious works before the subcommand", () => {
   assert.equal(filled().cheeky(["--serious", "read", "notes/absent.md"]).err, DENIED_PLAIN + "\n");
 });
 
-test("missing config message is cheeky by default", () => {
+test("missing config message is plain: without a config there is no tone to choose", () => {
   const sandbox = new Sandbox();
-  const cheeky = sandbox.run(["find", "x"], { cwd: sandbox.tmp });
-  const plain = sandbox.run(["find", "x", "--serious"], { cwd: sandbox.tmp });
-  assert.ok(cheeky.err.startsWith("No brain here, Dummkopf. No rcllr.toml found in "), cheeky.err);
-  assert.ok(plain.err.startsWith("No rcllr.toml found in "), plain.err);
-  assert.ok(cheeky.err.endsWith(plain.err));
+  const result = sandbox.run(["find", "x"], { cwd: sandbox.tmp });
+  assert.ok(result.err.startsWith("No rcllr.toml found in "), result.err);
+  assert.equal(result.err, sandbox.run(["find", "x", "--serious"], { cwd: sandbox.tmp }).err);
+});
+
+test("a brain without a tone setting answers plain", () => {
+  const brain = new Sandbox().brain();
+  assert.equal(brain.sandbox.run(["find", "zzz"], { cwd: brain.root }).out,
+    "Nothing found in released sources.\nNot found: zzz\n");
 });
 
 // --- the joke never hides the instruction ----------------------------------------------------------------------
@@ -90,7 +94,7 @@ test("cheeky version conflict keeps the current rev", () => {
   const plain = brain.run(["write", "notes/first.md", "--expected", "0123456789ab"], { stdin: md() });
   assert.equal(cheeky.code, 2);
   assert.equal(plain.code, 2);
-  assert.equal(cheeky.err, "Someone else touched this note. Read it again, Dummkopf. " + plain.err);
+  assert.equal(cheeky.err, "Someone else touched this note. Read it again. " + plain.err);
   assert.ok(cheeky.err.includes("current rev="));
 });
 
@@ -99,7 +103,7 @@ test("cheeky new sensitive note keeps the grant instruction", () => {
   const content = md({ body: "> SENSITIVE" });
   const cheeky = brain.cheeky(["write", "notes/secret.md", "--expected", "new"], { stdin: content });
   const plain = brain.run(["write", "notes/secret.md", "--expected", "new"], { stdin: content });
-  assert.equal(cheeky.err, "Dummkopf! " + plain.err);
+  assert.equal(cheeky.err, "Not so fast. " + plain.err);
   assert.ok(cheeky.err.includes("--allow-sensitive notes/secret.md"));
 });
 
@@ -113,7 +117,7 @@ test("cheeky marker removal keeps the rule", () => {
   const cheeky = brain.cheeky(args, { stdin: md({ body: "no marker" }) });
   const plain = brain.run(args, { stdin: md({ body: "no marker" }) });
   assert.equal(plain.err, "A write package must not remove a sensitivity marker.\n");
-  assert.equal(cheeky.err, "Dummkopf! " + plain.err);
+  assert.equal(cheeky.err, "Not so fast. " + plain.err);
 });
 
 for (const args of [["find", "docker", "--limit", "11"], ["read", "notes/alpha.md", "--start", "0"],

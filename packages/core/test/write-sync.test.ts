@@ -296,6 +296,8 @@ describe("sync", () => {
 
   test("cli sync reports in tone", () => {
     const s = synced();
+    assert.equal(invoke(s.brain, ["sync"]).out, "Synced.\n");
+    s.brain.configure("[ui]\ntone = 'cheeky'\n");
     assert.equal(invoke(s.brain, ["sync"]).out, "Brain synced.\n");
     assert.equal(invoke(s.brain, ["sync", "--serious"]).out, "Synced.\n");
   });

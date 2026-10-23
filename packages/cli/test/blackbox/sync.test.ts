@@ -251,7 +251,7 @@ test("cheeky dirty tree message scolds but keeps the instruction", () => {
   brain.write("notes/by-hand.md", md());
   const result = brain.cheeky(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 2);
-  assert.equal(result.err, "Dummkopf, clean up first. "
+  assert.equal(result.err, "Tidy up first. "
     + "The brain has uncommitted note changes. Run `rcllr sync` first.\n");
 });
 

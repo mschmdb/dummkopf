@@ -154,8 +154,21 @@ export class Brain {
     return this.sandbox.run([...args, "--serious"], { cwd: this.root, ...options });
   }
 
+  /**
+   * Run the CLI without --serious. Unless rcllr.toml names a tone itself, it says cheeky for this one call and
+   * then gets its old text back.
+   */
   cheeky(args: readonly string[], options: { stdin?: string } = {}): Result {
-    return this.sandbox.run(args, { cwd: this.root, ...options });
+    const file = path.join(this.root, "rcllr.toml");
+    const saved = fs.readFileSync(file, "utf-8");
+    const cheeky = /^tone\s*=/m.test(saved) ? saved : saved.includes("[ui]\n") ? saved.replace("[ui]\n", '[ui]\ntone = "cheeky"\n')
+      : saved + '\n[ui]\ntone = "cheeky"\n';
+    fs.writeFileSync(file, cheeky, "utf-8");
+    try {
+      return this.sandbox.run(args, { cwd: this.root, ...options });
+    } finally {
+      fs.writeFileSync(file, saved, "utf-8");
+    }
   }
 
   git(args: readonly string[], check = true): string {

@@ -41,7 +41,7 @@ describe("config", () => {
     assert.equal(config.sensitive.marker, "> SENSITIVE");
     assert.deepEqual(config.sensitive.always, []);
     assert.equal(config.frontmatter.keyFact, "key_fact");
-    assert.equal(config.ui.tone, "cheeky");
+    assert.equal(config.ui.tone, "plain");
     assert.equal(config.limits.maxChars, 6000);
     assert.equal(config.search.weights.aliases, 12);
     assert.equal(config.extras.links, true);

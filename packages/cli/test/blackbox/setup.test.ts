@@ -72,7 +72,7 @@ test("init writes a config with the remote", () => {
   assert.ok(text.includes('remote = "' + REMOTE + '"'));
   assert.ok(text.includes('branch = "main"'));
   assert.ok(text.includes('locale = "en"'));
-  assert.ok(text.includes('tone = "cheeky"'));
+  assert.ok(text.includes('tone = "plain"'));
 });
 
 test("init without remote names the remote only in a comment", () => {

@@ -194,7 +194,7 @@ const SCHEMA: Section = {
     entities: ["str", "entities"], scope: ["str", "scope"], todo_placeholder: ["str", "TODO"],
     summary_max: ["int", 160],
   },
-  ui: { locale: ["str", "en"], tone: ["str", "cheeky"] },
+  ui: { locale: ["str", "en"], tone: ["str", "plain"] },
   hooks: { report: ["str", "changes"] },
   limits: {
     max_chars: ["int", 6000], find_limit: ["int", 3], max_input_chars: ["int", 2_000_000],

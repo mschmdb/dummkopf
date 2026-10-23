@@ -78,7 +78,7 @@ export function main(argv: readonly string[]): number {
     }
     throw error;
   }
-  let tone = args.serious ? "plain" : "cheeky";
+  let tone = "plain";
   try {
     const explicit = typeof args.root === "string" ? args.root : null;
     const [withConfig, withoutConfig] = handlers();

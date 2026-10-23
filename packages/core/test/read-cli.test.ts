@@ -63,10 +63,10 @@ describe("cli read", () => {
     const b = brain();
     b.write(".sensitive-paths", "notes/listed.md\n");
     b.note("notes/listed.md");
-    assert.ok(invoke(b, ["read", "notes/listed.md"]).err.startsWith("Dummkopf!"));
-    assert.ok(!invoke(b, ["read", "notes/listed.md", "--serious"]).err.startsWith("Dummkopf"));
-    b.configure("[ui]\ntone = 'plain'\n");
     assert.ok(invoke(b, ["read", "notes/listed.md"]).err.startsWith("Path unavailable"));
+    b.configure("[ui]\ntone = 'cheeky'\n");
+    assert.ok(invoke(b, ["read", "notes/listed.md"]).err.startsWith("Nice try."));
+    assert.ok(invoke(b, ["read", "notes/listed.md", "--serious"]).err.startsWith("Path unavailable"));
   });
 
   const invalid = [["find", "!!!"], ["read", "notes/a.md", "--start", "0"], ["read", "notes/a.md", "--start", "4", "--end", "2"],
@@ -115,8 +115,10 @@ describe("cli read", () => {
   test("no results text follows tone", () => {
     const b = brain();
     b.note("notes/a.md");
-    assert.ok(invoke(b, ["find", "absent"]).out.includes("Even a Dummkopf knows"));
-    assert.ok(!invoke(b, ["find", "absent", "--serious"]).out.includes("Dummkopf"));
+    assert.ok(!invoke(b, ["find", "absent"]).out.includes("Knowing what you don't know"));
+    b.configure("[ui]\ntone = 'cheeky'\n");
+    assert.ok(invoke(b, ["find", "absent"]).out.includes("Knowing what you don't know is a start."));
+    assert.ok(!invoke(b, ["find", "absent", "--serious"]).out.includes("Knowing what you don't know"));
   });
 
   test("read larger budget can return a full long line", () => {

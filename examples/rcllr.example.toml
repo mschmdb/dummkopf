@@ -53,7 +53,7 @@ summary_max = 160
 
 [ui]
 locale = "en"                          # "en" | "de": generated headings + language heuristics
-tone = "cheeky"                        # "cheeky" | "plain"; --serious forces plain
+tone = "plain"                         # "plain" | "cheeky"; --serious forces plain
 
 [hooks]
 report = "changes"                     # pre-commit report line: "changes" | "always" | "never"

@@ -13,6 +13,8 @@ All notable changes to this project are listed here. The format follows
   `install` replaces hooks written under the old name.
 - `rcllr migrate-name` moves a brain to the new name: it renames the config, updates `AGENTS.md` and `CLAUDE.md`
   and reinstalls old hooks. It lists the steps first and writes only with `--apply`.
+- The default tone is now `plain`. `tone = "cheeky"` still adds a remark to some messages, and none of them calls
+  the user names anymore.
 
 ### Added
 
