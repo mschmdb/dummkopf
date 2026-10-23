@@ -129,6 +129,10 @@ export function run(args: Namespace, config: Config, tone: string): number {
     }
   }
   out(outputResult(result, Boolean(args.json), args.maxChars as number, tone));
-  if (code === EXIT_SYNC_FAILED) err(say("sync_failed_after_save", tone) + "\n");
+  if (code === EXIT_SYNC_FAILED) {
+    err(say("sync_failed_after_save", tone) + "\n");
+    // Only the login failure gets its own line: the other sync failures need no step beyond `dummkopf sync`.
+    if (result.syncError === "git_auth") err(say("git_auth", tone) + "\n");
+  }
   return code;
 }

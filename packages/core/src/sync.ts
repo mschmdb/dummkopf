@@ -14,10 +14,27 @@ import { exists, join, resolve, stripTrailingSlashes } from "./pyos.ts";
 
 const OPEN_OPERATIONS = ["rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
 
+// Git's own wording for a refused login. "Could not read from remote repository" alone also means a missing
+// repository, so it stays a plain failure.
+const AUTH_FAILURES = [
+  "Permission denied (publickey",
+  "Host key verification failed",
+  "Authentication failed for",
+  "could not read Username for",
+];
+
+/** The message key for a failed fetch or push, judged from Git's stderr. The text itself never leaves. */
+export function remoteFailure(stderr: string): "git_auth" | null {
+  return AUTH_FAILURES.some((pattern) => stderr.includes(pattern)) ? "git_auth" : null;
+}
+
 export function git(config: Config, args: readonly string[], allowed: readonly number[] = [0]): Done {
   const done = run("git", args, { cwd: config.root, timeoutS: config.limits.gitTimeoutS });
   if (done.failed) throw new SyncError("git_unavailable");
-  if (!allowed.includes(done.code!)) throw new SyncError("git_failed", { step: args[0] });
+  if (!allowed.includes(done.code!)) {
+    const remoteStep = args[0] === "fetch" || args[0] === "push";
+    throw new SyncError((remoteStep && remoteFailure(done.stderr)) || "git_failed", { step: args[0] });
+  }
   return done;
 }
 

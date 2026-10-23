@@ -210,7 +210,8 @@ Every hit starts with a header line: `path | rev=<12 chars> | updated | status |
 as `--expected` when you change the file.
 
 **Exit codes:** `0` ok, `2` rejected call (nothing changed; the message says what to fix),
-`3` saved but the Git sync failed (run `dummkopf sync` again).
+`3` saved but the Git sync failed (run `dummkopf sync` again). When the remote refuses the login, the
+message says so; with `--json`, `syncError` holds the message key, for example `git_auth`.
 
 ## Agent setup
 

@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
+- A sync that fails because the remote refuses the login (SSH key, host key or HTTPS credentials) now says so,
+  instead of only "Git step failed". Git's own output still never leaves the process. After `write` or `ingest`,
+  `--json` reports the reason in `syncError`.
 - `dummkopf install` adds permission rules to `.claude/settings.json`: `allow` for `dummkopf` and `dk`, `ask` for
   any call with `--allow-sensitive`. Headless agents (`claude -p`, the GitHub Action) can call dummkopf without
   a prompt, but never open a sensitive note.

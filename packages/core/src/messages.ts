@@ -61,6 +61,7 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "sync_failed_after_save": "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.",
   "git_unavailable": "Git is not available or does not answer.",
   "git_failed": "Git step failed: {step}. Local data is kept.",
+  "git_auth": "Git could not log in to the remote. Local data is kept. For an SSH remote, test the login with `ssh -T git@<host>`; `gh auth` does not cover SSH.",
   "git_root": "The Git root does not match the brain root.",
   "git_branch": "Sync needs branch {branch}.",
   "git_remote": "Remote {name} does not match repo.remote in dummkopf.toml.",

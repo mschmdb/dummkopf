@@ -11,7 +11,9 @@ import { Access } from "../src/access.ts";
 import { DummkopfError, SyncError } from "../src/errors.ts";
 import { withRepositoryLock } from "../src/lock.ts";
 import { defaultConfig } from "../src/config.ts";
-import { checkCommitMessage, committedPaths, notePathspec, prepareRepository, syncRepository } from "../src/sync.ts";
+import {
+  checkCommitMessage, committedPaths, notePathspec, prepareRepository, remoteFailure, syncRepository,
+} from "../src/sync.ts";
 import { atomicWrite, ingest, seams } from "../src/write.ts";
 import { documentText as document, invoke, REPO, revision, type Synced, synced, tempDir } from "./helpers.ts";
 
@@ -159,6 +161,23 @@ describe("sync", () => {
     const error = caught(() => prepareRepository(s.brain.config));
     assert.ok(error instanceof SyncError);
     assert.equal(error.key, "git_dirty");
+  });
+
+  test("a remote that refuses the SSH login fails as git_auth and never echoes Git's text", () => {
+    const s = synced();
+    const url = "git@example.invalid:me/brain.git";
+    s.brain.toml = s.brain.toml.replace(s.remote, url);
+    s.brain.configure("");
+    s.git(["remote", "set-url", "origin", url]);
+    const ssh = path.join(s.base, "fake-ssh");
+    fs.writeFileSync(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n");
+    fs.chmodSync(ssh, 0o755);
+    s.git(["config", "core.sshCommand", ssh]);
+    s.brain.write("notes/first.md", "updated\n");
+    const error = caught(() => syncRepository(s.brain.config));
+    assert.ok(error instanceof SyncError);
+    assert.equal(error.key, "git_auth");
+    assert.ok(!error.message.includes("example.invalid"));
   });
 
   test("sync refuses other remote", () => {
@@ -356,5 +375,22 @@ describe("commit scope and message", () => {
     const error = caught(() => ingest(new Access(s.brain.config), packet(s), false, true, "two\nlines"));
     assert.equal(error.key, "commit_message_invalid");
     assert.equal(s.git(["status", "--porcelain"]), "");
+  });
+});
+
+describe("remote failures", () => {
+  test("login failures over SSH and HTTPS count as auth", () => {
+    for (const stderr of [
+      "git@github.com: Permission denied (publickey).\nfatal: Could not read from remote repository.",
+      "Host key verification failed.\nfatal: Could not read from remote repository.",
+      "remote: Invalid username or token.\nfatal: Authentication failed for 'https://github.com/me/brain.git/'",
+      "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+    ]) assert.equal(remoteFailure(stderr), "git_auth", stderr);
+  });
+
+  test("anything else stays a plain Git failure", () => {
+    for (const stderr of ["", "fatal: Could not read from remote repository.", "error: failed to push some refs"]) {
+      assert.equal(remoteFailure(stderr), null, stderr);
+    }
   });
 });
