@@ -161,6 +161,25 @@ describe("sync", () => {
     assert.equal(error.key, "git_dirty");
   });
 
+  test("a push that loses the race against another machine fetches, rebases and pushes again", () => {
+    const s = synced();
+    const other = path.join(s.base, "other");
+    s.git(["clone", "-q", "-b", "main", s.remote, other], s.base);
+    fs.writeFileSync(path.join(other, "notes", "elsewhere.md"), document({ body: "From the other machine" }));
+    s.git(["add", "-A"], other);
+    s.git(["commit", "-q", "-m", "Other machine"], other);
+    // The other machine pushes after this brain fetched, right before its own push lands.
+    const hook = path.join(s.brain.root, ".git", "hooks", "pre-push");
+    fs.writeFileSync(hook, "#!/bin/sh\nunset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE\n"
+      + "[ -f \"$0.done\" ] && exit 0\ntouch \"$0.done\"\ngit -C '" + other + "' push -q origin main\n");
+    fs.chmodSync(hook, 0o755);
+    s.brain.write("notes/first.md", "updated\n");
+    syncRepository(s.brain.config);
+    assert.equal(s.git(["rev-parse", "HEAD"]), s.git(["rev-parse", "refs/heads/main"], s.remote));
+    assert.ok(s.brain.exists("notes/elsewhere.md"));
+    assert.equal(s.git(["log", "-1", "--format=%s"]), "Update notes");
+  });
+
   test("sync refuses other remote", () => {
     const s = synced();
     s.git(["remote", "set-url", "origin", "git@example.org:other/repo.git"]);
