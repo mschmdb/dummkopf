@@ -56,7 +56,7 @@ test("install is idempotent and keeps foreign settings", () => {
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.equal(target.read(".claude/settings.json"), first);
   const settings = JSON.parse(first);
-  assert.deepEqual(settings.permissions.allow, ["Bash(ls)", "Bash(dummkopf *)", "Bash(dk *)"]);
+  assert.deepEqual(settings.permissions.allow, ["Bash(ls)", "Bash(rcllr *)", "Bash(dummkopf *)", "Bash(dk *)"]);
   assert.equal(settings.hooks.PostToolUse.length, 2);
 });
 
@@ -64,8 +64,8 @@ test("install lets headless agents call dummkopf, but asks before sensitive read
   const target = repo();
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.deepEqual(json(target, ".claude/settings.json").permissions, {
-    allow: ["Bash(dummkopf *)", "Bash(dk *)"],
-    ask: ["Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+    allow: ["Bash(rcllr *)", "Bash(dummkopf *)", "Bash(dk *)"],
+    ask: ["Bash(rcllr *--allow-sensitive*)", "Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
   });
 });
 
@@ -76,8 +76,9 @@ test("install keeps foreign permission rules and adds its own once", () => {
   }));
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.deepEqual(json(target, ".claude/settings.json").permissions, {
-    allow: ["Bash(dk *)", "Bash(dummkopf *)"],
-    ask: ["Bash(rm *)", "Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+    allow: ["Bash(dk *)", "Bash(rcllr *)", "Bash(dummkopf *)"],
+    ask: ["Bash(rm *)", "Bash(rcllr *--allow-sensitive*)", "Bash(dummkopf *--allow-sensitive*)",
+      "Bash(dk *--allow-sensitive*)"],
     deny: ["Bash(dummkopf *)"],
   });
 });
@@ -107,6 +108,16 @@ test("install never overwrites a foreign Git hook", () => {
   assert.equal(result.code, 2);
   assert.ok(result.err.includes("pre-commit"));
   assert.equal(fs.readFileSync(hook, "utf-8"), "#!/bin/sh\necho mine\n");
+});
+
+test("install replaces a pre-commit hook written by dummkopf before the rename", () => {
+  const target = repo();
+  const hook = hookPath(target);
+  fs.mkdirSync(path.dirname(hook), { recursive: true });
+  fs.writeFileSync(hook, "#!/bin/sh\n# managed-by: dummkopf\ndummkopf hook pre-commit || true\n");
+  assert.equal(invoke(target, ["install"]).code, 0);
+  const script = fs.readFileSync(hook, "utf-8");
+  assert.ok(script.includes("# managed-by: rcllr") && script.includes("rcllr hook pre-commit"));
 });
 
 test("install respects core.hooksPath", () => {

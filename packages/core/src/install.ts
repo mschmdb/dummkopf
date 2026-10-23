@@ -9,7 +9,11 @@ import { str, strip } from "./py.ts";
 import { isObject, type Json, type JsonObject, loads } from "./pyjson.ts";
 import { asPosix, exists, isRelativeTo, join, name, parent, readText, relativeTo, writeText } from "./pyos.ts";
 
-export const MANAGED = "# managed-by: dummkopf";
+export const MANAGED = "# managed-by: rcllr";
+/** The marker of hooks written before the rename to rcllr; `install` may overwrite those too. */
+export const LEGACY_MANAGED = "# managed-by: dummkopf";
+/** Every name the CLI answers to: rcllr, and the old names that stay as aliases during the transition. */
+export const COMMANDS = ["rcllr", "dummkopf", "dk"] as const;
 // `uv tool install` and `pipx` put executables in ~/.local/bin. Hooks often run with a narrower PATH than
 // a terminal (the Claude desktop app, for one), so every hook adds that folder in front. $HOME keeps the
 // committed files free of machine-specific paths.
@@ -19,23 +23,23 @@ ${MANAGED}
 # Regenerates the sensitive-paths list and the indexes. Never blocks a commit.
 ${USER_BIN}
 export PATH
-if command -v dummkopf >/dev/null 2>&1; then
-  dummkopf hook pre-commit || true
+if command -v rcllr >/dev/null 2>&1; then
+  rcllr hook pre-commit || true
 else
-  echo "dummkopf not found on PATH; indexes not updated." >&2
+  echo "rcllr not found on PATH; indexes not updated." >&2
 fi
 exit 0
 `;
-export const CLAUDE_COMMAND = USER_BIN + ' dummkopf --root "$CLAUDE_PROJECT_DIR" hook agent';
-export const CODEX_COMMAND = USER_BIN + ' dummkopf --root "$(git rev-parse --show-toplevel)" hook agent';
+export const CLAUDE_COMMAND = USER_BIN + ' rcllr --root "$CLAUDE_PROJECT_DIR" hook agent';
+export const CODEX_COMMAND = USER_BIN + ' rcllr --root "$(git rev-parse --show-toplevel)" hook agent';
 export const CLAUDE_MATCHER = "Write|Edit|MultiEdit|Bash";
 export const CODEX_MATCHER = "Bash|apply_patch|Edit|Write";
 // Headless agents (`claude -p`, the GitHub Action, cloud sessions) deny every Bash command nobody allowed,
 // and say so only in their result. `ask` beats `allow`, so a sensitive read still prompts in a terminal
 // and is denied headless, where no user named the topic.
 export const PERMISSIONS: Readonly<Record<"allow" | "ask", readonly string[]>> = {
-  allow: ["Bash(dummkopf *)", "Bash(dk *)"],
-  ask: ["Bash(dummkopf *--allow-sensitive*)", "Bash(dk *--allow-sensitive*)"],
+  allow: COMMANDS.map((command) => "Bash(" + command + " *)"),
+  ask: COMMANDS.map((command) => "Bash(" + command + " *--allow-sensitive*)"),
 };
 
 export type Settings = JsonObject;
@@ -55,7 +59,8 @@ function relativeOrFail(path: string, root: string): string {
 /** The pre-commit hook path, after checking it is free or ours. */
 export function gitHookPath(config: Config): string {
   const hook = join(hooksDir(config), "pre-commit");
-  if (exists(hook) && !readText(hook, "ignore").includes(MANAGED)) {
+  const text = exists(hook) ? readText(hook, "ignore") : "";
+  if (exists(hook) && !text.includes(MANAGED) && !text.includes(LEGACY_MANAGED)) {
     throw new Rejected("hook_exists", { path: relativeOrFail(hook, config.root) });
   }
   return hook;
@@ -81,9 +86,10 @@ export function loadJson(path: string): Settings {
   return data;
 }
 
-/** Any dummkopf agent hook, including the format of older releases. */
+/** Any of our agent hooks, including the formats of older releases and the old name dummkopf. */
 export function isOurs(command: unknown): boolean {
-  return typeof command === "string" && command.includes("dummkopf") && command.includes("hook agent");
+  return typeof command === "string" && (command.includes("rcllr") || command.includes("dummkopf"))
+    && command.includes("hook agent");
 }
 
 /** dict.get on a JSON value; anything but an object fails like Python's AttributeError. */
