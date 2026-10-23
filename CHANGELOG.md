@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-23
+
 ### Fixed
 
 - Hooks also look for `rcllr` and `node` in `/opt/homebrew/bin` and `/usr/local/bin`. Started with a narrow
