@@ -33,6 +33,8 @@ export interface WriteResult {
   issues: Issue[];
   saved: boolean;
   sync: string;
+  /** The message key of a failed sync, so the caller can say why. */
+  syncError?: string;
 }
 
 export interface CheckResult {
@@ -180,6 +182,7 @@ export function ingest(access: Access, packet: unknown, dryRun = false, sync = t
       } catch (error) {
         if (!(error instanceof SyncError)) throw error;
         result.sync = "failed";
+        result.syncError = error.key;
         return result;
       }
       // The remote may have hidden a note or removed the paths list meanwhile; the write still succeeded.
