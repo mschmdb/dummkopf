@@ -390,7 +390,13 @@ CLI. The package exports no raw note reader, so a frontend cannot skip those rul
 
 rcllr was called dummkopf up to version 0.4. The new version reads old brains as they are: it finds
 `dummkopf.toml` when there is no `rcllr.toml`, reads `DUMMKOPF_ROOT` when `RCLLR_ROOT` is unset, and the
-commands `dummkopf` and `dk` start rcllr. To move a brain to the new name:
+commands `dummkopf` and `dk` start rcllr. Both packages ship those two commands, so remove the old one first:
+
+```bash
+npm uninstall -g dummkopf && npm install -g rcllr
+```
+
+To move a brain to the new name:
 
 ```bash
 cd ~/brain && rcllr migrate-name           # lists the steps, changes nothing
