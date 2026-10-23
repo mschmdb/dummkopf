@@ -269,7 +269,7 @@ test("install keeps existing settings and other hooks", () => {
   fs.writeFileSync(path.join(root, ".claude/settings.json"), JSON.stringify(existing), "utf-8");
   sandbox.run(["install"], { cwd: root });
   const data = settings(root);
-  assert.deepEqual(data.permissions, { allow: ["Bash(ls)"] });
+  assert.deepEqual(data.permissions.allow, ["Bash(ls)", "Bash(dummkopf *)", "Bash(dk *)"]);
   assert.ok(commands(data.hooks.PostToolUse).includes("keepme"));
   assert.ok(commands(data.hooks.PostToolUse).some((command) => command.endsWith(CLAUDE_HOOK)));
 });
