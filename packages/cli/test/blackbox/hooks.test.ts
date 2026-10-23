@@ -404,8 +404,11 @@ test("commit completes the frontmatter of a staged note", () => {
 
 test("commit still succeeds when dummkopf is not on the PATH", () => {
   const { sandbox, root } = hooked();
-  const gitFolder = path.dirname(which("git") ?? "/usr/bin/git");
-  const env = { ...sandbox.env, PATH: gitFolder + ":/bin" };
+  // Only git, never a dummkopf that happens to share git's folder (Homebrew puts both in /opt/homebrew/bin).
+  const gitOnly = path.join(sandbox.tmp, "git-only");
+  fs.mkdirSync(gitOnly);
+  fs.symlinkSync(which("git") ?? "/usr/bin/git", path.join(gitOnly, "git"));
+  const env = { ...sandbox.env, PATH: gitOnly + ":/bin" };
   fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
   const result = commit(sandbox, root, env);
   assert.equal(result.status, 0);
