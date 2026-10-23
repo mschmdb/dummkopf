@@ -1,4 +1,4 @@
-/** Load and validate dummkopf.toml. Unknown keys fail, so a typo never disables a rule. */
+/** Load and validate rcllr.toml. Unknown keys fail, so a typo never disables a rule. */
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
@@ -6,9 +6,12 @@ import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytes
   stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
-export const CONFIG_NAME = "dummkopf.toml";
+export const CONFIG_NAME = "rcllr.toml";
+/** The name before the rename to rcllr. Brains that still use it keep working. */
+export const LEGACY_CONFIG_NAME = "dummkopf.toml";
 export const SCHEMA_VERSION = 1;
-export const ROOT_ENV = "DUMMKOPF_ROOT";
+export const ROOT_ENV = "RCLLR_ROOT";
+export const LEGACY_ROOT_ENV = "DUMMKOPF_ROOT";
 export const LOCALES = ["en", "de"] as const;
 export const TONES = ["cheeky", "plain"] as const;
 export const REPORT_MODES = ["changes", "always", "never"] as const;
@@ -277,7 +280,7 @@ function relativePath(value: string, key: string, allowDir = false, written = fa
   const items = parts(plain);
   if (!plain || isAbsolute(plain) || items.includes("..") || value.includes("\\") || items.length === 0
       || value.startsWith("~") || asPosix(plain) !== plain
-      || (written && (items[0] === ".git" || items[0] === CONFIG_NAME))) {
+      || (written && (items[0] === ".git" || items[0] === CONFIG_NAME || items[0] === LEGACY_CONFIG_NAME))) {
     throw invalid(key, "must be a normalized relative path inside the brain");
   }
 }
@@ -423,10 +426,22 @@ export function defaultConfig(root: string, overrides: Record<string, unknown> =
   return config;
 }
 
+/**
+ * The config file of a brain: rcllr.toml, else the old dummkopf.toml. A symlink counts as present, so a
+ * symlinked rcllr.toml is rejected instead of quietly falling back to the old name.
+ */
+export function configFile(rootPath: string): string {
+  const root = resolve(rootPath);
+  const legacy = join(root, LEGACY_CONFIG_NAME);
+  const current = join(root, CONFIG_NAME);
+  if (isFile(current) || isSymlink(current)) return current;
+  return isFile(legacy) || isSymlink(legacy) ? legacy : current;
+}
+
 export function loadConfig(rootPath: string): Config {
   const root = resolve(rootPath);
-  const file = join(root, CONFIG_NAME);
-  if (isSymlink(file)) throw new ConfigError("config_unreadable", { detail: "dummkopf.toml must not be a symlink" });
+  const file = configFile(root);
+  if (isSymlink(file)) throw new ConfigError("config_unreadable", { detail: CONFIG_NAME + " must not be a symlink" });
   if (!isFile(file)) throw new ConfigMissing("config_missing", { start: root });
   let data: Record<string, unknown>;
   try {
@@ -451,13 +466,13 @@ export function loadConfig(rootPath: string): Config {
 export function findRoot(cwd: string, explicit: string | null, env: Record<string, string | undefined> = process.env): string {
   let candidates: string[];
   if (explicit !== null) candidates = [explicit];
-  else if (env[ROOT_ENV]) candidates = [env[ROOT_ENV]!];
+  else if (env[ROOT_ENV] || env[LEGACY_ROOT_ENV]) candidates = [(env[ROOT_ENV] || env[LEGACY_ROOT_ENV])!];
   else {
     const start = resolve(cwd);
     candidates = [start, ...parents(start)];
   }
   for (const candidate of candidates) {
-    if (isFile(join(candidate, CONFIG_NAME))) return resolve(candidate);
+    if (isFile(join(candidate, CONFIG_NAME)) || isFile(join(candidate, LEGACY_CONFIG_NAME))) return resolve(candidate);
   }
   throw new ConfigMissing("config_missing", { start: asPosix(candidates[0]!) });
 }

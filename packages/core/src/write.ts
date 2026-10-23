@@ -4,13 +4,13 @@ import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 
 import { Access } from "./access.ts";
-import { CONFIG_NAME, type Config } from "./config.ts";
+import { type Config, configFile } from "./config.ts";
 import { AccessDenied, Rejected, SyncError } from "./errors.ts";
 import { type Issue, issue, linkIssues } from "./links.ts";
 import { withRepositoryLock } from "./lock.ts";
 import { text as say } from "./messages.ts";
 import { compare } from "./py.ts";
-import { exists, join, parent, sha256 } from "./pyos.ts";
+import { exists, join, name, parent, sha256 } from "./pyos.ts";
 import { checkCommitMessage, prepareRepository, syncLocked } from "./sync.ts";
 import { type Change, metadataIssues, type Plan, validatePacket } from "./validate.ts";
 
@@ -214,7 +214,7 @@ function configIssues(config: Config): Issue[] {
     [config.links.entitiesFileSet, config.links.entitiesFile, "entities-file-missing", "entities_file_missing"],
   ];
   return files.filter(([set, file]) => set && !exists(join(config.root, file)))
-    .map(([, file, code, key]) => issue(CONFIG_NAME, code, say(key, "plain", { file }), "warning"));
+    .map(([, file, code, key]) => issue(name(configFile(config.root)), code, say(key, "plain", { file }), "warning"));
 }
 
 export function check(access: Access, paths: readonly string[] | null = null): CheckResult {
