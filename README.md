@@ -104,6 +104,45 @@ A local brain never talks to a remote, even when the Git repository has one. To 
 synced one later, add the remote to Git and set `repo.remote` to the same URL. To go back, remove the
 `remote` line.
 
+### A key just for the brain
+
+The hooks push in the background. There your SSH agent or keychain may be out of reach: the Mac is locked,
+the agent runs in a sandbox, or your key needs a passphrase. Then the push fails with
+`Permission denied (publickey)`. A deploy key gives the brain its own SSH key with write access to that one
+repository and nothing else:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/brain_deploy -N "" -C "brain deploy key"
+```
+
+Add `~/.ssh/brain_deploy.pub` on GitHub under the brain repository's **Settings → Deploy keys**, with
+**Allow write access**. `gh repo deploy-key add ~/.ssh/brain_deploy.pub --allow-write` works too, but GitHub
+removes such a key when you revoke the GitHub CLI app or its token. Then give the key its own host name in
+`~/.ssh/config`:
+
+```sshconfig
+Host github-brain
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/brain_deploy
+  IdentitiesOnly yes
+  IdentityAgent none
+```
+
+Point the brain at that host, in Git and in `dummkopf.toml` alike:
+
+```bash
+git remote set-url origin git@github-brain:you/your-brain.git
+```
+
+```toml
+[repo]
+remote = "git@github-brain:you/your-brain.git"
+```
+
+The key has no passphrase, so anyone who can read `~/.ssh/brain_deploy` can write to your brain. In
+exchange, it can reach no other repository. Create one key per machine, so you can revoke a lost machine alone.
+
 ## How a brain looks
 
 ```
