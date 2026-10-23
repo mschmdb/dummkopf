@@ -1,4 +1,4 @@
-/** `dummkopf init`: create a new brain repository from the packaged templates. Port of scaffold.py. */
+/** `rcllr init`: create a new brain repository from the packaged templates. Port of scaffold.py. */
 
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -13,25 +13,25 @@ import { Sensitivity } from "./sensitive.ts";
 
 export const PLACEHOLDER_REMOTE = "git@github.com:you/your-brain.git";
 
-/** dummkopf.toml of a local brain: the remote stays commented out until the owner wants sync. */
-const LOCAL_REMOTE_HINT = "# No remote: this brain stays on this machine. dummkopf commits, but never pushes.\n"
+/** rcllr.toml of a local brain: the remote stays commented out until the owner wants sync. */
+const LOCAL_REMOTE_HINT = "# No remote: this brain stays on this machine. rcllr commits, but never pushes.\n"
   + "# To sync, set a private repository: remote = \"" + PLACEHOLDER_REMOTE + "\"\n";
 
-/** What dummkopf commits, and how a save gets its own commit subject. */
-const COMMIT_RULES = "- dummkopf commits only the note folders and generated files. Changes to `dummkopf.toml`, `AGENTS.md`,\n"
+/** What rcllr commits, and how a save gets its own commit subject. */
+const COMMIT_RULES = "- rcllr commits only the note folders and generated files. Changes to `rcllr.toml`, `AGENTS.md`,\n"
   + "  `CLAUDE.md`, `.claude/`, `.codex/` and other tooling stay uncommitted; leave them for the user to commit.\n"
   + "- Give each save its own commit subject: `write ... --message \"Add pnpm build fix\"`, one line, at most\n"
   + "  200 characters. Without it the commit uses `repo.commit_message`.\n";
 
 /** The sync rules in AGENTS.md: with a remote, and for a local brain. */
-const SYNC_REMOTE = "- The hooks installed by `dummkopf install` commit and push note changes after each edit and at session end.\n"
+const SYNC_REMOTE = "- The hooks installed by `rcllr install` commit and push note changes after each edit and at session end.\n"
   + "  `ingest`, `write`, the Claude Code hook and the Codex hook share one sync path and one process lock.\n"
   + COMMIT_RULES
-  + "- Before changes dummkopf fetches and rebases onto the remote. Never merge from or write to `FETCH_HEAD`;\n"
+  + "- Before changes rcllr fetches and rebases onto the remote. Never merge from or write to `FETCH_HEAD`;\n"
   + "  parallel fetches share it.\n"
-  + "- If histories diverge, dummkopf stops and keeps local commits. Check before you resolve anything.";
+  + "- If histories diverge, rcllr stops and keeps local commits. Check before you resolve anything.";
 const SYNC_LOCAL = "- This brain is local: it has no remote, and nothing leaves this machine. Never add a remote or push.\n"
-  + "- The hooks installed by `dummkopf install` commit note changes after each edit and at session end.\n"
+  + "- The hooks installed by `rcllr install` commit note changes after each edit and at session end.\n"
   + "  `ingest`, `write`, the Claude Code hook and the Codex hook share one commit path and one process lock.\n"
   + COMMIT_RULES.trimEnd();
 
@@ -112,8 +112,8 @@ export function init(targetPath: string, remote: string | null, locale: string):
   fs.mkdirSync(target, { recursive: true });
   // Without --remote the brain stays local: the remote line is only a commented hint.
   const settings = remote
-    ? template("dummkopf.toml").replaceAll("{remote}", () => remote)
-    : template("dummkopf.toml").replace('remote = "{remote}"\n', () => LOCAL_REMOTE_HINT);
+    ? template("rcllr.toml").replaceAll("{remote}", () => remote)
+    : template("rcllr.toml").replace('remote = "{remote}"\n', () => LOCAL_REMOTE_HINT);
   writeText(join(target, CONFIG_NAME), settings.replaceAll("{locale}", () => locale));
   const config = loadConfig(target);
   const filesToWrite = new Map<string, string>([

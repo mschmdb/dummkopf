@@ -42,12 +42,12 @@ export function git(config: Config, args: readonly string[], allowed: readonly n
 export const MAX_COMMIT_MESSAGE = 200;
 
 /**
- * What dummkopf commits: the note folders, the content folders `init` creates and the generated files.
- * Config and tooling (dummkopf.toml, AGENTS.md, CLAUDE.md, .claude/, .codex/, scripts) stay for a human commit.
+ * What rcllr commits: the note folders, the content folders `init` creates and the generated files.
+ * Config and tooling (rcllr.toml, AGENTS.md, CLAUDE.md, .claude/, .codex/, scripts) stay for a human commit.
  */
 export function committedPaths(config: Config): string[] {
   const layout = config.layout;
-  // The routes and entities files are content the user curates, wherever dummkopf.toml puts them.
+  // The routes and entities files are content the user curates, wherever rcllr.toml puts them.
   const paths = [...layout.roots, layout.sources, layout.archive, layout.index, config.sensitive.pathsFile,
     config.links.output, stripTrailingSlashes(config.curator.reportDir), config.context.routesFile,
     config.links.entitiesFile];

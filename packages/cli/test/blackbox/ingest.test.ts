@@ -313,7 +313,7 @@ for (const [rel, message] of DEPTH_RULES) {
 }
 
 for (const rel of ["../escape.md", "/tmp/escape.md", "other/x.md", "sources/x.md", "x.md", "notes\\x.md",
-  "dummkopf.toml"]) {
+  "rcllr.toml"]) {
   test("paths outside the note folders are denied: " + rel, () => {
     const brain = repo();
     const result = ingest(brain, [newEntry(rel)]);

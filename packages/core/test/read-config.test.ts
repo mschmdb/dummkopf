@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "node:test";
 
-import { CONFIG_NAME, findRoot, loadConfig } from "../src/config.ts";
+import { CONFIG_NAME, configFile, findRoot, LEGACY_CONFIG_NAME, loadConfig } from "../src/config.ts";
 import { ConfigError, ConfigMissing } from "../src/errors.ts";
 import { REPO, tempDir } from "./helpers.ts";
 
@@ -41,7 +41,7 @@ describe("config", () => {
     assert.equal(config.sensitive.marker, "> SENSITIVE");
     assert.deepEqual(config.sensitive.always, []);
     assert.equal(config.frontmatter.keyFact, "key_fact");
-    assert.equal(config.ui.tone, "cheeky");
+    assert.equal(config.ui.tone, "plain");
     assert.equal(config.limits.maxChars, 6000);
     assert.equal(config.search.weights.aliases, 12);
     assert.equal(config.extras.links, true);
@@ -50,7 +50,7 @@ describe("config", () => {
 
   test("example config loads", () => {
     const root = tempDir();
-    write(root, fs.readFileSync(path.join(REPO, "examples", "dummkopf.example.toml"), "utf-8"));
+    write(root, fs.readFileSync(path.join(REPO, "examples", "rcllr.example.toml"), "utf-8"));
     const config = loadConfig(root);
     assert.equal(config.curator.openDays, 28);
     assert.equal(config.hooks.report, "changes");
@@ -130,7 +130,7 @@ describe("config", () => {
     ["[sensitive]\nalways = ['../x/']\n", "sensitive.always"],
     ["[sensitive]\nalways = ['./topics/health/']\n", "sensitive.always"],
     ["[sensitive]\nalways = ['notes//secret.md']\n", "sensitive.always"],
-    ["[links]\noutput = 'dummkopf.toml'\n", "links.output"],
+    ["[links]\noutput = 'rcllr.toml'\n", "links.output"],
     ["[layout]\ntopics = 'a/b'\n", "layout.topics"],
     ["[layout]\nnotes = 'topics'\n", "layout"],
     ["[frontmatter]\nkey_fact = 'has space'\n", "frontmatter.key_fact"],
@@ -184,8 +184,47 @@ describe("config", () => {
       fs.mkdirSync(directory);
       write(directory, MINIMAL);
     }
-    assert.equal(findRoot(base, first, { DUMMKOPF_ROOT: second }), fs.realpathSync(first));
+    assert.equal(findRoot(base, first, { RCLLR_ROOT: second }), fs.realpathSync(first));
+    assert.equal(findRoot(base, null, { RCLLR_ROOT: second }), fs.realpathSync(second));
+  });
+
+  test("find root still reads DUMMKOPF_ROOT, but RCLLR_ROOT wins", () => {
+    const base = tempDir();
+    const first = path.join(base, "one");
+    const second = path.join(base, "two");
+    for (const directory of [first, second]) {
+      fs.mkdirSync(directory);
+      write(directory, MINIMAL);
+    }
     assert.equal(findRoot(base, null, { DUMMKOPF_ROOT: second }), fs.realpathSync(second));
+    assert.equal(findRoot(base, null, { RCLLR_ROOT: first, DUMMKOPF_ROOT: second }), fs.realpathSync(first));
+  });
+
+  test("a brain with the old dummkopf.toml still loads and is found", () => {
+    const root = tempDir();
+    fs.writeFileSync(path.join(root, LEGACY_CONFIG_NAME), MINIMAL + "[ui]\ntone = 'plain'\n", "utf-8");
+    const nested = path.join(root, "notes");
+    fs.mkdirSync(nested);
+    assert.equal(findRoot(nested, null, {}), fs.realpathSync(root));
+    assert.equal(loadConfig(root).ui.tone, "plain");
+    assert.equal(configFile(root), path.join(fs.realpathSync(root), LEGACY_CONFIG_NAME));
+  });
+
+  test("rcllr.toml wins over dummkopf.toml", () => {
+    const root = tempDir();
+    write(root, MINIMAL + "[ui]\ntone = 'plain'\n");
+    fs.writeFileSync(path.join(root, LEGACY_CONFIG_NAME), MINIMAL + "[ui]\ntone = 'cheeky'\n", "utf-8");
+    assert.equal(CONFIG_NAME, "rcllr.toml");
+    assert.equal(loadConfig(root).ui.tone, "plain");
+  });
+
+  test("a symlinked rcllr.toml is rejected, never skipped for dummkopf.toml", () => {
+    const root = tempDir();
+    const real = path.join(root, "real.toml");
+    fs.writeFileSync(real, MINIMAL, "utf-8");
+    fs.symlinkSync(real, path.join(root, CONFIG_NAME));
+    fs.writeFileSync(path.join(root, LEGACY_CONFIG_NAME), MINIMAL, "utf-8");
+    assert.throws(() => loadConfig(root), ConfigError);
   });
 
   test("find root without config raises", () => {

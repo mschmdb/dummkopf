@@ -21,6 +21,6 @@ body:
   - type: input
     id: version
     attributes:
-      label: dummkopf version, Python version, OS
+      label: rcllr version, Python version, OS
     validations:
       required: true

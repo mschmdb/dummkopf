@@ -75,7 +75,7 @@ test("a failed sync is non-blocking", () => {
   repo.git(["remote", "set-url", "origin", "git@example.org:other/repo.git"]);
   const output = new Captured();
   assert.equal(agentEvent({ tool_name: "Bash", cwd: repo.brain.root }, repo.brain.config, output, syncRepository), 1);
-  assert.ok(output.stderr.includes("dummkopf sync failed"));
+  assert.ok(output.stderr.includes("rcllr sync failed"));
 });
 
 test("the hook command never returns 2", () => {
@@ -124,7 +124,7 @@ test("pre-commit skips repos without an index", () => {
 test("the installed pre-commit hook updates the index after ingest", () => {
   const repo = synced();
   const target = repo.brain;
-  // The installed hook calls `dummkopf` from PATH: put the dev runner first, like the black-box suite.
+  // The installed hook calls `rcllr` from PATH: put the dev runner first, like the black-box suite.
   const saved = process.env.PATH;
   process.env.PATH = path.dirname(DEV_BIN) + path.delimiter + (saved ?? "");
   Object.assign(process.env, GIT_ENV);

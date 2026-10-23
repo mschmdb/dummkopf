@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping. A few rules keep ˈdʊmkɔpf small and safe.
+Thanks for helping. A few rules keep rcllr small and safe.
 
 ## Setup
 
@@ -18,14 +18,14 @@ pnpm typecheck && pnpm test && pnpm test:blackbox
 
 - `pnpm test` runs the unit tests in `packages/*/test` with `node:test`.
 - `pnpm test:blackbox` runs the black-box suite in `packages/cli/test/blackbox` against the TypeScript sources,
-  through `packages/cli/dev/dummkopf`. No build needed.
+  through `packages/cli/dev/rcllr`. No build needed.
 - `pnpm test:blackbox:dist` builds first and tests the built CLI, like CI does.
 
-The black-box suite only talks to a binary, so `DUMMKOPF_BIN=/path/to/dummkopf` runs it against any build.
+The black-box suite only talks to a binary, so `RCLLR_BIN=/path/to/rcllr` runs it against any build.
 
 When you touch `packages/core/src/toml.ts`, also run `pnpm test:toml`. It fetches a pinned release of the
 official [toml-test](https://github.com/toml-lang/toml-test) suite into `.cache/` (needs network and Git) and
-runs the parser against its TOML 1.0 cases. Cases dummkopf leaves out on purpose are listed with a reason in
+runs the parser against its TOML 1.0 cases. Cases rcllr leaves out on purpose are listed with a reason in
 `packages/core/test/toml-test-skip.txt`; a listed case that starts to pass fails the run. `pnpm test` skips
 the suite unless `TOML_TEST_DIR` points at a toml-test checkout.
 
@@ -39,9 +39,9 @@ only from the same machine.
 
 ## Layout
 
-- `packages/core` is the library `@dummkopf/core`: config, frontmatter, the read gate `Access`, search, writes,
+- `packages/core` is the library `@rcllr/core`: config, frontmatter, the read gate `Access`, search, writes,
   Git sync, hooks and the extras.
-- `packages/cli` is the CLI `dummkopf`: argument parsing, output and the command handlers.
+- `packages/cli` is the CLI `rcllr`: argument parsing, output and the command handlers.
 - Node runs the TypeScript sources directly. Use only erasable syntax (no enums, no parameter properties) and
   `import type` for types.
 
@@ -50,7 +50,7 @@ only from the same machine.
 - Write the test first, then the code. Bug fixes start with a failing test.
 - `pnpm typecheck` must pass with the strict settings in `tsconfig.base.json`.
 - Keep files under 500 lines. Split a module before it grows past that.
-- No runtime dependencies. ˈdʊmkɔpf uses Node's built-in modules only.
+- No runtime dependencies. rcllr uses Node's built-in modules only.
 - Every user-facing message goes into `packages/core/src/messages.ts`. A cheeky variant must embed `{plain}`,
   so the joke never hides what failed or what to do.
 - Generated headings and text heuristics for a language go into `packages/core/src/locale.ts`.
@@ -67,13 +67,13 @@ network or your home folder.
 
 `pnpm pack:check` packs both packages like `pnpm publish`, installs the tarballs with npm into a temporary
 folder and runs the installed CLI. It also lints both tarballs with [publint](https://publint.dev) and checks
-the types of `@dummkopf/core` with [arethetypeswrong](https://arethetypeswrong.github.io) (`--profile esm-only`,
-since both packages are ESM-only). CI runs it on every push. The `source` condition in `@dummkopf/core`'s
+the types of `@rcllr/core` with [arethetypeswrong](https://arethetypeswrong.github.io) (`--profile esm-only`,
+since both packages are ESM-only). CI runs it on every push. The `source` condition in `@rcllr/core`'s
 `exports` points into `src/` for the dev binary; `publishConfig.exports` drops it from the published manifest.
 
 A release goes out from GitHub Actions (`.github/workflows/release.yml`), never from a laptop. It uses npm
 Trusted Publishing: GitHub proves the workflow's identity to npm, so no npm token exists. On npmjs.com, both
-`dummkopf` and `@dummkopf/core` name `mschmdb/dummkopf` and `release.yml` as their Trusted Publisher.
+`rcllr` and `@rcllr/core` name `mschmdb/rcllr` and `release.yml` as their Trusted Publisher.
 
 1. Set the same version in `packages/core/package.json`, `packages/cli/package.json` and `VERSION` in
    `packages/core/src/index.ts`, and move the changelog entries from "Unreleased" to that version.

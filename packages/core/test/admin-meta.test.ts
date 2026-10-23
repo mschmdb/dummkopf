@@ -385,5 +385,5 @@ test("the report summary stays silent without findings and counts them otherwise
   assert.equal(reportSummary(target.config), "");
   target.write("notes/todo.md", full(TODAY, "TODO"));
   assert.equal(reportSummary(target.config), "Report: 0 stale, 0 without date, 1 without key fact. "
-    + "Run `dummkopf meta report` for details.");
+    + "Run `rcllr meta report` for details.");
 });

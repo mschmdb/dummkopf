@@ -1,5 +1,5 @@
 /**
- * TOML 1.0 reader for dummkopf.toml. Node has no TOML parser, and dummkopf has no dependencies.
+ * TOML 1.0 reader for rcllr.toml. Node has no TOML parser, and rcllr has no dependencies.
  * Strict 1.0: TOML 1.1 additions (`\e` and `\xHH` escapes, times without seconds, newlines and
  * trailing commas in inline tables, Unicode bare keys) are syntax errors.
  * Floats come back as TomlFloat and date-times as TomlDateTime, so the config check can tell

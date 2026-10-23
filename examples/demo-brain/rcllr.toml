@@ -1,0 +1,8 @@
+# Demo brain. Copy the folder, set repo.remote (or delete it for a local brain), run `git init -b main` and `rcllr install`.
+schema_version = 1
+
+[repo]
+remote = "git@github.com:you/your-brain.git"
+
+[ui]
+tone = "plain"

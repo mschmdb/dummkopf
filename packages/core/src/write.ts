@@ -4,20 +4,20 @@ import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 
 import { Access } from "./access.ts";
-import { CONFIG_NAME, type Config } from "./config.ts";
+import { type Config, configFile } from "./config.ts";
 import { AccessDenied, Rejected, SyncError } from "./errors.ts";
 import { type Issue, issue, linkIssues } from "./links.ts";
 import { withRepositoryLock } from "./lock.ts";
 import { text as say } from "./messages.ts";
 import { compare } from "./py.ts";
-import { exists, join, parent, sha256 } from "./pyos.ts";
+import { exists, join, name, parent, sha256 } from "./pyos.ts";
 import { checkCommitMessage, prepareRepository, syncLocked } from "./sync.ts";
 import { type Change, metadataIssues, type Plan, validatePacket } from "./validate.ts";
 
 export const NEW_FILE_MODE = 0o600;
 
 /**
- * Steps tests replace to simulate a full disk or a failing remote, like Python's `patch("dummkopf.write.…")`.
+ * Steps tests replace to simulate a full disk or a failing remote, like Python's `patch("rcllr.write.…")`.
  * Production code never changes them.
  */
 export const seams = {
@@ -72,7 +72,7 @@ export function digest(path: string): string {
 /** Create a fresh temporary file next to the target, like tempfile.mkstemp. */
 function mkstemp(directory: string): [number, string] {
   for (;;) {
-    const name = join(directory, ".dummkopf-" + randomBytes(6).toString("hex") + ".tmp");
+    const name = join(directory, ".rcllr-" + randomBytes(6).toString("hex") + ".tmp");
     try {
       return [fs.openSync(name, fs.constants.O_RDWR | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o600), name];
     } catch (error) {
@@ -207,14 +207,14 @@ export function ingest(access: Access, packet: unknown, dryRun = false, sync = t
   }, config.limits.lockTimeoutS);
 }
 
-/** Files named explicitly in dummkopf.toml that are missing. A default name may be absent without notice. */
+/** Files named explicitly in rcllr.toml that are missing. A default name may be absent without notice. */
 function configIssues(config: Config): Issue[] {
   const files: [boolean, string, string, string][] = [
     [config.context.routesFileSet, config.context.routesFile, "routes-file-missing", "routes_file_missing"],
     [config.links.entitiesFileSet, config.links.entitiesFile, "entities-file-missing", "entities_file_missing"],
   ];
   return files.filter(([set, file]) => set && !exists(join(config.root, file)))
-    .map(([, file, code, key]) => issue(CONFIG_NAME, code, say(key, "plain", { file }), "warning"));
+    .map(([, file, code, key]) => issue(name(configFile(config.root)), code, say(key, "plain", { file }), "warning"));
 }
 
 export function check(access: Access, paths: readonly string[] | null = null): CheckResult {

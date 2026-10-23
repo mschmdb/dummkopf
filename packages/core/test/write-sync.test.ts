@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { describe, test } from "node:test";
 
 import { Access } from "../src/access.ts";
-import { DummkopfError, SyncError } from "../src/errors.ts";
+import { RcllrError, SyncError } from "../src/errors.ts";
 import { withRepositoryLock } from "../src/lock.ts";
 import { defaultConfig } from "../src/config.ts";
 import {
@@ -26,11 +26,11 @@ function packet(s: Synced, rel = "notes/first.md", body = "New content"): { chan
   return { changes: [{ path: rel, content: document({ body }), expected }] };
 }
 
-function caught(body: () => unknown): DummkopfError {
+function caught(body: () => unknown): RcllrError {
   try {
     body();
   } catch (error) {
-    assert.ok(error instanceof DummkopfError, String(error));
+    assert.ok(error instanceof RcllrError, String(error));
     return error;
   }
   assert.fail("no error");
@@ -218,7 +218,7 @@ describe("sync", () => {
   test("auto push false commits locally only", () => {
     const s = synced();
     repoOption(s, "auto_push = false");
-    s.brain.commit("Configure"); // dummkopf.toml is never part of a dummkopf commit
+    s.brain.commit("Configure"); // rcllr.toml is never part of a rcllr commit
     const remoteHead = s.git(["rev-parse", "refs/heads/main"], s.remote);
     s.brain.write("notes/first.md", "updated\n");
     syncRepository(s.brain.config);
@@ -291,11 +291,13 @@ describe("sync", () => {
       "--serious"], document({ body: "Third" }));
     assert.equal(done.code, 3, done.err);
     assert.ok(done.out.includes("sync: failed"));
-    assert.ok(done.err.includes("Retry with `dummkopf sync`"));
+    assert.ok(done.err.includes("Retry with `rcllr sync`"));
   });
 
   test("cli sync reports in tone", () => {
     const s = synced();
+    assert.equal(invoke(s.brain, ["sync"]).out, "Synced.\n");
+    s.brain.configure("[ui]\ntone = 'cheeky'\n");
     assert.equal(invoke(s.brain, ["sync"]).out, "Brain synced.\n");
     assert.equal(invoke(s.brain, ["sync", "--serious"]).out, "Synced.\n");
   });

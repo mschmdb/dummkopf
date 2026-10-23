@@ -281,7 +281,7 @@ test("work note may not link to a private note", () => {
   assert.ok(result.err.includes("A link crosses a sensitivity or scope boundary."));
 });
 
-/** A work page that already links to a private note, written past dummkopf as after a migration. */
+/** A work page that already links to a private note, written past rcllr as after a migration. */
 function oldBarrierLink(): Brain {
   const brain = repo();
   ingest(brain, [...topic("job", "work"), ...topic("home", "private"), newEntry("topics/home/diary.md"),

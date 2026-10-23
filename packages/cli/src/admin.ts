@@ -1,10 +1,12 @@
-/** Setup and maintenance commands: init, install, hook, meta, links, curator. Port of admin.py. */
+/** Setup and maintenance commands: init, install, migrate-name, hook, meta, links, curator. Port of admin.py. */
+
+import * as os from "node:os";
 
 import {
-  agentEvent, type Config, curator, DummkopfError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
-  loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, preCommit, refreshPathsFile, renderAgents,
-  requireExtra,
-} from "@dummkopf/core";
+  agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
+  loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, migrateName, preCommit, refreshPathsFile,
+  renderAgents, requireExtra,
+} from "@rcllr/core";
 
 import type { Namespace, Parser } from "./argparse.ts";
 import { err, out, readStdin } from "./io.ts";
@@ -18,6 +20,8 @@ export function register(add: (name: string) => Parser): void {
   command.option("--locale", { choices: LOCALES, default: "en", help: HELP.init_locale! });
   command = add("install");
   command.option("--replace-command", { kind: "append", metavar: "TEXT", help: HELP.install_replace! });
+  command = add("migrate-name");
+  command.option("--apply", { kind: "flag", help: HELP.migrate_apply! });
   command = add("hook");
   command.positional("kind", HELP.hook_kind!, { choices: ["pre-commit", "agent"] });
   command = add("meta");
@@ -59,7 +63,7 @@ export function runHook(args: Namespace, root: string, tone: string): number {
   try {
     config = loadConfig(findRoot(process.cwd(), root));
   } catch (error) {
-    if (error instanceof DummkopfError) return 0;
+    if (error instanceof RcllrError) return 0;
     throw error;
   }
   if (args.kind === "pre-commit") return preCommit(config, output);
@@ -77,6 +81,18 @@ export function runInstall(args: Namespace, config: Config, tone: string): numbe
   const [written, removed] = install(config, replace);
   if (replace.length > 0) out(say("out_removed_hooks", tone, { count: removed }) + "\n");
   for (const path of written) out(say("out_installed", tone, { what: path }) + "\n");
+  return 0;
+}
+
+export function runMigrateName(args: Namespace, config: Config, tone: string): number {
+  const result = migrateName(config.root, { apply: Boolean(args.apply), home: os.homedir(), env: process.env });
+  for (const step of result.steps) {
+    const [kind, file] = step.split(":");
+    out(say("out_migrate_" + kind, tone, { file }) + "\n");
+  }
+  if (result.steps.length === 0) out(say("out_migrate_none", tone) + "\n");
+  else out(say(result.applied ? "out_migrate_done" : "out_migrate_dry", tone) + "\n");
+  for (const place of result.outside) out(say("out_migrate_outside", tone, { place }) + "\n");
   return 0;
 }
 

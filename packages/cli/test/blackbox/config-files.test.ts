@@ -1,12 +1,12 @@
-/** `check` warns when a file named explicitly in dummkopf.toml is missing; defaults stay silent. */
+/** `check` warns when a file named explicitly in rcllr.toml is missing; defaults stay silent. */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { type Brain, fullNote, Sandbox } from "./harness.ts";
 
-const ROUTES_MISSING = "dummkopf.toml: Routes file hub-routes.json is missing; routes are off. (warning)";
-const ENTITIES_MISSING = "dummkopf.toml: Entities file scripts/entities.txt is missing; entity links are off. (warning)";
+const ROUTES_MISSING = "rcllr.toml: Routes file hub-routes.json is missing; routes are off. (warning)";
+const ENTITIES_MISSING = "rcllr.toml: Entities file scripts/entities.txt is missing; entity links are off. (warning)";
 
 function brain(extra = ""): Brain {
   const target = new Sandbox().brain("brain", extra);
@@ -43,10 +43,10 @@ test("check stays silent when the explicit entities file exists", () => {
   assert.equal(target.run(["check"]).out, "Checked files: 1; status: ok\n");
 });
 
-test("check JSON lists the missing file as a warning on dummkopf.toml", () => {
+test("check JSON lists the missing file as a warning on rcllr.toml", () => {
   const data = JSON.parse(brain('[context]\nroutes_file = "hub-routes.json"\n').run(["check", "--json"]).out);
   assert.equal(data.ok, true);
-  assert.deepEqual(data.issues, [{ path: "dummkopf.toml", code: "routes-file-missing", severity: "warning",
+  assert.deepEqual(data.issues, [{ path: "rcllr.toml", code: "routes-file-missing", severity: "warning",
     message: "Routes file hub-routes.json is missing; routes are off." }]);
 });
 

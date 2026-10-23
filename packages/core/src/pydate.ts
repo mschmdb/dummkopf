@@ -104,7 +104,7 @@ export class PyDate {
     return firstMonday.addDays((week - 1) * 7 + day - 1);
   }
 
-  /** datetime.strptime(value, format).date() for the formats dummkopf uses: %Y, %m, %d and literals. */
+  /** datetime.strptime(value, format).date() for the formats rcllr uses: %Y, %m, %d and literals. */
   static strptime(value: string, pattern: string): PyDate {
     let source = "";
     for (let i = 0; i < pattern.length; i++) {

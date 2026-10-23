@@ -299,7 +299,7 @@ test("wrong case spelling of a hidden topic is denied", () => {
   assert.equal(brain.run(["read", "Topics/Health/x.md"]).err, DENIED);
 });
 
-for (const rel of ["../open.md", "notes/../notes/open.md", "/etc/passwd", "notes\\open.md", "dummkopf.toml",
+for (const rel of ["../open.md", "notes/../notes/open.md", "/etc/passwd", "notes\\open.md", "rcllr.toml",
   ".sensitive-paths", "notes"]) {
   test("paths outside the note folders are denied: " + rel, () => {
     const brain = openBrain();
@@ -374,7 +374,7 @@ for (const args of [["read", "notes/open.md"], ["find", "visible"], ["context", 
     assert.equal(result.code, 2);
     assert.equal(result.out, "");
     assert.ok(result.err.includes(".sensitive-paths"));
-    assert.ok(result.err.includes("`dummkopf meta index`"));
+    assert.ok(result.err.includes("`rcllr meta index`"));
   });
 }
 

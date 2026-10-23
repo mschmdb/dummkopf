@@ -11,7 +11,7 @@
 import * as fs from "node:fs";
 
 import type { Config } from "./config.ts";
-import { DummkopfError } from "./errors.ts";
+import { RcllrError } from "./errors.ts";
 import { iterNoteFiles } from "./files.ts";
 import { text as say } from "./messages.ts";
 import { generate, migrate, reportCounts, reportSummary } from "./meta.ts";
@@ -91,7 +91,7 @@ export function stage(config: Config, paths: readonly string[], unstaged: Readon
 }
 
 /** Where the pre-commit hook keeps the counts it printed last: inside the Git folder, never in the tree. */
-export const REPORT_STATE = "dummkopf-report";
+export const REPORT_STATE = "rcllr-report";
 
 function reportStatePath(config: Config): string | null {
   const done = run("git", ["rev-parse", "--git-dir"], { cwd: config.root, timeoutS: config.limits.gitTimeoutS });

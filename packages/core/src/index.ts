@@ -1,5 +1,5 @@
 /**
- * @dummkopf/core: long-term memory for coding agents, kept in a Git repo of Markdown notes.
+ * @rcllr/core: long-term memory for coding agents, kept in a Git repo of Markdown notes.
  *
  * Read notes only through `Access`: it applies scope, sensitivity and path rules. The core exports no
  * raw file reader for notes, so a frontend cannot skip the gate by accident.
@@ -44,3 +44,4 @@ export * as linksExtra from "./extras/links.ts";
 export * as curator from "./extras/curator.ts";
 
 export const VERSION = "0.4.1";
+export { migrateName, type NameMigration } from "./migrate.ts";

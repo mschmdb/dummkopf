@@ -1,15 +1,15 @@
 {
-  "name": "@dummkopf/core",
+  "name": "@rcllr/core",
   "version": "0.4.1",
-  "description": "Core of dummkopf: notes, scopes, the sensitivity gate, search and Git sync.",
+  "description": "Core of rcllr: notes, scopes, the sensitivity gate, search and Git sync.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mschmdb/dummkopf.git",
+    "url": "git+https://github.com/mschmdb/rcllr.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/mschmdb/dummkopf#readme",
-  "bugs": "https://github.com/mschmdb/dummkopf/issues",
+  "homepage": "https://github.com/mschmdb/rcllr#readme",
+  "bugs": "https://github.com/mschmdb/rcllr/issues",
   "type": "module",
   "exports": {
     ".": {

@@ -159,7 +159,7 @@ test("sync with a different remote URL exits 2", () => {
   brain.git(["remote", "set-url", "origin", "/somewhere/else.git"]);
   const result = brain.run(["sync"]);
   assert.equal(result.code, 2);
-  assert.equal(result.err, "Remote origin does not match repo.remote in dummkopf.toml.\n");
+  assert.equal(result.err, "Remote origin does not match repo.remote in rcllr.toml.\n");
 });
 
 test("sync without the configured remote name exits 2", () => {
@@ -182,7 +182,7 @@ test("write refuses a wrong remote and writes nothing", () => {
   brain.git(["remote", "set-url", "origin", "/somewhere/else.git"]);
   const result = brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 2);
-  assert.equal(result.err, "Remote origin does not match repo.remote in dummkopf.toml.\n");
+  assert.equal(result.err, "Remote origin does not match repo.remote in rcllr.toml.\n");
   assert.ok(!brain.exists("notes/fresh.md"));
 });
 
@@ -251,8 +251,8 @@ test("cheeky dirty tree message scolds but keeps the instruction", () => {
   brain.write("notes/by-hand.md", md());
   const result = brain.cheeky(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 2);
-  assert.equal(result.err, "Dummkopf, clean up first. "
-    + "The brain has uncommitted note changes. Run `dummkopf sync` first.\n");
+  assert.equal(result.err, "Tidy up first. "
+    + "The brain has uncommitted note changes. Run `rcllr sync` first.\n");
 });
 
 // --- exit code 3 ----------------------------------------------------------------------------------------------
@@ -263,7 +263,7 @@ test("failed push after a write exits 3 and keeps the save", () => {
   const result = world.brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 3);
   assert.equal(result.out, "Write status: saved; sync: failed\nChanged: notes/fresh.md\n");
-  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.\n");
+  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `rcllr sync`.\n");
   assert.ok(world.brain.exists("notes/fresh.md"));
   assert.equal(world.brain.git(["log", "--format=%s", "-1"]), "Update notes");
   assert.deepEqual(world.remoteLog(), ["Initial"]);
@@ -278,7 +278,7 @@ test("a refused SSH login on push names the login after the save", () => {
   world.brain.git(["config", "core.sshCommand", ssh]);
   const result = world.brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 3);
-  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.\n"
+  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `rcllr sync`.\n"
     + "Git could not log in to the remote. Local data is kept. For an SSH remote, test the login with "
     + "`ssh -T git@<host>`; `gh auth` does not cover SSH.\n");
   assert.ok(!result.err.includes("example.invalid"));
@@ -291,7 +291,7 @@ test("exit 3 json reports saved true and sync failed", () => {
   assert.equal(result.code, 3);
   const data = JSON.parse(result.out);
   assert.deepEqual([data.saved, data.sync], [true, "failed"]);
-  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.\n");
+  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `rcllr sync`.\n");
 });
 
 test("exit 3 applies to ingest too", () => {
@@ -306,7 +306,7 @@ test("cheeky exit 3 message keeps the instruction", () => {
   const result = world.brain.cheeky(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 3);
   assert.equal(result.err, "Half a brain is better than none. "
-    + "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.\n");
+    + "Markdown saved, but Git sync failed. Retry with `rcllr sync`.\n");
 });
 
 test("sync after exit 3 pushes once pushes work again", () => {

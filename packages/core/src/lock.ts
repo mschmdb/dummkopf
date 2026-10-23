@@ -9,7 +9,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 
-import { DummkopfError } from "./errors.ts";
+import { RcllrError } from "./errors.ts";
 import { resolve, sha256 } from "./pyos.ts";
 
 const POLL_MS = 50;
@@ -17,7 +17,7 @@ const POLL_MS = 50;
 const ORPHAN_MS = 60_000;
 
 export function lockPath(root: string): string {
-  return os.tmpdir() + "/dummkopf-" + sha256(resolve(root)).slice(0, 16) + ".lock.node";
+  return os.tmpdir() + "/rcllr-" + sha256(resolve(root)).slice(0, 16) + ".lock.node";
 }
 
 function sleep(ms: number): void {
@@ -74,7 +74,7 @@ export function withRepositoryLock<T>(root: string, body: () => T, timeoutS = 10
   const deadline = Date.now() + timeoutS * 1000;
   while (!acquire(path)) {
     if (clearStale(path)) continue;
-    if (Date.now() >= deadline) throw new DummkopfError("busy");
+    if (Date.now() >= deadline) throw new RcllrError("busy");
     sleep(POLL_MS);
   }
   try {

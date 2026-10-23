@@ -3,7 +3,7 @@
 import {
   Access, bodyStart, bounded, type Config, contextPacket, find, headingRange, lineCount, type Packet, Rejected,
   sourceHit, withRepositoryLock,
-} from "@dummkopf/core";
+} from "@rcllr/core";
 
 import type { Namespace } from "./argparse.ts";
 import { out } from "./io.ts";

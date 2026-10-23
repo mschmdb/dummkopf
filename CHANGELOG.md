@@ -5,6 +5,17 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Renamed
+
+- dummkopf is now **rcllr**: npm packages `rcllr` and `@rcllr/core`, command `rcllr`, config file `rcllr.toml`,
+  env var `RCLLR_ROOT`, error class `RcllrError`. Old brains keep working: rcllr reads `dummkopf.toml` when there
+  is no `rcllr.toml` and `DUMMKOPF_ROOT` when `RCLLR_ROOT` is unset, and `dummkopf` and `dk` still start it.
+  `install` replaces hooks written under the old name.
+- `rcllr migrate-name` moves a brain to the new name: it renames the config, updates `AGENTS.md` and `CLAUDE.md`
+  and reinstalls old hooks. It lists the steps first and writes only with `--apply`.
+- The default tone is now `plain`. `tone = "cheeky"` still adds a remark to some messages, and none of them calls
+  the user names anymore.
+
 ### Added
 
 - A sync that fails because the remote refuses the login (SSH key, host key or HTTPS credentials) now says so,

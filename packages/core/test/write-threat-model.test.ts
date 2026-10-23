@@ -6,7 +6,7 @@ import * as path from "node:path";
 import { describe, test } from "node:test";
 
 import { Access } from "../src/access.ts";
-import { AccessDenied, ConfigError, DummkopfError } from "../src/errors.ts";
+import { AccessDenied, ConfigError, RcllrError } from "../src/errors.ts";
 import { preCommit } from "../src/hook.ts";
 import { references } from "../src/links.ts";
 import { generate, migrate } from "../src/meta.ts";
@@ -17,11 +17,11 @@ import { type Brain, brain, documentText as document, invoke, revision, synced, 
 
 process.setMaxListeners(0);
 
-function caught(body: () => unknown): DummkopfError {
+function caught(body: () => unknown): RcllrError {
   try {
     body();
   } catch (error) {
-    assert.ok(error instanceof DummkopfError, String(error));
+    assert.ok(error instanceof RcllrError, String(error));
     return error;
   }
   assert.fail("no error");
@@ -105,7 +105,7 @@ function linkResult(b: Brain, target: string): string {
   try {
     ingest(new Access(b.config), data, true, false);
   } catch (error) {
-    if (error instanceof DummkopfError) return error.message;
+    if (error instanceof RcllrError) return error.message;
     throw error;
   }
   return "accepted";
@@ -117,7 +117,7 @@ describe("existence oracles", () => {
     b.write("topics/health/README.md", document({ body: "> SENSITIVE" }));
     b.write("archive/old.md", "# Old\n");
     const absent = linkResult(b, "../topics/nonexist");
-    for (const target of ["../topics/health", "../archive/old.md", "../.sensitive-paths", "../.git", "../dummkopf.toml",
+    for (const target of ["../topics/health", "../archive/old.md", "../.sensitive-paths", "../.git", "../rcllr.toml",
       "../nonexist-dir", "../.git/nonexist"]) {
       assert.equal(linkResult(b, target), absent, target);
     }
@@ -383,7 +383,7 @@ describe("extras and links.allow_outside", () => {
     fs.symlinkSync(secret, path.join(b.root, "archive", "link.md"));
     const absent = linkResult(b, "../archive/absent.md");
     assert.ok(absent.includes("link-unavailable"));
-    for (const target of ["../archive/link.md", "../archive", "../archive/sub", "../.git/HEAD", "../dummkopf.toml",
+    for (const target of ["../archive/link.md", "../archive", "../archive/sub", "../.git/HEAD", "../rcllr.toml",
       "../archiveX/x.md"]) {
       assert.equal(linkResult(b, target), absent, target);
     }
@@ -396,7 +396,7 @@ describe("extras and links.allow_outside", () => {
     assert.equal(linkResult(b, "chart.png"), "accepted");
   });
 
-  for (const value of ["['.git']", "['dummkopf.toml']", "['../x']", "['notes']", "['./archive']"]) {
+  for (const value of ["['.git']", "['rcllr.toml']", "['../x']", "['notes']", "['./archive']"]) {
     test("allow outside rejects " + value, () => {
       const b = brain();
       assert.throws(() => b.configure("[links]\nallow_outside = " + value + "\n"),

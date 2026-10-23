@@ -3,7 +3,7 @@
  * `--opt=value` and negative numbers as values. Usage errors exit with code 2; help.ts lays out --help.
  */
 
-import { message as say } from "@dummkopf/core";
+import { message as say } from "@rcllr/core";
 
 import { fill, type Group, type HelpCommand, type Page, render, usage, WIDTH } from "./help.ts";
 

@@ -11,7 +11,7 @@ entities: [Example Corp]
 
 # Release process
 
-A made-up work topic. A `work` note must not link to `private` notes; ˈdʊmkɔpf rejects such links.
+A made-up work topic. A `work` note must not link to `private` notes; rcllr rejects such links.
 
 - Freeze on Monday at noon.
 - Smoke test on staging, then ship on Tuesday.

@@ -1,4 +1,4 @@
-/** Load and validate dummkopf.toml. Unknown keys fail, so a typo never disables a rule. */
+/** Load and validate rcllr.toml. Unknown keys fail, so a typo never disables a rule. */
 
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
@@ -6,9 +6,12 @@ import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytes
   stripTrailingSlashes } from "./pyos.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
-export const CONFIG_NAME = "dummkopf.toml";
+export const CONFIG_NAME = "rcllr.toml";
+/** The name before the rename to rcllr. Brains that still use it keep working. */
+export const LEGACY_CONFIG_NAME = "dummkopf.toml";
 export const SCHEMA_VERSION = 1;
-export const ROOT_ENV = "DUMMKOPF_ROOT";
+export const ROOT_ENV = "RCLLR_ROOT";
+export const LEGACY_ROOT_ENV = "DUMMKOPF_ROOT";
 export const LOCALES = ["en", "de"] as const;
 export const TONES = ["cheeky", "plain"] as const;
 export const REPORT_MODES = ["changes", "always", "never"] as const;
@@ -18,7 +21,7 @@ const SCOPE_RE = /^[\p{L}\p{N}_-]+$/u;
 const FRONTMATTER_KEY_RE = /^[A-Za-z0-9_.\-]+$/;
 
 export interface RepoConfig {
-  /** Empty means a local brain: dummkopf commits, but never fetches or pushes. */
+  /** Empty means a local brain: rcllr commits, but never fetches or pushes. */
   readonly remote: string;
   readonly remoteName: string;
   readonly branch: string;
@@ -77,7 +80,7 @@ export interface FrontmatterConfig {
   readonly summaryMax: number;
   readonly mappedKeys: readonly string[];
   readonly listKeys: readonly [string, string, string];
-  /** Order of the managed keys when dummkopf writes frontmatter. */
+  /** Order of the managed keys when rcllr writes frontmatter. */
   readonly fieldOrder: readonly string[];
 }
 
@@ -118,14 +121,14 @@ export interface SearchConfig {
 
 export interface ContextConfig {
   readonly routesFile: string;
-  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  /** True when rcllr.toml names the file; then `check` warns if it is missing. */
   readonly routesFileSet: boolean;
 }
 
 export interface LinksOptions {
   readonly output: string;
   readonly entitiesFile: string;
-  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  /** True when rcllr.toml names the file; then `check` warns if it is missing. */
   readonly entitiesFileSet: boolean;
   readonly minTopics: number;
   readonly allowOutside: readonly string[];
@@ -191,7 +194,7 @@ const SCHEMA: Section = {
     entities: ["str", "entities"], scope: ["str", "scope"], todo_placeholder: ["str", "TODO"],
     summary_max: ["int", 160],
   },
-  ui: { locale: ["str", "en"], tone: ["str", "cheeky"] },
+  ui: { locale: ["str", "en"], tone: ["str", "plain"] },
   hooks: { report: ["str", "changes"] },
   limits: {
     max_chars: ["int", 6000], find_limit: ["int", 3], max_input_chars: ["int", 2_000_000],
@@ -277,7 +280,7 @@ function relativePath(value: string, key: string, allowDir = false, written = fa
   const items = parts(plain);
   if (!plain || isAbsolute(plain) || items.includes("..") || value.includes("\\") || items.length === 0
       || value.startsWith("~") || asPosix(plain) !== plain
-      || (written && (items[0] === ".git" || items[0] === CONFIG_NAME))) {
+      || (written && (items[0] === ".git" || items[0] === CONFIG_NAME || items[0] === LEGACY_CONFIG_NAME))) {
     throw invalid(key, "must be a normalized relative path inside the brain");
   }
 }
@@ -415,7 +418,7 @@ function assemble(root: string, values: Record<string, unknown>, data: Record<st
   };
 }
 
-/** A config with every default, for tests and tools that have no dummkopf.toml. */
+/** A config with every default, for tests and tools that have no rcllr.toml. */
 export function defaultConfig(root: string, overrides: Record<string, unknown> = {}): Config {
   const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""),
                           overrides);
@@ -423,10 +426,22 @@ export function defaultConfig(root: string, overrides: Record<string, unknown> =
   return config;
 }
 
+/**
+ * The config file of a brain: rcllr.toml, else the old rcllr.toml. A symlink counts as present, so a
+ * symlinked rcllr.toml is rejected instead of quietly falling back to the old name.
+ */
+export function configFile(rootPath: string): string {
+  const root = resolve(rootPath);
+  const legacy = join(root, LEGACY_CONFIG_NAME);
+  const current = join(root, CONFIG_NAME);
+  if (isFile(current) || isSymlink(current)) return current;
+  return isFile(legacy) || isSymlink(legacy) ? legacy : current;
+}
+
 export function loadConfig(rootPath: string): Config {
   const root = resolve(rootPath);
-  const file = join(root, CONFIG_NAME);
-  if (isSymlink(file)) throw new ConfigError("config_unreadable", { detail: "dummkopf.toml must not be a symlink" });
+  const file = configFile(root);
+  if (isSymlink(file)) throw new ConfigError("config_unreadable", { detail: CONFIG_NAME + " must not be a symlink" });
   if (!isFile(file)) throw new ConfigMissing("config_missing", { start: root });
   let data: Record<string, unknown>;
   try {
@@ -442,7 +457,7 @@ export function loadConfig(rootPath: string): Config {
   if (version === undefined) throw invalid("schema_version", "is required");
   // Python compares with ==, so 1.0 and true pass as version 1.
   const number = version instanceof TomlFloat ? version.value : typeof version === "boolean" ? Number(version) : version;
-  if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this dummkopf reads version 1");
+  if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this rcllr reads version 1");
   const config = assemble(root, build(SCHEMA, data, ""), data);
   validate(config);
   return config;
@@ -451,13 +466,13 @@ export function loadConfig(rootPath: string): Config {
 export function findRoot(cwd: string, explicit: string | null, env: Record<string, string | undefined> = process.env): string {
   let candidates: string[];
   if (explicit !== null) candidates = [explicit];
-  else if (env[ROOT_ENV]) candidates = [env[ROOT_ENV]!];
+  else if (env[ROOT_ENV] || env[LEGACY_ROOT_ENV]) candidates = [(env[ROOT_ENV] || env[LEGACY_ROOT_ENV])!];
   else {
     const start = resolve(cwd);
     candidates = [start, ...parents(start)];
   }
   for (const candidate of candidates) {
-    if (isFile(join(candidate, CONFIG_NAME))) return resolve(candidate);
+    if (isFile(join(candidate, CONFIG_NAME)) || isFile(join(candidate, LEGACY_CONFIG_NAME))) return resolve(candidate);
   }
   throw new ConfigMissing("config_missing", { start: asPosix(candidates[0]!) });
 }

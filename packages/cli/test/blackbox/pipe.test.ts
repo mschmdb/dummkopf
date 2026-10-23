@@ -7,9 +7,9 @@ import { test } from "node:test";
 
 import { binary, fullNote, Sandbox } from "./harness.ts";
 
-/** Run `dummkopf args` into a pipe whose reader has already exited; return its stderr and exit code. */
+/** Run `rcllr args` into a pipe whose reader has already exited; return its stderr and exit code. */
 function intoClosedPipe(args: string, cwd: string): { err: string; code: string } {
-  // `true` exits at once; the sleep makes sure dummkopf writes only after that.
+  // `true` exits at once; the sleep makes sure rcllr writes only after that.
   const script = '( sleep 0.5; "$BIN" ' + args + ' 2>"$ERR"; echo $? >"$CODE" ) | true';
   const env = { ...process.env, BIN: binary(), ERR: cwd + "/stderr.txt", CODE: cwd + "/code.txt" };
   spawnSync("sh", ["-c", script], { cwd, env, encoding: "utf-8" });

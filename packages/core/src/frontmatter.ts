@@ -1,5 +1,5 @@
 /**
- * The small YAML subset dummkopf reads and writes: scalars, inline lists, block lists.
+ * The small YAML subset rcllr reads and writes: scalars, inline lists, block lists.
  *
  * No YAML library. Values are strings or lists of strings. Data is a Map, so key order survives
  * exactly as written, numeric keys included.
