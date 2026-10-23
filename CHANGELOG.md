@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-23
+
 ### Renamed
 
 - dummkopf is now **rcllr**: npm packages `rcllr` and `@rcllr/core`, command `rcllr`, config file `rcllr.toml`,
