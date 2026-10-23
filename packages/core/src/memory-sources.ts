@@ -82,16 +82,87 @@ function parseCodex(file: string, text: string): Memory & { cwd: string } {
   };
 }
 
-/** The memory of one project, or null when that source has none for it. */
-export function readMemories(source: SourceKey, home: string, project: string): Memory[] | null {
+export interface ProjectMemory {
+  /** The project as shown in each note: its path where known, else Claude's folder name. */
+  label: string;
+  /** Folder name inside the topic. */
+  slug: string;
+  memories: Memory[];
+}
+
+export interface Selection {
+  /** Listed projects; `*` means every project. */
+  projects: readonly string[];
+  exclude: readonly string[];
+  /** Only this project, for the hook. */
+  only?: string;
+}
+
+/** The folder name inside the topic: the project path without its leading separators, in lower case. */
+export function slug(project: string): string {
+  return claudeProjectFolder(project).replace(/^-+/, "").replace(/-+/g, "-").toLowerCase();
+}
+
+function inside(folder: string, project: string): boolean {
+  return folder === project || folder.startsWith(project === "/" ? "/" : project + "/");
+}
+
+/** The folder a Claude project ran in, read from one of its session logs; Claude's folder name if none says. */
+function claudeLabel(projectFolder: string): string {
+  try {
+    const log = fs.readdirSync(projectFolder).find((name) => name.endsWith(".jsonl"));
+    if (log) {
+      const handle = fs.openSync(join(projectFolder, log), "r");
+      const buffer = Buffer.alloc(65536);
+      const read = fs.readSync(handle, buffer, 0, buffer.length, 0);
+      fs.closeSync(handle);
+      const cwd = /"cwd":"([^"\\]+)"/.exec(buffer.toString("utf-8", 0, read))?.[1];
+      if (cwd && claudeProjectFolder(cwd) === projectFolder.split("/").at(-1)) return cwd;
+    }
+  } catch {
+    // No readable log: the folder name has to do. Turning it back into a path is ambiguous.
+  }
+  return projectFolder.split("/").at(-1)!;
+}
+
+/** Every listed project of a source with its memory. A project without memory is left out. */
+export function projectMemories(source: SourceKey, home: string, selection: Selection): ProjectMemory[] {
+  const all = selection.projects.includes("*");
+  const listed = selection.projects.filter((project) => project !== "*").map((project) => projectPath(project));
+  const excluded = selection.exclude.map((project) => projectPath(project));
+  const only = selection.only === undefined ? undefined : projectPath(selection.only);
   if (source === "claude") {
-    const folder = join(home, "projects", claudeProjectFolder(project), "memory");
-    return markdownFiles(folder, ["MEMORY.md"])?.map((name) => parseClaude(name, fs.readFileSync(join(folder, name), "utf-8")))
-      ?? null;
+    const root = join(home, "projects");
+    let folders: string[] = [];
+    try {
+      folders = fs.readdirSync(root).filter((name) => !name.startsWith(".")).sort();
+    } catch {
+      return [];
+    }
+    const wanted = all ? folders : listed.map((project) => claudeProjectFolder(project));
+    const skip = new Set(excluded.map((project) => claudeProjectFolder(project)));
+    return wanted.filter((folder) => folders.includes(folder) && !skip.has(folder)
+      && (only === undefined || folder === claudeProjectFolder(only)))
+      .flatMap((folder) => {
+        const memoryFolder = join(root, folder, "memory");
+        const names = markdownFiles(memoryFolder, ["MEMORY.md"]);
+        if (!names) return [];
+        const memories = names.map((name) => parseClaude(name, fs.readFileSync(join(memoryFolder, name), "utf-8")));
+        const known = listed.find((project) => claudeProjectFolder(project) === folder);
+        return [{ label: known ?? claudeLabel(join(root, folder)), slug: slug(folder), memories }];
+      });
   }
   const folder = join(home, "memories", "rollout_summaries");
-  const inside = (cwd: string): boolean => cwd === project || cwd.startsWith(project === "/" ? "/" : project + "/");
-  const memories = markdownFiles(folder)?.map((name) => parseCodex(name, fs.readFileSync(join(folder, name), "utf-8")))
-    .filter((memory) => inside(memory.cwd));
-  return memories ? memories.map(({ cwd: _cwd, ...memory }) => memory) : null;
+  const summaries = (markdownFiles(folder) ?? [])
+    .map((name) => parseCodex(name, fs.readFileSync(join(folder, name), "utf-8")))
+    .filter((memory) => memory.cwd && !excluded.some((project) => inside(memory.cwd, project))
+      && (only === undefined || inside(memory.cwd, only)));
+  const groups = new Map<string, Memory[]>();
+  for (const { cwd, ...memory } of summaries) {
+    const project = all ? cwd : listed.find((item) => inside(cwd, item));
+    if (project === undefined) continue;
+    groups.set(project, [...(groups.get(project) ?? []), memory]);
+  }
+  return [...groups].sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([project, memories]) => ({ label: project, slug: slug(project), memories }));
 }

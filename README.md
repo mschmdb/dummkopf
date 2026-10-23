@@ -334,7 +334,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[extras]` | `links`, `curator`, `codex_sync`, `claude_memory`, `codex_memory` | Switch each extra on or off. The two memory imports are off by default. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
 | `[curator]` | `open_days`, `stale_days`, `report_dir`, `keep_key` | Options of the curator extra. |
-| `[claude_memory]`, `[codex_memory]` | `projects`, `scope`, `topic` | Options of the two memory imports. |
+| `[claude_memory]`, `[codex_memory]` | `projects`, `exclude`, `scope`, `topic` | Options of the two memory imports. `projects = ["*"]` imports every project; `exclude` leaves some out. |
 
 **An existing brain in another language** runs on rcllr through configuration alone.
 [examples/config-german-hub.toml](examples/config-german-hub.toml) maps German keys (`kernfakt`, `stand`, …),
@@ -368,7 +368,8 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   claude_memory = true
 
   [claude_memory]
-  projects = ["/Users/you/Sites/shop"]            # only these projects; a client project stays out
+  projects = ["/Users/you/Sites/shop"]            # only these projects, or ["*"] for all of them
+  exclude = []                                    # projects to leave out, also with ["*"]
   ```
 
   Agents write that memory themselves. So every mirrored note says it is not an instruction, links in it become

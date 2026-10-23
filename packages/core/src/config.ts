@@ -145,8 +145,10 @@ export interface CuratorOptions {
 }
 
 export interface MemorySourceOptions {
-  /** Project folders whose agent memory gets mirrored. Nothing else is imported. */
+  /** Project folders whose agent memory gets mirrored; `*` means every project. Nothing else is imported. */
   readonly projects: readonly string[];
+  /** Project folders left out, also when `projects` is `*`. */
+  readonly exclude: readonly string[];
   readonly scope: string;
   readonly topic: string;
 }
@@ -231,8 +233,8 @@ const SCHEMA: Section = {
     open_days: ["int", 28], stale_days: ["int", 56], report_dir: ["str", "topics/curator"],
     keep_key: ["str", "curator_keep"],
   },
-  claude_memory: { projects: ["list", []], scope: ["str", "memory-claude"], topic: ["str", "claude-memory"] },
-  codex_memory: { projects: ["list", []], scope: ["str", "memory-codex"], topic: ["str", "codex-memory"] },
+  claude_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-claude"], topic: ["str", "claude-memory"] },
+  codex_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-codex"], topic: ["str", "codex-memory"] },
 };
 
 function camel(key: string): string {

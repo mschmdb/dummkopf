@@ -13,6 +13,8 @@ All notable changes to this project are listed here. The format follows
   project a session ran in. Imported notes rank below the user's own (`search.weights.imported_percent`, 25).
 - The extra `codex_memory` imports Codex memory the same way: the rollout summaries under
   `~/.codex/memories/rollout_summaries/` whose session ran in a listed project, into their own scope `memory-codex`.
+- `projects = ["*"]` imports the memory of every project, for Claude Code and Codex alike; `exclude` leaves projects
+  out.
 
 ## [0.5.1] - 2026-10-23
 
