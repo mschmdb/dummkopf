@@ -21,6 +21,9 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      # pnpm runs package scripts with cmd on Windows; the scripts are POSIX shell.
+      npm_config_script_shell: ${{ matrix.os == 'windows-latest' && 'C:\Program Files\Git\bin\bash.exe' || '' }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
