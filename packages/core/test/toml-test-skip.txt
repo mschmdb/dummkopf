@@ -1,4 +1,4 @@
-# toml-test cases dummkopf leaves out on purpose. One rule per line: <glob> <reason>.
+# toml-test cases rcllr leaves out on purpose. One rule per line: <glob> <reason>.
 # Lines starting with # are comments. Skipped cases still run: one that starts to pass fails the run.
 
 valid/integer/long  Integers beyond 2^53 are refused, not rounded: JavaScript numbers cannot hold int64 exactly, and the config never needs them.

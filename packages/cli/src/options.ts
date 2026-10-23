@@ -1,6 +1,6 @@
 /** Options shared by several commands. */
 
-import { HELP, Rejected } from "@dummkopf/core";
+import { HELP, Rejected } from "@rcllr/core";
 
 import type { Parser } from "./argparse.ts";
 

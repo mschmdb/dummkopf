@@ -1,4 +1,4 @@
-/** A local brain: no `repo.remote`. dummkopf commits, but never fetches, pushes or checks a remote. */
+/** A local brain: no `repo.remote`. rcllr commits, but never fetches, pushes or checks a remote. */
 
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -7,11 +7,11 @@ import { test } from "node:test";
 
 import { type Brain, fullNote, lines, md, Sandbox } from "./harness.ts";
 
-/** A Git brain whose dummkopf.toml has no remote. */
+/** A Git brain whose rcllr.toml has no remote. */
 function localBrain(sandbox = new Sandbox(), extra = ""): Brain {
   const brain = sandbox.brain("local");
   brain.toml = "schema_version = 1\n" + extra;
-  fs.writeFileSync(path.join(brain.root, "dummkopf.toml"), brain.toml, "utf-8");
+  fs.writeFileSync(path.join(brain.root, "rcllr.toml"), brain.toml, "utf-8");
   brain.gitInit();
   brain.write("notes/first.md", fullNote({ title: "First" }));
   brain.commit("Initial");
@@ -30,9 +30,9 @@ test("init without --remote creates a local brain without a remote line", () => 
   const sandbox = new Sandbox();
   const result = sandbox.run(["init", "brain", "--serious"]);
   assert.equal(result.code, 0, result.err);
-  assert.ok(result.out.endsWith("It stays local: dummkopf commits, but never pushes. Next: `dummkopf install`.\n"));
+  assert.ok(result.out.endsWith("It stays local: rcllr commits, but never pushes. Next: `rcllr install`.\n"));
   const root = path.join(sandbox.tmp, "brain");
-  const toml = fs.readFileSync(path.join(root, "dummkopf.toml"), "utf-8");
+  const toml = fs.readFileSync(path.join(root, "rcllr.toml"), "utf-8");
   assert.ok(!/^remote\s*=/m.test(toml), toml);
   assert.ok(toml.includes("# No remote: this brain stays on this machine."));
   assert.equal(sandbox.git(root, ["remote"]), "");
@@ -50,7 +50,7 @@ test("a brain created with --remote keeps the remote rules in AGENTS.md", () => 
   const sandbox = new Sandbox();
   sandbox.run(["init", "brain", "--remote", "git@example.org:me/brain.git", "--serious"]);
   const agents = fs.readFileSync(path.join(sandbox.tmp, "brain", "AGENTS.md"), "utf-8");
-  assert.ok(agents.includes("Before changes dummkopf fetches and rebases onto the remote."));
+  assert.ok(agents.includes("Before changes rcllr fetches and rebases onto the remote."));
   assert.ok(!agents.includes("This brain is local"));
 });
 

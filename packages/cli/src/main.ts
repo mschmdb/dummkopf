@@ -1,10 +1,10 @@
 /**
- * Command line entry point: `dummkopf` and its alias `dk`.
+ * Command line entry point: `rcllr`, and the old names `dummkopf` and `dk` during the transition.
  *
  * Exit codes: 0 ok, 2 rejected call (nothing changed), 3 saved but Git sync failed.
  */
 
-import { type Config, DummkopfError, findRoot, HELP, loadConfig, VERSION } from "@dummkopf/core";
+import { type Config, RcllrError, findRoot, HELP, loadConfig, VERSION } from "@rcllr/core";
 
 import {
   register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta, runMigrateName,
@@ -18,14 +18,14 @@ import { runRead } from "./read.ts";
 export type Handler = (args: Namespace, config: Config, tone: string) => number;
 export type NoConfigHandler = (args: Namespace, root: string, tone: string) => number;
 
-/** The heading each command is listed under in `dummkopf --help`. */
+/** The heading each command is listed under in `rcllr --help`. */
 const GROUPS: Readonly<Record<string, string>> = {
   context: "read", find: "read", read: "read", ingest: "write", write: "write", check: "write", sync: "write",
   init: "setup", install: "setup", "migrate-name": "setup", hook: "setup", meta: "setup", links: "extras", curator: "extras",
 };
 
 export function parser(): Parser {
-  const command = new Parser("dummkopf", { purpose: HELP.prog!, version: "dummkopf " + VERSION });
+  const command = new Parser("rcllr", { purpose: HELP.prog!, version: "rcllr " + VERSION });
   commonOptions(command, true);
   command.commandsDest("command");
   const add = (name: string): Parser => {
@@ -93,7 +93,7 @@ export function main(argv: readonly string[]): number {
     }
     return withConfig[command]!(args, config, tone);
   } catch (error) {
-    if (error instanceof DummkopfError) {
+    if (error instanceof RcllrError) {
       err(error.render(tone) + "\n");
       return error.exitCode;
     }

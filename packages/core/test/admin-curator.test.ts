@@ -263,6 +263,6 @@ test("the prompt asks for fresh reasons instead of last week's report", () => {
 
 test("the prompt creates the report topic with ingest", () => {
   const text = prompt(repo().config);
-  assert.ok(text.includes("dummkopf ingest"));
+  assert.ok(text.includes("rcllr ingest"));
   assert.ok(text.includes("topics/curator/README.md"));
 });

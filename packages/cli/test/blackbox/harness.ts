@@ -1,9 +1,9 @@
 /**
  * Black-box harness: every test talks to the CLI through a subprocess and reads files and Git state.
  *
- * Nothing here imports the implementation, so any build of dummkopf runs the same suite: point
- * DUMMKOPF_BIN at its binary. Without it, the suite runs the TypeScript sources through
- * packages/cli/dev/dummkopf.
+ * Nothing here imports the implementation, so any build of rcllr runs the same suite: point
+ * RCLLR_BIN at its binary. Without it, the suite runs the TypeScript sources through
+ * packages/cli/dev/rcllr.
  */
 
 import { spawnSync } from "node:child_process";
@@ -32,9 +32,9 @@ export interface Result {
   err: string;
 }
 
-/** The binary under test: DUMMKOPF_BIN, else the development runner next to this suite. */
+/** The binary under test: RCLLR_BIN, else the development runner next to this suite. */
 export function binary(): string {
-  return process.env.DUMMKOPF_BIN || path.resolve(HERE, "../../dev/dummkopf");
+  return process.env.RCLLR_BIN || path.resolve(HERE, "../../dev/rcllr");
 }
 
 /** Python's text mode turned `\r\n` into `\n`; the suite compares output the same way. */
@@ -45,7 +45,7 @@ function text(value: string | null | undefined): string {
 export type Env = Readonly<Record<string, string | undefined>>;
 
 /**
- * One test's world: a temporary folder, its own HOME and Git identity, and no DUMMKOPF_ROOT, so no
+ * One test's world: a temporary folder, its own HOME and Git identity, and no RCLLR_ROOT, so no
  * user configuration leaks in or out. Removed when the test process exits.
  */
 export class Sandbox {
@@ -54,12 +54,12 @@ export class Sandbox {
   readonly env: Record<string, string | undefined>;
 
   constructor() {
-    this.tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "dummkopf-bb-")));
+    this.tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "rcllr-bb-")));
     this.home = path.join(this.tmp, "home");
     fs.mkdirSync(this.home);
     process.on("exit", () => fs.rmSync(this.tmp, { recursive: true, force: true }));
     const env: Record<string, string | undefined> = { ...process.env };
-    delete env.DUMMKOPF_ROOT;
+    delete env.RCLLR_ROOT;
     Object.assign(env, GIT_IDENTITY, {
       HOME: this.home,
       GIT_CONFIG_NOSYSTEM: "1",
@@ -91,7 +91,7 @@ export class Sandbox {
     const root = path.join(this.tmp, name);
     fs.mkdirSync(root, { recursive: true });
     const toml = BASE_TOML(remote) + extra;
-    fs.writeFileSync(path.join(root, "dummkopf.toml"), toml, "utf-8");
+    fs.writeFileSync(path.join(root, "rcllr.toml"), toml, "utf-8");
     fs.writeFileSync(path.join(root, ".sensitive-paths"), "# generated\n", "utf-8");
     return new Brain(this, fs.realpathSync(root), toml);
   }
@@ -136,16 +136,16 @@ export class Brain {
     return fs.existsSync(path.join(this.root, rel));
   }
 
-  /** Append TOML to dummkopf.toml; start a new section with its header inside `extra`. */
+  /** Append TOML to rcllr.toml; start a new section with its header inside `extra`. */
   configure(extra: string): void {
     this.toml += extra;
-    fs.writeFileSync(path.join(this.root, "dummkopf.toml"), this.toml, "utf-8");
+    fs.writeFileSync(path.join(this.root, "rcllr.toml"), this.toml, "utf-8");
   }
 
   /** Add a key to the [repo] table; in a Git brain, commit the config so the tree stays clean. */
   repoOption(line: string, commit = true): void {
     this.toml = this.toml.replace("[repo]\n", "[repo]\n" + line + "\n");
-    fs.writeFileSync(path.join(this.root, "dummkopf.toml"), this.toml, "utf-8");
+    fs.writeFileSync(path.join(this.root, "rcllr.toml"), this.toml, "utf-8");
     if (commit) this.commit("config");
   }
 
@@ -239,7 +239,7 @@ export function revOf(out: string, rel: string): string {
   throw new Error("no header for " + rel + " in:\n" + out);
 }
 
-/** Markdown a writer sends: only a key fact in the frontmatter, the rest is completed by dummkopf. */
+/** Markdown a writer sends: only a key fact in the frontmatter, the rest is completed by rcllr. */
 export function md({ body = "Body", fields = "", title = "T" } = {}): string {
   return "---\nkey_fact: A fact.\n" + fields + "---\n\n# " + title + "\n\n" + body + "\n";
 }

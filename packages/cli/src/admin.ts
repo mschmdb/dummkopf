@@ -3,10 +3,10 @@
 import * as os from "node:os";
 
 import {
-  agentEvent, type Config, curator, DummkopfError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
+  agentEvent, type Config, curator, RcllrError, dumpJson, findRoot, generate, HELP, init, install, linksExtra,
   loadConfig, loadsJson, LOCALES, message as say, metaReport, migrate, migrateName, preCommit, refreshPathsFile,
   renderAgents, requireExtra,
-} from "@dummkopf/core";
+} from "@rcllr/core";
 
 import type { Namespace, Parser } from "./argparse.ts";
 import { err, out, readStdin } from "./io.ts";
@@ -63,7 +63,7 @@ export function runHook(args: Namespace, root: string, tone: string): number {
   try {
     config = loadConfig(findRoot(process.cwd(), root));
   } catch (error) {
-    if (error instanceof DummkopfError) return 0;
+    if (error instanceof RcllrError) return 0;
     throw error;
   }
   if (args.kind === "pre-commit") return preCommit(config, output);

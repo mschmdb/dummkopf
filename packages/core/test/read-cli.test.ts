@@ -326,6 +326,6 @@ describe("cli read", () => {
     assert.equal(result.status, 0);
     const help = result.stdout.replace(/\s+/g, " ");
     assert.ok(help.includes("If --end lies before the first body line"));
-    assert.ok(help.includes("dummkopf read notes/topic.md --end 3"));
+    assert.ok(help.includes("rcllr read notes/topic.md --end 3"));
   });
 });

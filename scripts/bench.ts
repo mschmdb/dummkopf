@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const BIN = join(ROOT, "packages/cli/bin/dummkopf");
+const BIN = join(ROOT, "packages/cli/bin/rcllr");
 const SIZES = [200, 2000];
 const args = process.argv.slice(2);
 const runsIndex = args.indexOf("--runs");
@@ -58,7 +58,7 @@ function makeBrain(parent: string, notes: number): string {
   const root = join(parent, `brain-${notes}`);
   const topics = Math.max(10, Math.round(notes / 20));
   mkdirSync(root, { recursive: true });
-  writeFileSync(join(root, "dummkopf.toml"), "schema_version = 1\n");
+  writeFileSync(join(root, "rcllr.toml"), "schema_version = 1\n");
   for (let topic = 0; topic < topics; topic++) {
     const dir = join(root, "topics", `topic-${String(topic).padStart(3, "0")}`);
     mkdirSync(dir, { recursive: true });
@@ -75,7 +75,7 @@ function makeBrain(parent: string, notes: number): string {
     const fact = sentence(random, 10);
     const paragraphs = Array.from({ length: 4 }, () => sentence(random, 25 + Math.floor(random() * 30)));
     // Every 50th note is sensitive. Links stay inside the topic and never point at a sensitive note,
-    // so `dummkopf check` passes on the generated brain.
+    // so `rcllr check` passes on the generated brain.
     const isSensitive = (index: number) => index % 50 === 7;
     let target = topic + topics * Math.floor(random() * (notes / topics));
     if (target >= notes || isSensitive(target)) target = note;
@@ -125,7 +125,7 @@ if (!args.includes("--no-build")) {
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
 
-const parent = mkdtempSync(join(tmpdir(), "dummkopf-bench-"));
+const parent = mkdtempSync(join(tmpdir(), "rcllr-bench-"));
 const rows: string[][] = [["brain", "command", "median ms", "min–max ms"]];
 try {
   rows.push(["-", 'node -e ""', ...stats(time(process.execPath, ["-e", ""]))]);

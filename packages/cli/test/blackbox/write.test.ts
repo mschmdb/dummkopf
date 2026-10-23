@@ -374,7 +374,7 @@ test("write refuses a dirty tree until sync ran", () => {
   brain.write("notes/by-hand.md", md());
   const result = writeNew(brain, "notes/fresh.md", md());
   assert.equal(result.code, 2);
-  assert.equal(result.err, "The brain has uncommitted note changes. Run `dummkopf sync` first.\n");
+  assert.equal(result.err, "The brain has uncommitted note changes. Run `rcllr sync` first.\n");
   assert.equal(brain.run(["sync"]).code, 0);
   assert.equal(writeNew(brain, "notes/fresh.md", md()).code, 0);
 });

@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes dummkopf and @dummkopf/core to npm when a tag like v0.3.0 is pushed.
+# Publishes rcllr and @rcllr/core to npm when a tag like v0.3.0 is pushed.
 # npm Trusted Publishing: GitHub Actions proves its identity through OIDC, so there is no npm token.
 # Each package names this repository and this workflow file as its Trusted Publisher on npmjs.com.
 #
@@ -89,8 +89,8 @@ jobs:
         # The Trusted Publishers allow only `npm stage publish`: a maintainer approves each version on
         # npmjs.com with 2FA. The leading ./ matters: npm reads release/name.tgz as a GitHub repository.
         run: |
-          npm stage publish ./release/dummkopf-core-*.tgz --access public --ignore-scripts
-          npm stage publish ./release/dummkopf-[0-9]*.tgz --access public --ignore-scripts
+          npm stage publish ./release/rcllr-core-*.tgz --access public --ignore-scripts
+          npm stage publish ./release/rcllr-[0-9]*.tgz --access public --ignore-scripts
 
   github-release:
     needs: publish
@@ -108,4 +108,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" ./release/*.tgz \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "ˈdʊmkɔpf ${GITHUB_REF_NAME#v}" --notes-file release/notes.md
+            --title "rcllr ${GITHUB_REF_NAME#v}" --notes-file release/notes.md

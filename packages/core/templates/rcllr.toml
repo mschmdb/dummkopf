@@ -1,4 +1,4 @@
-# Configuration of this brain. Every key is documented in the dummkopf README.
+# Configuration of this brain. Every key is documented in the rcllr README.
 schema_version = 1
 
 [repo]

@@ -23,7 +23,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@dummkopf/core':
+      '@rcllr/core':
         specifier: workspace:*
         version: link:../core
 

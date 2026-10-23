@@ -1,7 +1,7 @@
 {
-  "name": "@dummkopf/core",
+  "name": "@rcllr/core",
   "version": "0.4.1",
-  "description": "Core of dummkopf: notes, scopes, the sensitivity gate, search and Git sync.",
+  "description": "Core of rcllr: notes, scopes, the sensitivity gate, search and Git sync.",
   "license": "MIT",
   "repository": {
     "type": "git",

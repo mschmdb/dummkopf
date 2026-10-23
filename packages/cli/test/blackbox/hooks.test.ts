@@ -51,7 +51,7 @@ test("hook outside a brain exits 0", () => {
 
 test("hook with a broken config exits 0", () => {
   const brain = new Sandbox().brain();
-  fs.writeFileSync(path.join(brain.root, "dummkopf.toml"), "[repo\n", "utf-8");
+  fs.writeFileSync(path.join(brain.root, "rcllr.toml"), "[repo\n", "utf-8");
   const result = agent(brain.sandbox, brain.root, toolEvent("Bash", brain.root));
   assert.deepEqual([result.code, result.err], [0, ""]);
 });
@@ -146,7 +146,7 @@ test("failed push exits 1 with a message", () => {
   fs.chmodSync(hook, 0o755);
   const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", p.brain.root));
   assert.equal(result.code, 1);
-  assert.equal(result.err, "dummkopf sync failed: Git step failed: push. Local data is kept.\n");
+  assert.equal(result.err, "rcllr sync failed: Git step failed: push. Local data is kept.\n");
 });
 
 test("rejected sync state exits 1, not 2", () => {
@@ -154,7 +154,7 @@ test("rejected sync state exits 1, not 2", () => {
   p.brain.git(["checkout", "-q", "-b", "other"]);
   const result = agent(p.sandbox, p.brain.root, toolEvent("Bash", p.brain.root));
   assert.equal(result.code, 1);
-  assert.equal(result.err, "dummkopf sync failed: Sync needs branch main.\n");
+  assert.equal(result.err, "rcllr sync failed: Sync needs branch main.\n");
 });
 
 // --- hook pre-commit ---------------------------------------------------------------------------------------------
@@ -241,7 +241,7 @@ test("pre-commit sums up findings in one line and exits 0", () => {
   assert.equal(result.code, 0);
   const summary = result.out.split("\n").filter((line) => line.startsWith("Report:"));
   assert.deepEqual(summary, ["Report: 1 stale, 1 without date, 1 without key fact. "
-    + "Run `dummkopf meta report` for details."]);
+    + "Run `rcllr meta report` for details."]);
   assert.ok(!result.out.includes("###"), result.out);
   assert.ok(!result.out.includes("notes/todo.md"), result.out);
 });
@@ -263,7 +263,7 @@ function addTodo(b: Brain, name: string): void {
   b.write("notes/" + name + ".md", FRESH.replace("key_fact: K.", "key_fact: TODO") + "\n# " + name + "\n");
 }
 
-const ONE_TODO = "Report: 0 stale, 0 without date, 1 without key fact. Run `dummkopf meta report` for details.";
+const ONE_TODO = "Report: 0 stale, 0 without date, 1 without key fact. Run `rcllr meta report` for details.";
 
 test("pre-commit prints the same counts only once", () => {
   const b = indexed();
@@ -279,7 +279,7 @@ test("pre-commit prints the report again when a note turns stale", () => {
   reportLines(b);
   b.write("notes/old.md", FRESH.replace("updated: " + TODAY, "updated: 2020-01-01") + "\n# Old\n");
   assert.deepEqual(reportLines(b), ["Report: 1 stale, 0 without date, 1 without key fact. "
-    + "Run `dummkopf meta report` for details."]);
+    + "Run `rcllr meta report` for details."]);
   assert.deepEqual(reportLines(b), []);
 });
 
@@ -298,7 +298,7 @@ test("pre-commit keeps the last counts in the Git folder, not in the working tre
   addTodo(b, "todo");
   const before = b.git(["status", "--porcelain", "--untracked-files=all"]);
   reportLines(b);
-  assert.ok(fs.existsSync(path.join(b.root, ".git", "dummkopf-report")));
+  assert.ok(fs.existsSync(path.join(b.root, ".git", "rcllr-report")));
   const after = b.git(["status", "--porcelain", "--untracked-files=all"]).split("\n")
     .filter((line) => !line.endsWith(".sensitive-paths") && !line.endsWith("INDEX.md"));
   assert.deepEqual(after, before.split("\n").filter((line) => !line.endsWith(".sensitive-paths")
@@ -327,7 +327,7 @@ test("hooks.report never prints no report", () => {
   b.configure('[hooks]\nreport = "never"\n');
   addTodo(b, "todo");
   assert.deepEqual(reportLines(b), []);
-  assert.ok(!fs.existsSync(path.join(b.root, ".git", "dummkopf-report")));
+  assert.ok(!fs.existsSync(path.join(b.root, ".git", "rcllr-report")));
 });
 
 test("an unknown hooks.report value is a config error", () => {
@@ -335,7 +335,7 @@ test("an unknown hooks.report value is a config error", () => {
   b.configure('[hooks]\nreport = "sometimes"\n');
   const result = b.run(["check"]);
   assert.equal(result.code, 2);
-  assert.equal(result.err, "dummkopf.toml: hooks.report: must be one of changes, always, never\n");
+  assert.equal(result.err, "rcllr.toml: hooks.report: must be one of changes, always, never\n");
 });
 
 test("meta report keeps the full list", () => {
@@ -402,9 +402,9 @@ test("commit completes the frontmatter of a staged note", () => {
   assert.ok(committed.endsWith("# Bare\n\nno frontmatter"));
 });
 
-test("commit still succeeds when dummkopf is not on the PATH", () => {
+test("commit still succeeds when rcllr is not on the PATH", () => {
   const { sandbox, root } = hooked();
-  // Only git, never a dummkopf that happens to share git's folder (Homebrew puts both in /opt/homebrew/bin).
+  // Only git, never a rcllr that happens to share git's folder (Homebrew puts both in /opt/homebrew/bin).
   const gitOnly = path.join(sandbox.tmp, "git-only");
   fs.mkdirSync(gitOnly);
   fs.symlinkSync(which("git") ?? "/usr/bin/git", path.join(gitOnly, "git"));
@@ -412,7 +412,7 @@ test("commit still succeeds when dummkopf is not on the PATH", () => {
   fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
   const result = commit(sandbox, root, env);
   assert.equal(result.status, 0);
-  assert.ok(result.stderr.includes("dummkopf not found on PATH; indexes not updated."));
+  assert.ok(result.stderr.includes("rcllr not found on PATH; indexes not updated."));
   assert.ok(!sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
 });
 

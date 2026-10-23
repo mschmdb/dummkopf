@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Sandbox } from "./harness.ts";
 import type { Result } from "./harness.ts";
 
-const COMMANDS = ["context", "find", "read", "ingest", "write", "check", "sync", "init", "install", "hook", "meta",
+const COMMANDS = ["context", "find", "read", "ingest", "write", "check", "sync", "init", "install", "migrate-name", "hook", "meta",
   "links", "curator"];
 const WIDTH = 100;
 
@@ -44,7 +44,7 @@ test("top-level help: usage, purpose, commands, global options, pointer", () => 
   const result = run(["--help"]);
   assert.equal(result.code, 0);
   const lines = result.out.split("\n");
-  assert.equal(lines[0], "usage: dummkopf [--root PATH] [--serious] <command> ...");
+  assert.equal(lines[0], "usage: rcllr [--root PATH] [--serious] <command> ...");
   assert.equal(lines[1], "");
   assert.equal(lines[2], "Long-term memory for coding agents, kept in a Git repo of Markdown notes.");
   assertOrdered(result.out, ["Read:", "Write:", "Setup and maintenance:", "Extras:", "Global options:"]);
@@ -57,13 +57,13 @@ test("top-level help: usage, purpose, commands, global options, pointer", () => 
   assert.ok(global.some((line) => /^ {2}--serious {2,}\S/.test(line)), result.out);
   assert.ok(global.some((line) => line.startsWith("  -h, --help")), result.out);
   assert.ok(global.some((line) => /^ {2}--version {2,}\S/.test(line)), result.out);
-  assert.equal(lines.filter((line) => line !== "").at(-1), "Details and examples: dummkopf <command> --help");
+  assert.equal(lines.filter((line) => line !== "").at(-1), "Details and examples: rcllr <command> --help");
 });
 
 test("--version prints the version and exits 0, at the top level only", () => {
   const result = run(["--version"]);
   assert.equal(result.code, 0);
-  assert.match(result.out, /^dummkopf \d+\.\d+\.\d+\S*\n$/);
+  assert.match(result.out, /^rcllr \d+\.\d+\.\d+\S*\n$/);
   assert.equal(result.err, "");
   assert.equal(run(["--serious", "--version"]).out, result.out);
   assert.equal(run(["find", "--version"]).code, 2);
@@ -85,11 +85,11 @@ test("find help: purpose, examples, then access, output and own options", () => 
   const result = run(["find", "--help"]);
   assert.equal(result.code, 0);
   const lines = result.out.split("\n");
-  assert.equal(lines[0], "usage: dummkopf find <query> [options]");
+  assert.equal(lines[0], "usage: rcllr find <query> [options]");
   assert.equal(lines[1], "");
   assert.equal(lines[2], "Keyword search over title, aliases, key fact, path and text.");
   assertOrdered(result.out, ["Examples:", "Arguments:", "Access:", "Output:", "Options:", "Global options:"]);
-  assert.deepEqual(section(result.out, "Examples:"), ["  dummkopf find \"pnpm esbuild\" --limit 5"]);
+  assert.deepEqual(section(result.out, "Examples:"), ["  rcllr find \"pnpm esbuild\" --limit 5"]);
   const names = (heading: string): string[] => entries(result.out, heading).map((line) => line.trim().split(/ {2,}/)[0]!);
   assert.deepEqual(names("Arguments:"), ["<query>"]);
   assert.deepEqual(names("Access:"), ["--scope SCOPE", "--topic TOPIC", "--allow-sensitive PATH"]);
@@ -119,7 +119,7 @@ for (const command of COMMANDS) {
     const result = run([command, "--help"]);
     assert.equal(result.code, 0);
     const lines = result.out.split("\n");
-    assert.ok(lines[0]!.startsWith("usage: dummkopf " + command + " "), lines[0]);
+    assert.ok(lines[0]!.startsWith("usage: rcllr " + command + " "), lines[0]);
     assert.equal(lines[1], "");
     assert.ok(/^[A-Z]/.test(lines[2]!) && lines[3] === "", "one-line purpose in:\n" + result.out);
     const examples = lines.indexOf("Examples:");
@@ -135,14 +135,14 @@ for (const command of COMMANDS) {
 
 test("required options show in the usage line and say so", () => {
   const out = run(["write", "--help"]).out;
-  assert.equal(out.split("\n")[0], "usage: dummkopf write <path> --expected REV [options]");
+  assert.equal(out.split("\n")[0], "usage: rcllr write <path> --expected REV [options]");
   assert.ok(section(out, "Options:").some((line) => /^ {2}--expected REV {2,}Required\. /.test(line)), out);
 });
 
 test("positionals with choices and optional positionals", () => {
-  assert.equal(run(["meta", "--help"]).out.split("\n")[0], "usage: dummkopf meta <action> [options]");
-  assert.equal(run(["init", "--help"]).out.split("\n")[0], "usage: dummkopf init [<path>] [options]");
-  assert.equal(run(["check", "--help"]).out.split("\n")[0], "usage: dummkopf check [<paths>...] [options]");
+  assert.equal(run(["meta", "--help"]).out.split("\n")[0], "usage: rcllr meta <action> [options]");
+  assert.equal(run(["init", "--help"]).out.split("\n")[0], "usage: rcllr init [<path>] [options]");
+  assert.equal(run(["check", "--help"]).out.split("\n")[0], "usage: rcllr check [<paths>...] [options]");
   assert.ok(run(["init", "--help"]).out.includes("  --locale en|de  "));
 });
 
@@ -155,7 +155,7 @@ test("read help keeps the notes on line ranges", () => {
 test("help works after global options and with -h", () => {
   const result = run(["--serious", "find", "-h"]);
   assert.equal(result.code, 0);
-  assert.ok(result.out.startsWith("usage: dummkopf find <query> [options]\n"));
+  assert.ok(result.out.startsWith("usage: rcllr find <query> [options]\n"));
 });
 
 // --- usage errors --------------------------------------------------------------------------------------------------
@@ -172,35 +172,35 @@ function usageError(args: readonly string[], usage: string, needle: string): voi
 }
 
 test("a missing positional names it", () => {
-  usageError(["read"], "usage: dummkopf read <path> [options]", "<path>");
+  usageError(["read"], "usage: rcllr read <path> [options]", "<path>");
 });
 
 test("a missing required option names it", () => {
-  usageError(["write", "notes/a.md"], "usage: dummkopf write <path> --expected REV [options]", "--expected");
+  usageError(["write", "notes/a.md"], "usage: rcllr write <path> --expected REV [options]", "--expected");
 });
 
 test("an unknown command lists the commands", () => {
-  usageError(["bogus"], "usage: dummkopf [--root PATH] [--serious] <command> ...", "'bogus'");
+  usageError(["bogus"], "usage: rcllr [--root PATH] [--serious] <command> ...", "'bogus'");
   assert.ok(run(["bogus"]).err.includes("context, find, read"));
 });
 
 test("no command at all", () => {
-  usageError([], "usage: dummkopf [--root PATH] [--serious] <command> ...", "command");
+  usageError([], "usage: rcllr [--root PATH] [--serious] <command> ...", "command");
 });
 
 test("a bad option value names the option", () => {
-  usageError(["find", "x", "--limit", "abc"], "usage: dummkopf find <query> [options]", "--limit");
-  usageError(["find", "x", "--limit"], "usage: dummkopf find <query> [options]", "--limit");
-  usageError(["init", "--locale", "fr"], "usage: dummkopf init [<path>] [options]", "en, de");
-  usageError(["find", "x", "--json=yes"], "usage: dummkopf find <query> [options]", "--json");
+  usageError(["find", "x", "--limit", "abc"], "usage: rcllr find <query> [options]", "--limit");
+  usageError(["find", "x", "--limit"], "usage: rcllr find <query> [options]", "--limit");
+  usageError(["init", "--locale", "fr"], "usage: rcllr init [<path>] [options]", "en, de");
+  usageError(["find", "x", "--json=yes"], "usage: rcllr find <query> [options]", "--json");
 });
 
 test("unknown options and extra arguments are named", () => {
-  usageError(["find", "x", "--bogus"], "usage: dummkopf find <query> [options]", "--bogus");
-  usageError(["read", "a.md", "b.md"], "usage: dummkopf read <path> [options]", "b.md");
+  usageError(["find", "x", "--bogus"], "usage: rcllr find <query> [options]", "--bogus");
+  usageError(["read", "a.md", "b.md"], "usage: rcllr read <path> [options]", "b.md");
 });
 
 test("usage errors point to the command help", () => {
   const result = run(["read"]);
-  assert.ok(result.err.includes("dummkopf read --help"), result.err);
+  assert.ok(result.err.includes("rcllr read --help"), result.err);
 });

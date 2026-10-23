@@ -6,7 +6,7 @@ import * as path from "node:path";
 import { describe, test } from "node:test";
 
 import { Access } from "../src/access.ts";
-import { AccessDenied, DummkopfError } from "../src/errors.ts";
+import { AccessDenied, RcllrError } from "../src/errors.ts";
 import { PyDate } from "../src/pydate.ts";
 import { check, ingest, type WriteResult } from "../src/write.ts";
 import { type Brain, brain, documentText as document, german, invoke, revision } from "./helpers.ts";
@@ -27,7 +27,7 @@ function write(b: Brain, data: unknown, scope: string | null = null, allowSensit
   return ingest(new Access(b.config, scope, null, allowSensitive), data, false, false);
 }
 
-function rejects(body: () => unknown, key?: string, kind: typeof DummkopfError = DummkopfError): DummkopfError {
+function rejects(body: () => unknown, key?: string, kind: typeof RcllrError = RcllrError): RcllrError {
   let caught: unknown;
   try {
     body();
@@ -35,8 +35,8 @@ function rejects(body: () => unknown, key?: string, kind: typeof DummkopfError =
     caught = error;
   }
   assert.ok(caught instanceof kind, "expected " + kind.name + ", got " + String(caught));
-  if (key !== undefined) assert.equal((caught as DummkopfError).key, key);
-  return caught as DummkopfError;
+  if (key !== undefined) assert.equal((caught as RcllrError).key, key);
+  return caught as RcllrError;
 }
 
 const today = (): string => PyDate.today().isoformat();

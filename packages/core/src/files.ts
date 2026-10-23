@@ -9,7 +9,7 @@ import { run } from "./proc.ts";
 
 export const SKILL_FILE = "SKILL.md";
 
-/** Folders holding a SKILL.md ship agent skills; dummkopf never touches them. */
+/** Folders holding a SKILL.md ship agent skills; rcllr never touches them. */
 export function skillDirs(config: Config): ReadonlySet<string> {
   const found = new Set<string>();
   for (const base of config.layout.roots) {
@@ -48,7 +48,7 @@ export function iterNoteFiles(config: Config): string[] {
   return sorted(found.filter((rel) => !skills.some((skill) => rel.startsWith(skill))));
 }
 
-/** Originals under a sources folder stay byte-identical; nothing in dummkopf writes them. */
+/** Originals under a sources folder stay byte-identical; nothing in rcllr writes them. */
 export function isSource(rel: string, layout: LayoutConfig): boolean {
   return parts(rel).includes(layout.sources);
 }

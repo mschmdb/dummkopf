@@ -214,7 +214,7 @@ for (const command of [["links"], ["links", "--json"], ["curator"], ["curator", 
     const name = command[0]!;
     assert.equal(result.code, 2);
     assert.equal(result.out, "");
-    assert.equal(result.err, "The extra `" + name + "` is disabled in dummkopf.toml ([extras] " + name + " = false).\n");
+    assert.equal(result.err, "The extra `" + name + "` is disabled in rcllr.toml ([extras] " + name + " = false).\n");
   });
 }
 

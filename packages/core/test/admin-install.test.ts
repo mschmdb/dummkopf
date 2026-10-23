@@ -35,7 +35,7 @@ test("install writes the Git hook and the agent hooks", () => {
   assert.ok(fs.statSync(hook).isFile());
   fs.accessSync(hook, fs.constants.X_OK);
   const script = fs.readFileSync(hook, "utf-8");
-  assert.ok(script.includes("dummkopf hook pre-commit"));
+  assert.ok(script.includes("rcllr hook pre-commit"));
   assert.ok(!script.includes("/Users/") && !script.includes(target.root));
   const settings = json(target, ".claude/settings.json");
   const post = settings.hooks.PostToolUse[0];
@@ -60,7 +60,7 @@ test("install is idempotent and keeps foreign settings", () => {
   assert.equal(settings.hooks.PostToolUse.length, 2);
 });
 
-test("install lets headless agents call dummkopf, but asks before sensitive reads", () => {
+test("install lets headless agents call rcllr, but asks before sensitive reads", () => {
   const target = repo();
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.deepEqual(json(target, ".claude/settings.json").permissions, {
@@ -72,14 +72,14 @@ test("install lets headless agents call dummkopf, but asks before sensitive read
 test("install keeps foreign permission rules and adds its own once", () => {
   const target = repo();
   target.write(".claude/settings.json", JSON.stringify({
-    permissions: { allow: ["Bash(dk *)"], ask: ["Bash(rm *)"], deny: ["Bash(dummkopf *)"] },
+    permissions: { allow: ["Bash(dk *)"], ask: ["Bash(rm *)"], deny: ["Bash(rcllr *)"] },
   }));
   assert.equal(invoke(target, ["install"]).code, 0);
   assert.deepEqual(json(target, ".claude/settings.json").permissions, {
     allow: ["Bash(dk *)", "Bash(rcllr *)", "Bash(dummkopf *)"],
     ask: ["Bash(rm *)", "Bash(rcllr *--allow-sensitive*)", "Bash(dummkopf *--allow-sensitive*)",
       "Bash(dk *--allow-sensitive*)"],
-    deny: ["Bash(dummkopf *)"],
+    deny: ["Bash(rcllr *)"],
   });
 });
 
@@ -158,16 +158,16 @@ test("init with the German locale uses German headings", () => {
 test("init refuses an existing brain", () => {
   const base = tempDir();
   assert.equal(cli(["init", base], base).code, 0);
-  const before = fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8");
+  const before = fs.readFileSync(path.join(base, "rcllr.toml"), "utf-8");
   assert.equal(cli(["init", base], base).code, 2);
-  assert.equal(fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8"), before);
+  assert.equal(fs.readFileSync(path.join(base, "rcllr.toml"), "utf-8"), before);
 });
 
 test("init without a remote creates a local brain and names the remote only in a comment", () => {
   const base = tempDir();
   const result = cli(["init", base], base);
   assert.equal(result.code, 0);
-  const toml = fs.readFileSync(path.join(base, "dummkopf.toml"), "utf-8");
+  const toml = fs.readFileSync(path.join(base, "rcllr.toml"), "utf-8");
   assert.ok(toml.includes('# To sync, set a private repository: remote = "git@github.com:you/your-brain.git"'));
   assert.ok(!/^remote\s*=/m.test(toml));
   assert.ok(result.out.includes("It stays local"));
@@ -177,7 +177,7 @@ test("init with a remote does not ask for it again", () => {
   const base = tempDir();
   const result = cli(["init", base, "--remote", "git@example.org:me/brain.git"], base);
   assert.equal(result.code, 0);
-  assert.ok(!result.out.includes("set repo.remote") && result.out.includes("dummkopf install"));
+  assert.ok(!result.out.includes("set repo.remote") && result.out.includes("rcllr install"));
 });
 
 test("AGENTS rules are rendered for the config", () => {
@@ -204,9 +204,9 @@ test("hook commands find uv tool installs without fixed paths", () => {
   }
 });
 
-test("reinstall upgrades older dummkopf hook commands", () => {
+test("reinstall upgrades older rcllr hook commands", () => {
   const target = repo();
-  const old = 'dummkopf --root "$CLAUDE_PROJECT_DIR" hook agent';
+  const old = 'rcllr --root "$CLAUDE_PROJECT_DIR" hook agent';
   target.write(".claude/settings.json", JSON.stringify({ hooks: {
     PostToolUse: [{ matcher: "Write|Edit|MultiEdit|Bash", hooks: [{ type: "command", command: old }] }],
     SessionEnd: [{ hooks: [{ type: "command", command: old }] }] } }));

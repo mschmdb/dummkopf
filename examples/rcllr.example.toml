@@ -1,4 +1,4 @@
-# dummkopf.toml: lives in the root of your brain repo.
+# rcllr.toml: lives in the root of your brain repo.
 # Every key is optional except where marked REQUIRED. Shown values are defaults.
 # Unknown keys are an error, so a typo never silently disables a rule.
 
@@ -19,7 +19,7 @@ topic_readme = "README.md"
 notes = "notes"                        # flat, no subfolders
 bookmarks = "bookmarks"                # flat, no subfolders
 archive = "archive"                    # notes here get status = archived
-sources = "sources"                    # originals, never edited by ˈdʊmkɔpf
+sources = "sources"                    # originals, never edited by rcllr
 index = "INDEX.md"
 
 [scopes]

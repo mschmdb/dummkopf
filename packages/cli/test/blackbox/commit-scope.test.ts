@@ -1,4 +1,4 @@
-/** What dummkopf commits: note folders and generated files only, and `--message` for writes. */
+/** What rcllr commits: note folders and generated files only, and `--message` for writes. */
 
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -14,19 +14,19 @@ function agentHook(world: Synced): number {
 }
 
 function changeConfig(world: Synced): void {
-  fs.appendFileSync(path.join(world.brain.root, "dummkopf.toml"), "# tuned by an agent\n", "utf-8");
+  fs.appendFileSync(path.join(world.brain.root, "rcllr.toml"), "# tuned by an agent\n", "utf-8");
 }
 
 // --- the commit scope -------------------------------------------------------------------------------------------
 
-test("agent hook commits a changed note but leaves dummkopf.toml for a human", () => {
+test("agent hook commits a changed note but leaves rcllr.toml for a human", () => {
   const world = new Sandbox().synced();
   changeConfig(world);
   world.brain.write("notes/pending.md", fullNote({ title: "Pending" }));
   assert.equal(agentHook(world), 0);
   assert.ok(world.remoteFiles().includes("notes/pending.md"));
-  assert.ok(!world.remoteFile("dummkopf.toml").includes("tuned by an agent"));
-  assert.equal(world.brain.git(["status", "--porcelain"]), "M dummkopf.toml");
+  assert.ok(!world.remoteFile("rcllr.toml").includes("tuned by an agent"));
+  assert.equal(world.brain.git(["status", "--porcelain"]), "M rcllr.toml");
 });
 
 test("agent hook leaves agent setup and other tooling uncommitted", () => {
@@ -69,7 +69,7 @@ test("a configured links.output and curator.report_dir are committed too", () =>
   assert.ok(!files.includes("maps/other.md"));
 });
 
-test("the routes and entities files named in dummkopf.toml are committed, wherever they live", () => {
+test("the routes and entities files named in rcllr.toml are committed, wherever they live", () => {
   const world = new Sandbox().synced();
   world.brain.configure('[context]\nroutes_file = "hub-routes.json"\n[links]\nentities_file = "scripts/entities.txt"\n');
   world.brain.git(["commit", "-qam", "config"]);
@@ -86,7 +86,7 @@ test("sync follows the same rule as the hook", () => {
   world.brain.write("notes/by-hand.md", fullNote({ title: "By hand" }));
   assert.equal(world.brain.run(["sync"]).code, 0);
   assert.ok(world.remoteFiles().includes("notes/by-hand.md"));
-  assert.equal(world.brain.git(["status", "--porcelain"]), "M dummkopf.toml");
+  assert.equal(world.brain.git(["status", "--porcelain"]), "M rcllr.toml");
 });
 
 test("sync_exclude still keeps paths inside the note folders out", () => {
@@ -100,21 +100,21 @@ test("sync_exclude still keeps paths inside the note folders out", () => {
   assert.ok(!files.includes("notes/drafts/wip.md"));
 });
 
-test("a changed dummkopf.toml does not block a write", () => {
+test("a changed rcllr.toml does not block a write", () => {
   const world = new Sandbox().synced();
   changeConfig(world);
   const result = world.brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 0, result.err);
   assert.ok(world.remoteFiles().includes("notes/fresh.md"));
-  assert.equal(world.brain.git(["status", "--porcelain"]), "M dummkopf.toml");
+  assert.equal(world.brain.git(["status", "--porcelain"]), "M rcllr.toml");
 });
 
-test("a changed note outside dummkopf's own write still blocks a write", () => {
+test("a changed note outside rcllr's own write still blocks a write", () => {
   const world = new Sandbox().synced();
   world.brain.write("notes/by-hand.md", md());
   const result = world.brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
   assert.equal(result.code, 2);
-  assert.equal(result.err, "The brain has uncommitted note changes. Run `dummkopf sync` first.\n");
+  assert.equal(result.err, "The brain has uncommitted note changes. Run `rcllr sync` first.\n");
 });
 
 // --- --message --------------------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ test("--message works in a local brain", () => {
   const sandbox = new Sandbox();
   const brain = sandbox.brain("local");
   brain.toml = "schema_version = 1\n";
-  fs.writeFileSync(path.join(brain.root, "dummkopf.toml"), brain.toml, "utf-8");
+  fs.writeFileSync(path.join(brain.root, "rcllr.toml"), brain.toml, "utf-8");
   brain.gitInit();
   brain.commit("Initial");
   const result = brain.run(["write", "notes/fresh.md", "--expected", "new", "--message", "Local note"],

@@ -21,7 +21,7 @@ const SCOPE_RE = /^[\p{L}\p{N}_-]+$/u;
 const FRONTMATTER_KEY_RE = /^[A-Za-z0-9_.\-]+$/;
 
 export interface RepoConfig {
-  /** Empty means a local brain: dummkopf commits, but never fetches or pushes. */
+  /** Empty means a local brain: rcllr commits, but never fetches or pushes. */
   readonly remote: string;
   readonly remoteName: string;
   readonly branch: string;
@@ -80,7 +80,7 @@ export interface FrontmatterConfig {
   readonly summaryMax: number;
   readonly mappedKeys: readonly string[];
   readonly listKeys: readonly [string, string, string];
-  /** Order of the managed keys when dummkopf writes frontmatter. */
+  /** Order of the managed keys when rcllr writes frontmatter. */
   readonly fieldOrder: readonly string[];
 }
 
@@ -121,14 +121,14 @@ export interface SearchConfig {
 
 export interface ContextConfig {
   readonly routesFile: string;
-  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  /** True when rcllr.toml names the file; then `check` warns if it is missing. */
   readonly routesFileSet: boolean;
 }
 
 export interface LinksOptions {
   readonly output: string;
   readonly entitiesFile: string;
-  /** True when dummkopf.toml names the file; then `check` warns if it is missing. */
+  /** True when rcllr.toml names the file; then `check` warns if it is missing. */
   readonly entitiesFileSet: boolean;
   readonly minTopics: number;
   readonly allowOutside: readonly string[];
@@ -418,7 +418,7 @@ function assemble(root: string, values: Record<string, unknown>, data: Record<st
   };
 }
 
-/** A config with every default, for tests and tools that have no dummkopf.toml. */
+/** A config with every default, for tests and tools that have no rcllr.toml. */
 export function defaultConfig(root: string, overrides: Record<string, unknown> = {}): Config {
   const config = assemble(root, build(SCHEMA, { repo: { remote: "git@example.org:me/brain.git" }, ...overrides }, ""),
                           overrides);
@@ -427,7 +427,7 @@ export function defaultConfig(root: string, overrides: Record<string, unknown> =
 }
 
 /**
- * The config file of a brain: rcllr.toml, else the old dummkopf.toml. A symlink counts as present, so a
+ * The config file of a brain: rcllr.toml, else the old rcllr.toml. A symlink counts as present, so a
  * symlinked rcllr.toml is rejected instead of quietly falling back to the old name.
  */
 export function configFile(rootPath: string): string {
@@ -457,7 +457,7 @@ export function loadConfig(rootPath: string): Config {
   if (version === undefined) throw invalid("schema_version", "is required");
   // Python compares with ==, so 1.0 and true pass as version 1.
   const number = version instanceof TomlFloat ? version.value : typeof version === "boolean" ? Number(version) : version;
-  if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this dummkopf reads version 1");
+  if (number !== SCHEMA_VERSION) throw invalid("schema_version", "unsupported version; this rcllr reads version 1");
   const config = assemble(root, build(SCHEMA, data, ""), data);
   validate(config);
   return config;

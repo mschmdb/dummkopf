@@ -3,7 +3,7 @@
  * by meaning. Every option sits on one line; long descriptions wrap under their column.
  */
 
-import { HELP } from "@dummkopf/core";
+import { HELP } from "@rcllr/core";
 
 /** Help text width; fixed, so agents and tests see the same layout in any terminal. */
 export const WIDTH = 100;

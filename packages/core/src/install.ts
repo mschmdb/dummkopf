@@ -117,7 +117,7 @@ function list(value: Json): Json[] {
   return value;
 }
 
-/** Add our hook once. Older dummkopf hook commands are replaced, never duplicated. */
+/** Add our hook once. Older hook commands, also those named dummkopf, are replaced, never duplicated. */
 export function addHook(settings: Settings, event: string, command: JsonObject, matcher: string | null): void {
   const hooks = setdefault(settings, "hooks", {});
   if (!isObject(hooks)) throw new TypeError("'" + typeName(hooks) + "' object has no attribute 'setdefault'");
@@ -181,7 +181,7 @@ function permissionsOf(settings: Settings, path: string): JsonObject {
   return permissions;
 }
 
-/** Add our permission rules once; foreign rules, including a deny on dummkopf, stay untouched. */
+/** Add our permission rules once; foreign rules, including a deny on rcllr, stay untouched. */
 export function addPermissions(settings: Settings, path: string): void {
   const permissions = permissionsOf(settings, path);
   for (const [key, ours] of Object.entries(PERMISSIONS)) {

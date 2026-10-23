@@ -77,8 +77,8 @@ test("missing config message is cheeky by default", () => {
   const sandbox = new Sandbox();
   const cheeky = sandbox.run(["find", "x"], { cwd: sandbox.tmp });
   const plain = sandbox.run(["find", "x", "--serious"], { cwd: sandbox.tmp });
-  assert.ok(cheeky.err.startsWith("No brain here, Dummkopf. No dummkopf.toml found in "), cheeky.err);
-  assert.ok(plain.err.startsWith("No dummkopf.toml found in "), plain.err);
+  assert.ok(cheeky.err.startsWith("No brain here, Dummkopf. No rcllr.toml found in "), cheeky.err);
+  assert.ok(plain.err.startsWith("No rcllr.toml found in "), plain.err);
   assert.ok(cheeky.err.endsWith(plain.err));
 });
 

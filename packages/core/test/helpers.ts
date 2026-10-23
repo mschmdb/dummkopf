@@ -12,7 +12,7 @@ import { CONFIG_NAME, type Config, loadConfig } from "../src/config.ts";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, "../../..");
 export const GERMAN_CONFIG = path.join(REPO, "examples", "config-german-hub.toml");
-export const DEV_BIN = path.join(REPO, "packages", "cli", "dev", "dummkopf");
+export const DEV_BIN = path.join(REPO, "packages", "cli", "dev", "rcllr");
 export const BASE_CONFIG = (remote: string): string => 'schema_version = 1\n[repo]\nremote = "' + remote + '"\n';
 export const GIT_ENV = {
   GIT_AUTHOR_NAME: "Test",
@@ -22,7 +22,7 @@ export const GIT_ENV = {
 };
 
 /** A fresh temporary folder, removed when the process exits. */
-export function tempDir(prefix = "dummkopf-test-"): string {
+export function tempDir(prefix = "rcllr-test-"): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
   process.on("exit", () => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;

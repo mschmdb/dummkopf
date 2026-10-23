@@ -21,7 +21,7 @@ import { effectiveScope, readRaw } from "./scopes.ts";
 import { Sensitivity } from "./sensitive.ts";
 import { dropSection, replaceTable, type Row, scrapeRows, sectionBounds, table } from "./tables.ts";
 
-/** Text of a file dummkopf only reads; missing, symlinked or unreadable files count as empty. */
+/** Text of a file rcllr only reads; missing, symlinked or unreadable files count as empty. */
 export function readText(path: string): string {
   return readRaw(path) ?? "";
 }

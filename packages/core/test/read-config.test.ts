@@ -50,7 +50,7 @@ describe("config", () => {
 
   test("example config loads", () => {
     const root = tempDir();
-    write(root, fs.readFileSync(path.join(REPO, "examples", "dummkopf.example.toml"), "utf-8"));
+    write(root, fs.readFileSync(path.join(REPO, "examples", "rcllr.example.toml"), "utf-8"));
     const config = loadConfig(root);
     assert.equal(config.curator.openDays, 28);
     assert.equal(config.hooks.report, "changes");
@@ -130,7 +130,7 @@ describe("config", () => {
     ["[sensitive]\nalways = ['../x/']\n", "sensitive.always"],
     ["[sensitive]\nalways = ['./topics/health/']\n", "sensitive.always"],
     ["[sensitive]\nalways = ['notes//secret.md']\n", "sensitive.always"],
-    ["[links]\noutput = 'dummkopf.toml'\n", "links.output"],
+    ["[links]\noutput = 'rcllr.toml'\n", "links.output"],
     ["[layout]\ntopics = 'a/b'\n", "layout.topics"],
     ["[layout]\nnotes = 'topics'\n", "layout"],
     ["[frontmatter]\nkey_fact = 'has space'\n", "frontmatter.key_fact"],

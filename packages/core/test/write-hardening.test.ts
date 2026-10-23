@@ -9,7 +9,7 @@ import * as path from "node:path";
 import { describe, test } from "node:test";
 
 import { Access } from "../src/access.ts";
-import { AccessDenied, ConfigError, DummkopfError } from "../src/errors.ts";
+import { AccessDenied, ConfigError, RcllrError } from "../src/errors.ts";
 import { scan } from "../src/extras/curator.ts";
 import { build } from "../src/extras/links.ts";
 import { generate } from "../src/meta.ts";
@@ -20,11 +20,11 @@ import { type Brain, brain, documentText as document, invoke, revision, synced, 
 
 process.setMaxListeners(0);
 
-function caught(body: () => unknown): DummkopfError {
+function caught(body: () => unknown): RcllrError {
   try {
     body();
   } catch (error) {
-    assert.ok(error instanceof DummkopfError, String(error));
+    assert.ok(error instanceof RcllrError, String(error));
     return error;
   }
   assert.fail("no error");
@@ -164,15 +164,15 @@ describe("hardening", () => {
 
   test("sync commits only note paths even if excluded files are staged", () => {
     const s = synced();
-    s.brain.toml = s.brain.toml.replace("[repo]\n", "[repo]\nsync_exclude = ['dummkopf.toml']\n");
+    s.brain.toml = s.brain.toml.replace("[repo]\n", "[repo]\nsync_exclude = ['rcllr.toml']\n");
     s.brain.configure("");
     s.brain.commit("Configure");
     s.git(["push", "-q"]);
-    s.brain.write("dummkopf.toml", s.brain.toml + "# half edited\n");
-    s.git(["add", "dummkopf.toml"]);
+    s.brain.write("rcllr.toml", s.brain.toml + "# half edited\n");
+    s.git(["add", "rcllr.toml"]);
     s.brain.write("notes/first.md", "updated\n");
     syncRepository(s.brain.config);
     assert.equal(s.git(["show", "--name-only", "--format=", "HEAD"]), "notes/first.md");
-    assert.equal(s.git(["diff", "--cached", "--name-only"]), "dummkopf.toml");
+    assert.equal(s.git(["diff", "--cached", "--name-only"]), "rcllr.toml");
   });
 });

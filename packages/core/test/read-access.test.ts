@@ -123,7 +123,7 @@ describe("access", () => {
     b.write("AGENTS.md", "# Agents\n");
     const access = new Access(b.config);
     for (const rel of ["../a.md", target, "notes/link.md", "AGENTS.md", "topics/skills/tool/data.md",
-      "topics/skills/tool/SKILL.md", "notes/..\\a.md", "notes", "dummkopf.toml"]) {
+      "topics/skills/tool/SKILL.md", "notes/..\\a.md", "notes", "rcllr.toml"]) {
       denied(() => access.read(rel));
     }
   });

@@ -2,7 +2,7 @@
 
 import * as fs from "node:fs";
 
-import { Rejected } from "@dummkopf/core";
+import { Rejected } from "@rcllr/core";
 
 export function out(text: string): void {
   writeAll(1, text);

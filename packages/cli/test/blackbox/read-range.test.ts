@@ -140,14 +140,14 @@ for (const args of [["--start", "0"], ["--start", "-3"], ["--start", "5", "--end
 test("read without a path exits 2 with usage", () => {
   const result = docker().run(["read"]);
   assert.equal(result.code, 2);
-  assert.ok(result.err.includes("usage: dummkopf read"), result.err);
+  assert.ok(result.err.includes("usage: rcllr read"), result.err);
 });
 
 test("read accepts only md files inside note folders", () => {
   const target = docker();
-  target.write("dummkopf-notes.txt", "x");
+  target.write("rcllr-notes.txt", "x");
   target.write("other/file.md", "# x\n");
-  for (const rel of ["dummkopf-notes.txt", "other/file.md", "dummkopf.toml", "notes", "notes/"]) {
+  for (const rel of ["rcllr-notes.txt", "other/file.md", "rcllr.toml", "notes", "notes/"]) {
     assert.equal(target.run(["read", rel]).code, 2, rel);
   }
 });

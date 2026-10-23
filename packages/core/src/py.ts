@@ -183,7 +183,7 @@ export function count(value: string, sub: string): number {
   return found;
 }
 
-/** Python's str() for the values dummkopf formats into messages. */
+/** Python's str() for the values rcllr formats into messages. */
 export function str(value: unknown): string {
   if (value === null || value === undefined) return "None";
   if (value === true) return "True";

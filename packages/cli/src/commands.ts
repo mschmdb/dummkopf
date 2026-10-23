@@ -3,7 +3,7 @@
 import {
   Access, check, checkCommitMessage, type Config, HELP, ingest, JsonDecodeError, loadsJson, message as say, Rejected, report,
   syncRepository, validatePacket, withRepositoryLock,
-} from "@dummkopf/core";
+} from "@rcllr/core";
 
 import type { Namespace, Parser } from "./argparse.ts";
 import { err, out, readInput } from "./io.ts";
@@ -131,7 +131,7 @@ export function run(args: Namespace, config: Config, tone: string): number {
   out(outputResult(result, Boolean(args.json), args.maxChars as number, tone));
   if (code === EXIT_SYNC_FAILED) {
     err(say("sync_failed_after_save", tone) + "\n");
-    // Only the login failure gets its own line: the other sync failures need no step beyond `dummkopf sync`.
+    // Only the login failure gets its own line: the other sync failures need no step beyond `rcllr sync`.
     if (result.syncError === "git_auth") err(say("git_auth", tone) + "\n");
   }
   return code;

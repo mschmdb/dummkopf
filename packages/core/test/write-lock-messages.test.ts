@@ -5,7 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "node:test";
 
-import { AccessDenied, DummkopfError, Rejected } from "../src/errors.ts";
+import { AccessDenied, RcllrError, Rejected } from "../src/errors.ts";
 import { withRepositoryLock } from "../src/lock.ts";
 import { CHEEKY, INFO_KEYS, PLAIN, text } from "../src/messages.ts";
 import { tempDir } from "./helpers.ts";
@@ -25,7 +25,7 @@ describe("lock", () => {
         error = caught;
       }
     });
-    assert.ok(error instanceof DummkopfError);
+    assert.ok(error instanceof RcllrError);
     assert.equal(error.key, "busy");
   });
 
@@ -64,8 +64,8 @@ describe("messages", () => {
 
   test("plain tone never jokes", () => {
     for (const [key, template] of Object.entries(PLAIN)) {
-      assert.ok(!template.toLowerCase().includes("dummkopf!"), key);
-      assert.ok(!template.replaceAll("dummkopf.toml", "").includes("Dummkopf"), key);
+      assert.ok(!template.toLowerCase().includes("rcllr!"), key);
+      assert.ok(!template.replaceAll("rcllr.toml", "").includes("Dummkopf"), key);
     }
   });
 
@@ -112,7 +112,7 @@ describe("messages", () => {
     const error = new AccessDenied("path_denied");
     assert.equal(String(error), text("path_denied", "plain"));
     assert.equal(error.render("cheeky"), text("path_denied", "cheeky"));
-    assert.ok(error instanceof DummkopfError);
+    assert.ok(error instanceof RcllrError);
     assert.equal(error.exitCode, 2);
     assert.equal(new Rejected("search_needs_term").exitCode, 2);
   });
