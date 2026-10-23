@@ -85,3 +85,19 @@ test("a real Codex file name with capitals and underscores imports", () => {
   const home = codexHome({ "2026-10-18T09-31-56-omdz-style_layering.md": summary("/Users/me/Sites/shop", "Style", "Layers.") });
   assert.deepEqual(run(target, home).changed.slice(1), ["topics/codex-memory/users-me-sites-shop/2026-10-18t09-31-56-omdz-style-layering.md"]);
 });
+
+test("projects = [\"*\"] groups Codex sessions by their folder and honours exclude", () => {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure('[scopes]\nvalues = ["private", "work", "memory-codex"]\n[extras]\ncodex_memory = true\n'
+    + '[codex_memory]\nprojects = ["*"]\nexclude = ["/Users/me/Clients"]\n');
+  target.gitInit();
+  target.commit("Initial");
+  const home = codexHome({
+    "a.md": summary("/Users/me/brain", "Heating", "Subsidy."),
+    "b.md": summary("/Users/me/Clients/bank", "Bank", "Client work."),
+    "c.md": summary("/Users/me/Sites/shop", "Shop", "Cart."),
+  });
+  assert.deepEqual(run(target, home).changed, ["topics/codex-memory/README.md", "topics/codex-memory/users-me-sites-shop/c.md",
+    "topics/codex-memory/users-me-brain/a.md"]);
+});

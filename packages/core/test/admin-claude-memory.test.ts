@@ -163,3 +163,24 @@ test("odd or symlinked memory files are skipped, the rest still imports", () => 
   fs.symlinkSync(outside, path.join(folder, "linked.md"));
   assert.deepEqual(run(target, home).changed, ["topics/claude-memory/README.md", "topics/claude-memory/users-me-sites-shop/ok.md"]);
 });
+
+test("projects = [\"*\"] imports every project except the excluded ones, labelled by the folder it ran in", () => {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure('[scopes]\nvalues = ["private", "work", "memory-claude"]\n[extras]\nclaude_memory = true\n'
+    + '[claude_memory]\nprojects = ["*"]\nexclude = ["/Users/me/Clients/bank"]\n');
+  target.gitInit();
+  target.commit("Initial");
+  const home = claudeHome({ "a.md": memoryFile("a", "Shop fact.", "Body.") });
+  for (const project of ["/Users/me/Clients/bank", "/Users/me/notes"]) {
+    const folder = path.join(home, "projects", claudeProjectFolder(project));
+    fs.mkdirSync(path.join(folder, "memory"), { recursive: true });
+    fs.writeFileSync(path.join(folder, "memory", "b.md"), memoryFile("b", "Fact.", "Body."));
+    fs.writeFileSync(path.join(folder, "session.jsonl"), JSON.stringify({ type: "user", cwd: project }) + "\n");
+  }
+  fs.mkdirSync(path.join(home, "projects", "-tmp-spike"), { recursive: true });
+  assert.deepEqual(run(target, home).changed, ["topics/claude-memory/README.md", "topics/claude-memory/users-me-sites-shop/a.md",
+    "topics/claude-memory/users-me-notes/b.md"]);
+  assert.ok(target.read("topics/claude-memory/users-me-notes/b.md").includes("Claude Code memory of /Users/me/notes."));
+  assert.ok(target.read("topics/claude-memory/users-me-sites-shop/a.md").includes("memory of -Users-me-Sites-shop."));
+});

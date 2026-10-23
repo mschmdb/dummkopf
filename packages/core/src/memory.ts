@@ -12,7 +12,7 @@ import * as fs from "node:fs";
 import { type Access, type Note } from "./access.ts";
 import { type Config, type MemorySourceOptions } from "./config.ts";
 import { AccessDenied, Rejected } from "./errors.ts";
-import { claudeProjectFolder, type Memory, projectPath, readMemories, type SourceKey } from "./memory-sources.ts";
+import { type Memory, projectMemories, type SourceKey } from "./memory-sources.ts";
 import { join } from "./pyos.ts";
 import { ingest } from "./write.ts";
 
@@ -40,11 +40,6 @@ interface Source {
   alias: string;
   home: string;
   options: MemorySourceOptions;
-}
-
-/** The folder name inside the topic: the project path without its leading separators, in lower case. */
-function slug(project: string): string {
-  return claudeProjectFolder(project).replace(/^-+/, "").replace(/-+/g, "-").toLowerCase();
 }
 
 /**
@@ -127,12 +122,9 @@ function sourceChanges(access: Access, source: Source, only: string | undefined)
     if (previous === undefined || (previous !== null && sourceOf(previous.text) === sourceOf(content))) return;
     changes.push({ path, content, expected: previous ? previous.revision : null });
   };
-  const projects = source.options.projects.map((project) => projectPath(project))
-    .filter((project) => only === undefined || project === projectPath(only));
-  for (const project of projects) {
-    const memories = readMemories(source.key, source.home, project);
-    if (memories === null) continue;
-    const folder = topic + "/" + slug(project);
+  const selection = { projects: source.options.projects, exclude: source.options.exclude, only };
+  for (const { label: project, slug, memories } of projectMemories(source.key, source.home, selection)) {
+    const folder = topic + "/" + slug;
     const name = (memory: Memory): string => mirrorName(memory.file, config.layout.topicReadme);
     for (const memory of memories) want(folder + "/" + name(memory), noteText(config, source, project, memory));
     const kept = new Set(memories.map(name));
