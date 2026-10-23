@@ -269,6 +269,21 @@ test("failed push after a write exits 3 and keeps the save", () => {
   assert.deepEqual(world.remoteLog(), ["Initial"]);
 });
 
+test("a refused SSH login on push names the login after the save", () => {
+  const world = synced();
+  const ssh = path.join(world.base, "fake-ssh");
+  fs.writeFileSync(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n", "utf-8");
+  fs.chmodSync(ssh, 0o755);
+  world.brain.git(["config", "remote.origin.pushurl", "git@example.invalid:me/brain.git"]);
+  world.brain.git(["config", "core.sshCommand", ssh]);
+  const result = world.brain.run(["write", "notes/fresh.md", "--expected", "new"], { stdin: md() });
+  assert.equal(result.code, 3);
+  assert.equal(result.err, "Markdown saved, but Git sync failed. Retry with `dummkopf sync`.\n"
+    + "Git could not log in to the remote. Local data is kept. For an SSH remote, test the login with "
+    + "`ssh -T git@<host>`; `gh auth` does not cover SSH.\n");
+  assert.ok(!result.err.includes("example.invalid"));
+});
+
 test("exit 3 json reports saved true and sync failed", () => {
   const world = synced();
   blockPushes(world);

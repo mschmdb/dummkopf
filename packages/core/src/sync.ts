@@ -14,10 +14,27 @@ import { exists, join, resolve, stripTrailingSlashes } from "./pyos.ts";
 
 const OPEN_OPERATIONS = ["rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
 
+// Git's own wording for a refused login. "Could not read from remote repository" alone also means a missing
+// repository, so it stays a plain failure.
+const AUTH_FAILURES = [
+  "Permission denied (publickey",
+  "Host key verification failed",
+  "Authentication failed for",
+  "could not read Username for",
+];
+
+/** The message key for a failed fetch or push, judged from Git's stderr. The text itself never leaves. */
+export function remoteFailure(stderr: string): "git_auth" | null {
+  return AUTH_FAILURES.some((pattern) => stderr.includes(pattern)) ? "git_auth" : null;
+}
+
 export function git(config: Config, args: readonly string[], allowed: readonly number[] = [0]): Done {
   const done = run("git", args, { cwd: config.root, timeoutS: config.limits.gitTimeoutS });
   if (done.failed) throw new SyncError("git_unavailable");
-  if (!allowed.includes(done.code!)) throw new SyncError("git_failed", { step: args[0] });
+  if (!allowed.includes(done.code!)) {
+    const remoteStep = args[0] === "fetch" || args[0] === "push";
+    throw new SyncError((remoteStep && remoteFailure(done.stderr)) || "git_failed", { step: args[0] });
+  }
   return done;
 }
 
@@ -170,10 +187,27 @@ export function syncLocked(config: Config, refreshRemote = false, message: strin
     }
   }
   if (!pushes(config)) return;
-  if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) {
+  if (count(config, remoteRef(config) + "..HEAD") || refreshRemote) pushLatest(config);
+}
+
+/** How often a sync fetches and pushes again when another machine pushed first. */
+export const PUSH_ATTEMPTS = 3;
+
+/**
+ * Catch up with the remote, then push. Another machine may push between our fetch and our push; then the
+ * push fails and we fetch, rebase and push again. A refused login fails at once, retrying cannot fix it.
+ */
+function pushLatest(config: Config): void {
+  const [remote, branch] = remoteAndBranch(config);
+  for (let attempt = 1; ; attempt++) {
     refresh(config);
-    const [remote, branch] = remoteAndBranch(config);
-    if (count(config, remoteRef(config) + "..HEAD")) git(config, ["push", "--", remote, branch]);
+    if (!count(config, remoteRef(config) + "..HEAD")) return;
+    try {
+      git(config, ["push", "--", remote, branch]);
+      return;
+    } catch (error) {
+      if (!(error instanceof SyncError) || error.key !== "git_failed" || attempt === PUSH_ATTEMPTS) throw error;
+    }
   }
 }
 

@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
+- A sync that fails because the remote refuses the login (SSH key, host key or HTTPS credentials) now says so,
+  instead of only "Git step failed". Git's own output still never leaves the process. After `write` or `ingest`,
+  `--json` reports the reason in `syncError`.
 - `dummkopf install` adds permission rules to `.claude/settings.json`: `allow` for `dummkopf` and `dk`, `ask` for
   any call with `--allow-sensitive`. Headless agents (`claude -p`, the GitHub Action) can call dummkopf without
   a prompt, but never open a sensitive note.
@@ -29,6 +32,8 @@ All notable changes to this project are listed here. The format follows
 
 ### Fixed
 
+- Two machines that sync at the same moment no longer report "Git step failed: push". A push that loses the
+  race fetches, rebases and pushes again, up to three times.
 - `curator` compares "as of" dates by calendar day, so `2026-09-25` and `25.09.2026` are the same date.
 
 ## [0.4.1] - 2026-10-11
