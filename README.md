@@ -37,14 +37,17 @@ npm install -g rcllr
 This installs `rcllr`. Update later with the same command. The old names `dummkopf` and `dk` keep working
 for now, see [Coming from dummkopf](#coming-from-dummkopf).
 
-The hooks call `rcllr` by name and also look in `~/.local/bin`. Agents often start hooks with a narrower
-`PATH` than your terminal, the Claude desktop app for one. npm's global folder is often missing there, for
-example with nvm. Link the command into `~/.local/bin` to be safe:
+The hooks call `rcllr` by name. Agents often start hooks with a narrower `PATH` than your terminal, the Claude
+desktop app for one, so the hooks also look in `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`. That
+covers Node from Homebrew or the nodejs.org installer. With nvm, fnm or Volta, `rcllr` and `node` live in a
+folder the hooks do not know. Link both into `~/.local/bin`:
 
 ```bash
 mkdir -p ~/.local/bin
-ln -sf "$(npm prefix -g)/bin/rcllr" ~/.local/bin/
+ln -sf "$(npm prefix -g)/bin/rcllr" "$(command -v node)" ~/.local/bin/
 ```
+
+The `node` link points to one Node version. Run the line again after you switch versions and reinstall rcllr.
 
 To run the latest `main` instead, build from source with pnpm: clone the repository, run
 `pnpm install && pnpm build`, and link `packages/cli/bin/rcllr` into `~/.local/bin`. See [CONTRIBUTING.md](CONTRIBUTING.md).

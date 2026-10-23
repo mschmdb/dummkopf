@@ -204,6 +204,16 @@ test("hook commands find uv tool installs without fixed paths", () => {
   }
 });
 
+test("hook commands find node in the usual places when the agent starts them with a narrow PATH", () => {
+  const target = repo();
+  assert.equal(invoke(target, ["install"]).code, 0);
+  const texts = [fs.readFileSync(hookPath(target), "utf-8"), target.read(".claude/settings.json"), target.read(".codex/hooks.json")];
+  for (const text of texts) {
+    assert.ok(text.includes('PATH=\\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\\"')
+      || text.includes('PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"'), text);
+  }
+});
+
 test("reinstall upgrades older rcllr hook commands", () => {
   const target = repo();
   const old = 'rcllr --root "$CLAUDE_PROJECT_DIR" hook agent';

@@ -14,10 +14,11 @@ export const MANAGED = "# managed-by: rcllr";
 export const LEGACY_MANAGED = "# managed-by: dummkopf";
 /** Every name the CLI answers to: rcllr, and the old names that stay as aliases during the transition. */
 export const COMMANDS = ["rcllr", "dummkopf", "dk"] as const;
-// `uv tool install` and `pipx` put executables in ~/.local/bin. Hooks often run with a narrower PATH than
-// a terminal (the Claude desktop app, for one), so every hook adds that folder in front. $HOME keeps the
-// committed files free of machine-specific paths.
-export const USER_BIN = 'PATH="$HOME/.local/bin:$PATH"';
+// Hooks often run with a narrower PATH than a terminal (the Claude desktop app, for one). rcllr is a Node script,
+// so the hook needs both rcllr and node: ~/.local/bin for links the user made, then the folders where Homebrew
+// (Apple silicon and Intel) and most installers put node. $HOME keeps the committed files free of
+// machine-specific paths.
+export const USER_BIN = 'PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"';
 export const PRE_COMMIT = `#!/bin/sh
 ${MANAGED}
 # Regenerates the sensitive-paths list and the indexes. Never blocks a commit.

@@ -5,6 +5,14 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Hooks also look for `rcllr` and `node` in `/opt/homebrew/bin` and `/usr/local/bin`. Started with a narrow
+  `PATH`, for example from the Claude desktop app, they used to find `rcllr` but not `node` and exit with 127.
+  Run `rcllr install` again to update the hooks of a brain.
+- The README tells users of nvm, fnm or Volta to link `node` into `~/.local/bin` too, and to remove dummkopf
+  before installing rcllr.
+
 ## [0.5.0] - 2026-10-23
 
 ### Renamed
