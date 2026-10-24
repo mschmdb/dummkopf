@@ -5,6 +5,13 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Link checks look only at a target's exact spelling. On Windows, `secret.md.` or `SECRET~1.MD` could reach a sensitive
+  note under a name the sensitive list does not hold, and a link check then answered differently than for a missing
+  note. A link with a backslash is now invalid: on Windows, `public/..\notes\x.md` could climb out of a folder in
+  `links.allow_outside`. Both found in a review of the Windows support, traced in code, not reproduced on Windows.
+
 ### Added
 
 - `check` warns when a visible note names a sensitive file or folder in plain text, for example a path in backticks.

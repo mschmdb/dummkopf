@@ -68,7 +68,7 @@ export function anchor(value: string, windows = WINDOWS): string {
 
 const isAnchor = (part: string | undefined): boolean => part !== undefined && part.endsWith("/");
 
-const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])$/iu;
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])$/iu;
 const WINDOWS_BAD_CHAR = /[<>:"|?*\u0000-\u001f]/u;
 
 /**

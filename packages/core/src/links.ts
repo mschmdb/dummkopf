@@ -1,11 +1,11 @@
 /** Link checks for write packets: no dead links, no links across sensitivity or scope barriers. */
 
-import type { Access, Note } from "./access.ts";
+import { type Access, exactSpelling, type Note } from "./access.ts";
 import { AccessDenied } from "./errors.ts";
 import { insideWithoutSymlinks } from "./files.ts";
 import { text as say } from "./messages.ts";
 import { len, rstrip, sorted, strip, WS, WS_CHARS } from "./py.ts";
-import { isDir, isFile, join, parts, stem, suffix } from "./pyos.ts";
+import { isDir, isFile, join, parts, stem, suffix, windowsUnsafe } from "./pyos.ts";
 import { dirname, isabs, joinPosix, normpath, unquote, UrlError, urlsplit } from "./pyurl.ts";
 
 export const ALLOWED_SCHEMES: readonly string[] = ["http", "https", "mailto"];
@@ -175,6 +175,17 @@ export function linkIssues(access: Access, note: Note, overlay: ReadonlyMap<stri
         continue;
       }
       rel = joined;
+    }
+    // A backslash is a separator on Windows: `public/..\notes\x.md` would pass the `../` check above and climb out.
+    if (rel.includes("\\")) {
+      problem("link-invalid", "link_escapes", true);
+      continue;
+    }
+    // Ask the disk only about the exact spelling. Windows also finds `secret.md.` or `SECRET~1.MD`, which the
+    // sensitive list does not name; such a target must answer like a missing one.
+    if (!overlay.has(rel) && (windowsUnsafe(rel) || !exactSpelling(access.root, rel))) {
+      problem("link-unavailable", "link_unavailable");
+      continue;
     }
     // Anything that is not a readable note answers like a missing file: folders of hidden topics,
     // files outside the note folders, .git. Otherwise a link check would map the repository.
