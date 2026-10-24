@@ -5,6 +5,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `import-memory` no longer fails on a first run with more files than `limits.max_changes`: each source gets packages
+  of its own, so a new topic's README always travels with its first notes. `--dry-run` now only lists the changes.
+
 ## [0.5.2] - 2026-10-24
 
 ### Added

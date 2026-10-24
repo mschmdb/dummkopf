@@ -101,3 +101,25 @@ test("projects = [\"*\"] groups Codex sessions by their folder and honours exclu
   assert.deepEqual(run(target, home).changed, ["topics/codex-memory/README.md", "topics/codex-memory/users-me-sites-shop/c.md",
     "topics/codex-memory/users-me-brain/a.md"]);
 });
+
+test("many files from two sources import in packages that never split a topic from its README, and a dry run lists them", () => {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure('[scopes]\nvalues = ["private", "work", "memory-claude", "memory-codex"]\n[extras]\nclaude_memory = true\n'
+    + 'codex_memory = true\n[claude_memory]\nprojects = ["/Users/me/Sites/shop"]\n[codex_memory]\nprojects = ["*"]\n'
+    + '[limits]\nmax_changes = 3\n');
+  target.gitInit();
+  target.commit("Initial");
+  const claude = tempDir();
+  const folder = path.join(claude, "projects", "-Users-me-Sites-shop", "memory");
+  fs.mkdirSync(folder, { recursive: true });
+  for (const name of ["a", "b", "c", "d"]) {
+    fs.writeFileSync(path.join(folder, name + ".md"), "---\nname: " + name + "\ndescription: Fact " + name + ".\n---\n\nBody.\n");
+  }
+  const codex = codexHome({ "x.md": summary("/Users/me/Sites/shop", "X", "Codex fact."), "y.md": summary("/Users/me/Sites/shop", "Y", "More.") });
+  const options = { claudeHome: claude, codexHome: codex, sync: true };
+  assert.equal(importMemory(new Access(target.config), { ...options, dryRun: true }).changed.length, 8);
+  assert.ok(!target.exists("topics/claude-memory"));
+  assert.equal(importMemory(new Access(target.config), { ...options, dryRun: false }).changed.length, 8);
+  assert.ok(target.exists("topics/codex-memory/users-me-sites-shop/y.md"));
+});

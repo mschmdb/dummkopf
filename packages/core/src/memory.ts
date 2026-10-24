@@ -162,12 +162,17 @@ export function importMemory(access: Access, options: MemoryImportOptions): Memo
   if (!config.extras.claudeMemory && !config.extras.codexMemory) {
     throw new Rejected("extra_disabled", { name: "claude_memory" });
   }
-  const changes = sources.flatMap((source) => sourceChanges(access, source, options.project));
-  const changed = changes.map((change) => change.path);
+  const perSource = sources.map((source) => sourceChanges(access, source, options.project));
+  const changed = perSource.flat().map((change) => change.path);
+  // A dry run only lists: its packages would fail, because a new topic's README is not written between them.
+  if (options.dryRun) return { changed, sync: "not-run" };
   let sync = "not-run";
-  for (let start = 0; start < changes.length; start += config.limits.maxChanges) {
-    const packet = { changes: changes.slice(start, start + config.limits.maxChanges) };
-    sync = ingest(access, packet, options.dryRun, options.sync && !options.dryRun, "Import agent memory").sync;
+  // Each source starts a package of its own, so its topic README always travels with the first notes of it.
+  for (const changes of perSource) {
+    for (let start = 0; start < changes.length; start += config.limits.maxChanges) {
+      const packet = { changes: changes.slice(start, start + config.limits.maxChanges) };
+      sync = ingest(access, packet, false, options.sync, "Import agent memory").sync;
+    }
   }
   return { changed, sync };
 }
