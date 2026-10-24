@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-24
+
 ### Security
 
 - Link checks look only at a target's exact spelling. On Windows, `secret.md.` or `SECRET~1.MD` could reach a sensitive
