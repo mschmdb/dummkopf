@@ -71,7 +71,11 @@ body {
 .prose-rcllr ol { list-style: decimal; padding-left: 1.5rem; }
 .prose-rcllr li + li { margin-top: 0.35rem; }
 .prose-rcllr code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-xs); padding: 0 0.25em; }
-.prose-rcllr pre, .code-block pre { overflow-x: auto; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 1rem; font-family: var(--font-mono); font-size: var(--text-sm); }
+/* Long lines wrap instead of scrolling; copying still takes the line as written. Space on the right for the button. */
+main pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 1rem 4.5rem 1rem 1rem; font-family: var(--font-mono); font-size: var(--text-sm); }
+.code-copy { position: relative; }
+.code-copy-button { position: absolute; top: 0.5rem; right: 0.5rem; border: 1px solid var(--rule); border-radius: var(--radius-sm); background: var(--bg); color: var(--ink-muted); font-size: var(--text-xs); padding: 0.15rem 0.5rem; }
+.code-copy-button:hover { color: var(--ink); border-color: var(--rule-strong); }
 .prose-rcllr pre code { border: 0; padding: 0; background: none; }
 .prose-rcllr table { display: block; overflow-x: auto; border-collapse: collapse; font-size: var(--text-sm); }
 .prose-rcllr th, .prose-rcllr td { border: 1px solid var(--rule); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }

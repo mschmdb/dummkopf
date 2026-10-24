@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Moon from '@lucide/svelte/icons/moon';
+	import Sun from '@lucide/svelte/icons/sun';
 	import { applyTheme, resolveTheme, THEME_STORAGE_KEY, type Theme } from '#lib/theme/theme.js';
 
 	let theme = $state<Theme>('light');
@@ -22,9 +24,15 @@
 
 <button
 	type="button"
-	class="rounded-md border border-rule px-3 py-1.5 text-sm text-ink-muted hover:border-rule-strong hover:text-ink"
+	class="inline-flex size-10 items-center justify-center rounded-md text-ink-muted hover:bg-bg-elevated hover:text-ink"
+	aria-label="Dark mode"
+	title="Dark mode"
 	aria-pressed={theme === 'dark'}
 	onclick={toggle}
 >
-	Dark mode
+	{#if theme === 'dark'}
+		<Sun size={18} aria-hidden="true" />
+	{:else}
+		<Moon size={18} aria-hidden="true" />
+	{/if}
 </button>
