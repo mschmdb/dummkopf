@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DocsShell from '#lib/components/DocsShell.svelte';
 	import { OPTION_GROUPS } from '#lib/content/index.js';
-	import { SITE } from '#lib/site.js';
+	import Seo from '#lib/components/Seo.svelte';
 
 	let { data } = $props();
 	const command = $derived(data.command);
@@ -16,10 +16,7 @@
 	]);
 </script>
 
-<svelte:head>
-	<title>rcllr {command.name} · {SITE.name}</title>
-	<meta name="description" content={command.purpose} />
-</svelte:head>
+<Seo kind="article" section="Commands" name="rcllr {command.name}" />
 
 <DocsShell {headings}>
 	<h1 class="font-mono text-3xl font-semibold tracking-tight">rcllr {command.name}</h1>

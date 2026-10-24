@@ -37,6 +37,9 @@ importers:
       '@fontsource/ibm-plex-sans':
         specifier: 5.3.0
         version: 5.3.0
+      '@lucide/svelte':
+        specifier: ^1.61.0
+        version: 1.61.0(svelte@5.57.2)
     devDependencies:
       '@sveltejs/adapter-static':
         specifier: 4.0.0
@@ -53,6 +56,9 @@ importers:
       marked:
         specifier: 18.1.1
         version: 18.1.1
+      playwright:
+        specifier: ^1.60.0
+        version: 1.60.0
       rcllr:
         specifier: workspace:*
         version: link:../packages/cli
@@ -120,6 +126,11 @@ packages:
 
   '@loaderkit/resolve@1.0.6':
     resolution: {integrity: sha512-G8FdIoF5CypfwmD9rl8BXod5HDn8JqB0CCNBXDTaRZ+yRYhARrrSToX1zg1zy9jX3zLqigsELwhT4gNtkdQAUg==}
+
+  '@lucide/svelte@1.61.0':
+    resolution: {integrity: sha512-Vwj4ADoKgVogLFpEbXv2PS2hh2fj+aAqPuiNydI88Zkyb1l7veL4fXgRrOX3tgpESHhIGneNkSSYhHupvCBshg==}
+    peerDependencies:
+      svelte: ^5
 
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
@@ -680,6 +691,11 @@ packages:
   fflate@0.8.3:
     resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -958,6 +974,16 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0:
+    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   postcss@8.5.31:
     resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
@@ -1257,6 +1283,10 @@ snapshots:
   '@loaderkit/resolve@1.0.6':
     dependencies:
       '@braidai/lang': 1.1.2
+
+  '@lucide/svelte@1.61.0(svelte@5.57.2)':
+    dependencies:
+      svelte: 5.57.2
 
   '@oxc-project/types@0.155.0': {}
 
@@ -1651,6 +1681,9 @@ snapshots:
 
   fflate@0.8.3: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -1888,6 +1921,14 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.60.0: {}
+
+  playwright@1.60.0:
+    dependencies:
+      playwright-core: 1.60.0
+    optionalDependencies:
+      fsevents: 2.3.2
 
   postcss@8.5.31:
     dependencies:

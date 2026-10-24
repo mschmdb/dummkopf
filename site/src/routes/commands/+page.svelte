@@ -1,13 +1,10 @@
 <script lang="ts">
 	import DocsShell from '#lib/components/DocsShell.svelte';
 	import { commands, globalOptions } from '#lib/content/index.js';
-	import { SITE } from '#lib/site.js';
+	import Seo from '#lib/components/Seo.svelte';
 </script>
 
-<svelte:head>
-	<title>Commands · {SITE.name}</title>
-	<meta name="description" content="Every rcllr command with its purpose, options and examples, taken from the CLI help." />
-</svelte:head>
+<Seo kind="collection" name="Commands" />
 
 <DocsShell>
 	<h1 class="text-3xl font-semibold tracking-tight">Commands</h1>
