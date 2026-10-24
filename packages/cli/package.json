@@ -1,6 +1,6 @@
 {
   "name": "rcllr",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Long-term memory for coding agents, kept in a plain Git repo of Markdown notes.",
   "license": "MIT",
   "repository": {

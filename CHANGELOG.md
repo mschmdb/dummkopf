@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-10-24
+
 ### Changed
 
 - `scope_by_project` gives single projects of a memory import their own scope, e.g. work memory under `work` and
