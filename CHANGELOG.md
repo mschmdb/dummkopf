@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-24
+
 ### Added
 
 - `rcllr import-memory` mirrors Claude Code's auto memory of the projects listed in `[claude_memory]` into the brain,
