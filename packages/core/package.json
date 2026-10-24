@@ -1,6 +1,6 @@
 {
   "name": "@rcllr/core",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Core of rcllr: notes, scopes, the sensitivity gate, search and Git sync.",
   "license": "MIT",
   "repository": {

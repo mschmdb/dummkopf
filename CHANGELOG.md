@@ -5,6 +5,8 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-24
+
 ### Fixed
 
 - `import-memory` no longer fails on a first run with more files than `limits.max_changes`: each source gets packages
