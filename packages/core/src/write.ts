@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 import * as fs from "node:fs";
 
-import { Access } from "./access.ts";
+import { Access, type Note } from "./access.ts";
 import { type Config, configFile } from "./config.ts";
 import { AccessDenied, Rejected, SyncError } from "./errors.ts";
 import { type Issue, issue, linkIssues } from "./links.ts";
@@ -217,6 +217,23 @@ function configIssues(config: Config): Issue[] {
     .map(([, file, code, key]) => issue(name(configFile(config.root)), code, say(key, "plain", { file }), "warning"));
 }
 
+/**
+ * Lines of a visible note that name a sensitive file or folder in plain text, not as a link. The note itself is
+ * fine, but every reader learns that the hidden path exists. The warning never repeats the path.
+ */
+function mentionIssues(access: Access, note: Note): Issue[] {
+  if (note.sensitive) return [];
+  const found: Issue[] = [];
+  note.text.split("\n").forEach((line, index) => {
+    // Split, don't match: a pattern around "/" would backtrack on long runs of slashes.
+    const named = line.split(/[^\p{L}\p{N}_.\/-]+/u).filter((token) => token.includes("/"))
+      .map((token) => token.replace(/^\.\//, "").replace(/[.,;:]+$/, "").replace(/\/+$/, ""))
+      .some((token) => token && access.sensitivity.isListed(token));
+    if (named) found.push(issue(note.path, "sensitive-path-mention", say("sensitive_path_mention", "plain"), "warning", index + 1));
+  });
+  return found;
+}
+
 export function check(access: Access, paths: readonly string[] | null = null): CheckResult {
   const problems: Issue[] = paths === null ? configIssues(access.config) : [];
   let checked = 0;
@@ -232,6 +249,7 @@ export function check(access: Access, paths: readonly string[] | null = null): C
     problems.push(...metadataIssues(note, access.config));
     // Report existing dead links; this is not a write request.
     problems.push(...linkIssues(access, note, new Map(), note, true));
+    problems.push(...mentionIssues(access, note));
   }
   // By path, then line; issues without a line (frontmatter) come first. The sort is stable.
   problems.sort((a, b) => compare(a.path, b.path) || (a.line ?? 0) - (b.line ?? 0));
