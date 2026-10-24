@@ -21,6 +21,10 @@ describe("windows path helpers", () => {
     assert.equal(isAbsolute("D:/brain", true), true);
     assert.equal(isAbsolute("D:brain", true), false);
     assert.equal(isAbsolute("D:/brain", false), false);
+    assert.equal(anchor("//server/share/brain", true), "//server/share/");
+    assert.equal(anchor("//server/share", true), "//server/share/");
+    assert.equal(anchor("//server", true), "/");
+    assert.equal(anchor("//server/share", false), "/");
   });
 
   test("parts, asPosix, parent and name keep the drive anchor", () => {
@@ -35,6 +39,9 @@ describe("windows path helpers", () => {
     assert.equal(name("C:/", true), "");
     assert.equal(name("C:/a/b.md", true), "b.md");
     assert.equal(join("C:/brain", "topics", "a.md"), "C:/brain/topics/a.md");
+    assert.equal(asPosix("//server/share//brain/", true), "//server/share/brain");
+    assert.equal(parent("//server/share/brain", true), "//server/share/");
+    assert.equal(parent("//server/share", true), "//server/share/");
   });
 
   test("POSIX results stay unchanged", () => {

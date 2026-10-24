@@ -54,11 +54,16 @@ export function posixSeparators(value: string, windows = WINDOWS): string {
   return windows ? value.replaceAll("\\", "/") : value;
 }
 
-/** `/` for an absolute POSIX path, `C:/` for a Windows drive path (Windows only), else empty. */
+/**
+ * `/` for an absolute POSIX path; on Windows also `C:/` for a drive path and `//server/share/` for a
+ * network path. Empty for a relative path.
+ */
 export function anchor(value: string, windows = WINDOWS): string {
-  if (value.startsWith("/")) return "/";
-  if (windows && /^[A-Za-z]:\//.test(value)) return value.slice(0, 3);
-  return "";
+  if (windows) {
+    const found = /^(?:[A-Za-z]:\/|\/\/[^/]+\/[^/]+(?:\/|$))/.exec(value);
+    if (found) return found[0].endsWith("/") ? found[0] : found[0] + "/";
+  }
+  return value.startsWith("/") ? "/" : "";
 }
 
 const isAnchor = (part: string | undefined): boolean => part !== undefined && part.endsWith("/");
@@ -168,7 +173,8 @@ export function resolve(value: string): string {
 function resolveNative(value: string): string {
   const absolute = path.resolve(value);
   try {
-    return fs.realpathSync(absolute);
+    // The native call on Windows expands 8.3 short names (RUNNER~1), so one folder has one spelling.
+    return WINDOWS ? fs.realpathSync.native(absolute) : fs.realpathSync(absolute);
   } catch {
     const up = path.dirname(absolute);
     if (up === absolute) return absolute;
