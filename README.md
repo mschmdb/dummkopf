@@ -424,7 +424,8 @@ answers in 0.16 s. To measure your own machine, run `pnpm bench` in a checkout.
 
 **Windows?** Yes. CI runs the test suite on Windows with Node 22 and 24. The Git hook and the agent hooks are shell
 scripts, so they need the bash from Git for Windows. Write paths in `rcllr.toml` in single quotes or with forward
-slashes, see [Configuration reference](#configuration-reference).
+slashes, see [Configuration reference](#configuration-reference). New notes get mode `0600` on macOS and Linux only;
+on Windows they inherit the folder's access rights, so keep the brain in a folder only you can read.
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
 the note folders. rcllr gives the same answer in all three cases, on purpose. With a narrow `--scope`, the answer
