@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 
 ### Changed
 
+- `scope_by_project` gives single projects of a memory import their own scope, e.g. work memory under `work` and
+  personal projects under `private`. A note's scope can't change once written, so delete a project's mirror folder
+  before you move it to another scope.
 - Imported agent memory counts 60 percent of an own note in the ranking instead of 25. At 25, `context` showed
   loosely related own notes and dropped the memory that answered the question.
 - A denied read or write with a narrow `--scope` adds that other scopes stay hidden and how to widen the search.

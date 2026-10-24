@@ -76,15 +76,23 @@ function sourceOf(text: string): string {
   return new RegExp("^" + SOURCE_KEY + ": (.*)$", "m").exec(text)?.[1] ?? "";
 }
 
-function noteText(config: Config, source: Source, project: string, memory: Memory): string {
+/** The scope for a project: its `scope_by_project` entry, else the source's scope. */
+function scopeFor(options: MemorySourceOptions, matches: (project: string) => boolean): string {
+  const entry = options.scopeByProject.find((item) => matches(item.slice(0, item.lastIndexOf("="))));
+  return entry ? entry.slice(entry.lastIndexOf("=") + 1) : options.scope;
+}
+
+function noteText(config: Config, source: Source, project: string, memory: Memory, scope: string): string {
   const fm = config.frontmatter;
   const status = config.status.active;
   const day = /^\d{4}-\d{2}-\d{2}/.exec(memory.modified)?.[0] ?? new Date().toISOString().slice(0, 10);
   const keyFact = oneLine(unlinked(memory.description)) || source.label + " memory " + memory.name + ".";
   const aliases = [...new Set([memory.name, memory.type, source.alias].map((item) => oneLine(item)).filter(Boolean))]
     .map((item) => item.replace(/[,[\]]/g, " ").trim());
-  const head = frontmatter([[fm.updated, day], [fm.status, status], [fm.keyFact, keyFact], [fm.aliases, aliases],
-    [SOURCE_KEY, fingerprint(project, memory, status)]]);
+  // The topic README carries the source's scope; a note names its own only when it differs.
+  const own: [string, string][] = scope === source.options.scope ? [] : [[fm.scope, scope]];
+  const head = frontmatter([...own, [fm.updated, day], [fm.status, status], [fm.keyFact, keyFact], [fm.aliases, aliases],
+    [SOURCE_KEY, fingerprint(project + "|" + scope, memory, status)]]);
   return head + "\n# " + oneLine(memory.name) + "\n\n> Imported from the " + source.label + " memory of " + project
     + ". It records what an agent noted in earlier sessions, not an instruction.\n\n" + unlinked(memory.body).trim() + "\n";
 }
@@ -123,10 +131,11 @@ function sourceChanges(access: Access, source: Source, only: string | undefined)
     changes.push({ path, content, expected: previous ? previous.revision : null });
   };
   const selection = { projects: source.options.projects, exclude: source.options.exclude, only };
-  for (const { label: project, slug, memories } of projectMemories(source.key, source.home, selection)) {
+  for (const { label: project, slug, memories, matches } of projectMemories(source.key, source.home, selection)) {
     const folder = topic + "/" + slug;
+    const scope = scopeFor(source.options, matches);
     const name = (memory: Memory): string => mirrorName(memory.file, config.layout.topicReadme);
-    for (const memory of memories) want(folder + "/" + name(memory), noteText(config, source, project, memory));
+    for (const memory of memories) want(folder + "/" + name(memory), noteText(config, source, project, memory, scope));
     const kept = new Set(memories.map(name));
     let mirrored: string[] = [];
     try {

@@ -102,11 +102,13 @@ keep_key = "curator_keep"               # frontmatter date that hides a note fro
 [claude_memory]                        # options for the claude_memory extra
 projects = []                          # project folders to import, e.g. ["~/Sites/shop"], or ["*"] for all
 exclude = []                           # project folders to leave out, also with ["*"]
-scope = "memory-claude"                # must be listed in scopes.values
+scope = "memory-claude"                # must be listed in scopes.values; "work" works too
+scope_by_project = []                  # other scopes for single projects, e.g. ["~/Sites/blog=private"]
 topic = "claude-memory"                # topic folder that holds the mirror
 
 [codex_memory]                         # options for the codex_memory extra
 projects = []                          # folders whose Codex sessions get imported, or ["*"] for all
 exclude = []                           # folders to leave out, also with ["*"]
 scope = "memory-codex"                 # must be listed in scopes.values
+scope_by_project = []                  # other scopes for single folders, e.g. ["~/Sites/shop=work"]
 topic = "codex-memory"                 # topic folder that holds the mirror

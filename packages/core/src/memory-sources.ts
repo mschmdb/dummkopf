@@ -88,6 +88,8 @@ export interface ProjectMemory {
   /** Folder name inside the topic. */
   slug: string;
   memories: Memory[];
+  /** True when a configured project folder means this project, e.g. for `scope_by_project`. */
+  matches: (project: string) => boolean;
 }
 
 export interface Selection {
@@ -149,7 +151,8 @@ export function projectMemories(source: SourceKey, home: string, selection: Sele
         if (!names) return [];
         const memories = names.map((name) => parseClaude(name, fs.readFileSync(join(memoryFolder, name), "utf-8")));
         const known = listed.find((project) => claudeProjectFolder(project) === folder);
-        return [{ label: known ?? claudeLabel(join(root, folder)), slug: slug(folder), memories }];
+        const matches = (project: string): boolean => claudeProjectFolder(projectPath(project)) === folder;
+        return [{ label: known ?? claudeLabel(join(root, folder)), slug: slug(folder), memories, matches }];
       });
   }
   const folder = join(home, "memories", "rollout_summaries");
@@ -164,5 +167,8 @@ export function projectMemories(source: SourceKey, home: string, selection: Sele
     groups.set(project, [...(groups.get(project) ?? []), memory]);
   }
   return [...groups].sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([project, memories]) => ({ label: project, slug: slug(project), memories }));
+    .map(([project, memories]) => ({
+      label: project, slug: slug(project), memories,
+      matches: (folder: string): boolean => inside(project, projectPath(folder)),
+    }));
 }

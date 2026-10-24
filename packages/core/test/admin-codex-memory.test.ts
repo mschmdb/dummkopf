@@ -123,3 +123,16 @@ test("many files from two sources import in packages that never split a topic fr
   assert.equal(importMemory(new Access(target.config), { ...options, dryRun: false }).changed.length, 8);
   assert.ok(target.exists("topics/codex-memory/users-me-sites-shop/y.md"));
 });
+
+test("scope_by_project works for Codex folders, a session in a subfolder included", () => {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure('[extras]\ncodex_memory = true\n[codex_memory]\nprojects = ["*"]\nscope = "private"\n'
+    + 'scope_by_project = ["/Users/me/Sites/shop=work"]\n');
+  target.gitInit();
+  target.commit("Initial");
+  run(target, codexHome({ "a.md": summary("/Users/me/Sites/shop/api", "API", "Work."), "b.md": summary("/Users/me/brain", "Home", "Private.") }));
+  const work = new Access(target.config, "work");
+  assert.equal(work.read("topics/codex-memory/users-me-sites-shop-api/a.md").scope, "work");
+  assert.throws(() => work.read("topics/codex-memory/users-me-brain/b.md"));
+});
