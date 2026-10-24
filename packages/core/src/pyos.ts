@@ -43,20 +43,56 @@ export function isSymlink(target: string): boolean {
   return lstat(target)?.isSymbolicLink() ?? false;
 }
 
+/**
+ * Paths inside rcllr are POSIX text. On Windows, absolute paths keep their drive letter (`C:/Users/...`)
+ * and use forward slashes, which every Windows file API accepts.
+ */
+const WINDOWS = process.platform === "win32";
+
+/** Backslashes become slashes on Windows; elsewhere a backslash is an ordinary file name character. */
+export function posixSeparators(value: string, windows = WINDOWS): string {
+  return windows ? value.replaceAll("\\", "/") : value;
+}
+
+/** `/` for an absolute POSIX path, `C:/` for a Windows drive path (Windows only), else empty. */
+export function anchor(value: string, windows = WINDOWS): string {
+  if (value.startsWith("/")) return "/";
+  if (windows && /^[A-Za-z]:\//.test(value)) return value.slice(0, 3);
+  return "";
+}
+
+const isAnchor = (part: string | undefined): boolean => part !== undefined && part.endsWith("/");
+
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])$/iu;
+const WINDOWS_BAD_CHAR = /[<>:"|?*\u0000-\u001f]/u;
+
+/**
+ * True if a relative path has a component Windows would read differently from how it is spelled: an
+ * alternate data stream (`a.md:x`), a device name (`CON`, `nul.md`), a trailing dot or space that Win32
+ * strips, or a character Windows forbids. Always false off Windows.
+ */
+export function windowsUnsafe(value: string, windows = WINDOWS): boolean {
+  if (!windows) return false;
+  return value.split("/").some((part) => part !== "." && part !== ".." && (
+    WINDOWS_BAD_CHAR.test(part) || part.endsWith(".") || part.endsWith(" ")
+    || WINDOWS_DEVICE.test(part.split(".")[0]!.trimEnd())));
+}
+
 /** Path components like PurePosixPath(value).parts: `//` and `.` collapse, `..` stays. */
-export function parts(value: string): string[] {
-  const out = value.startsWith("/") ? ["/"] : [];
-  for (const part of value.split("/")) {
+export function parts(value: string, windows = WINDOWS): string[] {
+  const root = anchor(value, windows);
+  const out = root ? [root] : [];
+  for (const part of value.slice(root.length).split("/")) {
     if (part !== "" && part !== ".") out.push(part);
   }
   return out;
 }
 
 /** PurePosixPath(value).as_posix(). */
-export function asPosix(value: string): string {
-  const items = parts(value);
+export function asPosix(value: string, windows = WINDOWS): string {
+  const items = parts(value, windows);
   if (items.length === 0) return ".";
-  if (items[0] === "/") return "/" + items.slice(1).join("/");
+  if (isAnchor(items[0])) return items[0] + items.slice(1).join("/");
   return items.join("/");
 }
 
@@ -67,25 +103,25 @@ export function stripTrailingSlashes(value: string): string {
   return value.slice(0, end);
 }
 
-export function isAbsolute(value: string): boolean {
-  return value.startsWith("/");
+export function isAbsolute(value: string, windows = WINDOWS): boolean {
+  return anchor(value, windows) !== "";
 }
 
 /** root / a / b without collapsing `..`, like pathlib. */
 export function join(root: string, ...rest: string[]): string {
   let out = root;
   for (const part of rest) {
-    if (part.startsWith("/")) out = part;
+    if (isAbsolute(part)) out = part;
     else if (part !== "") out = out.endsWith("/") ? out + part : out + "/" + part;
   }
   return asPosix(out);
 }
 
 /** PurePosixPath(value).name. */
-export function name(value: string): string {
-  const items = parts(value);
+export function name(value: string, windows = WINDOWS): string {
+  const items = parts(value, windows);
   const last = items[items.length - 1];
-  return last === undefined || last === "/" ? "" : last;
+  return last === undefined || isAnchor(last) ? "" : last;
 }
 
 /** PurePosixPath(value).suffix: `.md` for `a.md`, empty for `.md` and `a.`. */
@@ -104,18 +140,19 @@ export function stem(value: string): string {
 }
 
 /** PurePosixPath(value).parent. */
-export function parent(value: string): string {
-  const items = parts(value);
-  if (items.length <= 1) return items[0] === "/" ? "/" : ".";
-  return asPosix((items[0] === "/" ? "/" : "") + items.slice(items[0] === "/" ? 1 : 0, -1).join("/"));
+export function parent(value: string, windows = WINDOWS): string {
+  const items = parts(value, windows);
+  const root = isAnchor(items[0]) ? items[0]! : "";
+  if (items.length <= 1) return root || ".";
+  return asPosix(root + items.slice(root ? 1 : 0, -1).join("/"), windows);
 }
 
 /** PurePosixPath(value).parents, nearest first; a relative path ends with `.`. */
-export function parents(value: string): string[] {
+export function parents(value: string, windows = WINDOWS): string[] {
   const out: string[] = [];
-  let current = asPosix(value);
+  let current = asPosix(value, windows);
   for (;;) {
-    const up = parent(current);
+    const up = parent(current, windows);
     if (up === current) break;
     out.push(up);
     current = up;
@@ -123,15 +160,19 @@ export function parents(value: string): string[] {
   return out;
 }
 
-/** Path.resolve(): absolute, symlinks resolved as far as the path exists. */
+/** Path.resolve(): absolute, symlinks resolved as far as the path exists. POSIX separators on Windows. */
 export function resolve(value: string): string {
+  return posixSeparators(resolveNative(value));
+}
+
+function resolveNative(value: string): string {
   const absolute = path.resolve(value);
   try {
     return fs.realpathSync(absolute);
   } catch {
     const up = path.dirname(absolute);
     if (up === absolute) return absolute;
-    return path.join(resolve(up), path.basename(absolute));
+    return path.join(resolveNative(up), path.basename(absolute));
   }
 }
 
@@ -142,7 +183,7 @@ export function isRelativeTo(child: string, root: string): boolean {
 
 /** child relative to root, as posix text. */
 export function relativeTo(child: string, root: string): string {
-  return asPosix(path.relative(root, child));
+  return asPosix(posixSeparators(path.relative(root, child)));
 }
 
 /** UTF-8 text, strict. Throws on invalid bytes, like read_bytes().decode("utf-8"). */

@@ -3,7 +3,7 @@
 import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
 import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytesText, resolve,
-  stripTrailingSlashes } from "./pyos.ts";
+  stripTrailingSlashes, windowsUnsafe } from "./pyos.ts";
 import { validateMemorySources } from "./config-memory.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
@@ -303,7 +303,7 @@ function relativePath(value: string, key: string, allowDir = false, written = fa
   const plain = allowDir ? stripTrailingSlashes(value) : value;
   const items = parts(plain);
   if (!plain || isAbsolute(plain) || items.includes("..") || value.includes("\\") || items.length === 0
-      || value.startsWith("~") || asPosix(plain) !== plain
+      || value.startsWith("~") || asPosix(plain) !== plain || windowsUnsafe(plain)
       || (written && (items[0] === ".git" || items[0] === CONFIG_NAME || items[0] === LEGACY_CONFIG_NAME))) {
     throw invalid(key, "must be a normalized relative path inside the brain");
   }

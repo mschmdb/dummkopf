@@ -9,7 +9,7 @@ import { parseFrontmatter, textOr } from "./frontmatter.ts";
 import { lstrip, splitlines, strip } from "./py.ts";
 import {
   asPosix, exists, isAbsolute, isDir, isFile, isRelativeTo, isSymlink, join, listdir, name, parents, parts,
-  readBytesText, relativeTo, resolve as resolvePath, sha256, stem, stripTrailingSlashes, suffix,
+  readBytesText, relativeTo, resolve as resolvePath, sha256, stem, stripTrailingSlashes, suffix, windowsUnsafe,
 } from "./pyos.ts";
 import { Sensitivity } from "./sensitive.ts";
 
@@ -89,7 +89,7 @@ export class Access {
   /** A note path relative to the brain, inside a note folder; anything else is denied. */
   relative(value: string): string {
     const items = parts(value);
-    if (isAbsolute(value) || items.includes("..") || value.includes("\\")) throw denied();
+    if (isAbsolute(value) || items.includes("..") || value.includes("\\") || windowsUnsafe(value)) throw denied();
     if (items.length < 2 || !this.config.layout.roots.includes(items[0]!)) throw denied();
     return stripTrailingSlashes(asPosix(value));
   }
