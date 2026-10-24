@@ -169,7 +169,7 @@ describe("sync", () => {
     s.brain.toml = s.brain.toml.replace(s.remote, url);
     s.brain.configure("");
     s.git(["remote", "set-url", "origin", url]);
-    const ssh = path.join(s.base, "fake-ssh");
+    const ssh = s.base + "/fake-ssh"; // Git runs core.sshCommand through sh, which eats backslashes.
     fs.writeFileSync(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n");
     fs.chmodSync(ssh, 0o755);
     s.git(["config", "core.sshCommand", ssh]);
