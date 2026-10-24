@@ -9,8 +9,7 @@ import { Access } from "../src/access.ts";
 import { len, splitlines } from "../src/py.ts";
 import { bounded } from "../src/render.ts";
 import { contextPacket, find, type Packet } from "../src/search.ts";
-import { brain, DEV_BIN, documentText, german, invoke, revision, tempDir } from "./helpers.ts";
-import { spawnSync } from "node:child_process";
+import { brain, documentText, german, invoke, revision, spawnDev, tempDir } from "./helpers.ts";
 
 process.setMaxListeners(0);
 
@@ -315,7 +314,7 @@ describe("cli read", () => {
   test("root option and missing config", () => {
     const b = brain();
     b.write("notes/a.md", documentText({ body: "pnpm" }));
-    const run = (args: string[]): number | null => spawnSync(DEV_BIN, args, { cwd: b.root, encoding: "utf-8" }).status;
+    const run = (args: string[]): number | null => spawnDev(args, { cwd: b.root, encoding: "utf-8" }).status;
     assert.equal(run(["--root", b.root, "find", "pnpm", "--json"]), 0);
     assert.equal(run(["find", "pnpm", "--root", b.root, "--json"]), 0);
     const empty = path.join(tempDir(), "empty");
@@ -324,7 +323,7 @@ describe("cli read", () => {
   });
 
   test("read help explains end before body and shows example", () => {
-    const result = spawnSync(DEV_BIN, ["read", "--help"], { encoding: "utf-8" });
+    const result = spawnDev(["read", "--help"], { encoding: "utf-8" });
     assert.equal(result.status, 0);
     const help = result.stdout.replace(/\s+/g, " ");
     assert.ok(help.includes("If --end lies before the first body line"));

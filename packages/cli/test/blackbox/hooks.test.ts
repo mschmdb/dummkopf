@@ -5,7 +5,7 @@ import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
-import { binary, type Brain, type Env, type Result, Sandbox, type Synced, fullNote, md } from "./harness.ts";
+import { binary, type Brain, type Env, fullNote, md, NO_FILE_MODES, type Result, Sandbox, type Synced } from "./harness.ts";
 
 const FILLER = "---\nupdated: 2026-10-01\nstatus: active\nkey_fact: K.\nsummary: K.\naliases: []\nperiod: []\n"
   + "entities: []\n---\n";
@@ -193,7 +193,7 @@ test("pre-commit regenerates the sensitive paths list", () => {
   assert.equal(result.code, 0);
   assert.ok(result.out.startsWith(".sensitive-paths updated.\n"));
   assert.equal(splitlines(b.read(".sensitive-paths")).at(-1), "notes/secret.md");
-  assert.equal(b.mode(".sensitive-paths"), 0o600);
+  if (!NO_FILE_MODES) assert.equal(b.mode(".sensitive-paths"), 0o600);
 });
 
 test("pre-commit lists a whole folder when its README has the marker", () => {

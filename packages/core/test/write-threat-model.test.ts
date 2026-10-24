@@ -13,7 +13,7 @@ import { generate, migrate } from "../src/meta.ts";
 import { PyDate } from "../src/pydate.ts";
 import { contextPacket, find } from "../src/search.ts";
 import { check, ingest, seams } from "../src/write.ts";
-import { type Brain, brain, documentText as document, invoke, revision, synced, tempDir } from "./helpers.ts";
+import { type Brain, brain, documentText as document, invoke, NO_FILE_MODES, revision, synced, tempDir } from "./helpers.ts";
 
 process.setMaxListeners(0);
 
@@ -169,7 +169,7 @@ describe("symlinks and robustness", () => {
   });
 
   // Root reads files without read permission, so the case cannot arise; Python's test fails as root too.
-  test("unreadable note is never overwritten", { skip: process.getuid?.() === 0 }, () => {
+  test("unreadable note is never overwritten", { skip: process.getuid?.() === 0 || NO_FILE_MODES }, () => {
     const b = brain();
     b.gitInit();
     const note = b.write("notes/a.md", "# A\n\nprecious\n");
