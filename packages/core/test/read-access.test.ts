@@ -179,6 +179,18 @@ describe("access", () => {
     denied(() => new Access(b.config, null, "../x"));
   });
 
+  test("Windows spellings of an existing note are denied", { skip: process.platform !== "win32" && "Windows only" }, () => {
+    const b = brain();
+    b.note("notes/a.md");
+    b.note("topics/health-notes/x.md");
+    const access = new Access(b.config);
+    assert.equal(access.read("notes/a.md").path, "notes/a.md");
+    for (const rel of ["notes/A.md", "notes/a.md.", "notes/a.md ", "notes/a.md::$DATA", "notes/a.md:x.md",
+      "notes\\a.md", b.root + "/notes/a.md", "notes/nul.md", "topics/HEALTH~1/x.md"]) {
+      denied(() => access.read(rel));
+    }
+  });
+
   test("note fields follow the mapping", () => {
     const g = german();
     g.write("notes/a.md", "---\nstand: 2026-01-01\nstatus: aktiv\nkernfakt: Fakt\naliase: [eins, zwei]\n---\n\n# Titel\n\nText\n");
