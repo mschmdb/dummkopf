@@ -1,6 +1,6 @@
 // Turns the repo's Markdown (README, CHANGELOG) into site pages. Pure functions; scripts/content.ts does the I/O.
 
-import { Marked, type Tokens } from "marked";
+import { Marked, type Token, type Tokens } from "marked";
 
 import type { Highlight } from "./highlight.ts";
 
@@ -77,13 +77,33 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function plain(html: string): string {
-  // Inline tags vanish without a gap ("<code>x</code>." stays "x."); block tags become spaces. Text never holds a
-  // raw "<" (marked writes &lt;), so any "<" left after that is the rest of a tag like "<ifr<iframe>ame>" and goes.
-  const text = html.replace(/<\/?(?:a|code|strong|em|b|i)\b[^>]*>/g, "").replace(/<[^>]+>/g, " ").replace(/</g, "");
-  // &amp; last, so "&amp;lt;" becomes "&lt;" and not "<".
-  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+/** Plain text of inline tokens: markup and raw HTML drop out, the words stay. */
+function plainInline(tokens: Token[] = []): string {
+  return tokens.map((token) => {
+    switch (token.type) {
+      case "html": return "";
+      case "br": return " ";
+      case "strong": case "em": case "del": case "link": return plainInline((token as Tokens.Generic).tokens);
+      default: return "text" in token ? String(token.text) : "";
+    }
+  }).join("");
+}
+
+/** Plain text of block tokens, for search and llms.txt. Built from tokens, so no HTML is ever stripped. */
+function plainBlocks(tokens: Token[]): string {
+  return tokens.map((token) => {
+    switch (token.type) {
+      case "html": case "space": case "hr": return "";
+      case "code": return (token as Tokens.Code).text;
+      case "list": return (token as Tokens.List).items.map((item) => plainBlocks(item.tokens)).join(" ");
+      case "table": {
+        const table = token as Tokens.Table;
+        return [...table.header, ...table.rows.flat()].map((cell) => plainInline(cell.tokens)).join(" ");
+      }
+      case "blockquote": return plainBlocks((token as Tokens.Blockquote).tokens);
+      default: return "tokens" in token && token.tokens ? plainInline(token.tokens) : "text" in token ? String(token.text) : "";
+    }
+  }).join(" ").replace(/\s+/g, " ").trim();
 }
 
 /** Render one page. Headings get GitHub-style ids; the page title is not repeated as a heading. */
@@ -94,8 +114,9 @@ export function renderPage(slug: string, title: string, markdown: string, links:
     renderer: {
       heading(this: { parser: { parseInline(tokens: Tokens.Generic[]): string } }, token: Tokens.Heading) {
         const inner = this.parser.parseInline(token.tokens);
-        const id = slugify(plain(inner));
-        if (token.depth <= 3) headings.push({ depth: token.depth, text: plain(inner), id });
+        const text = plainInline(token.tokens);
+        const id = slugify(text);
+        if (token.depth <= 3) headings.push({ depth: token.depth, text, id });
         return `<h${token.depth} id="${id}">${inner}</h${token.depth}>\n`;
       },
       code(token: Tokens.Code) {
@@ -110,6 +131,7 @@ export function renderPage(slug: string, title: string, markdown: string, links:
       },
     },
   });
-  const html = marked.parse(markdown, { async: false });
-  return { slug, title, html, headings, text: plain(html) };
+  const tokens = marked.lexer(markdown);
+  const html = marked.parser(tokens);
+  return { slug, title, html, headings, text: plainBlocks(tokens) };
 }

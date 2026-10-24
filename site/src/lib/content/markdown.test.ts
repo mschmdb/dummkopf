@@ -37,7 +37,7 @@ test("a page collects its headings with ids and links rewritten", () => {
   assert.equal(page.text, "Headless agents See sync.");
 });
 
-test("plain text unescapes entities once and leaves no tags behind", () => {
+test("plain text keeps code literally and drops raw HTML", () => {
   assert.equal(renderPage("x", "X", "Write `&lt;` for <.", links).text, "Write &lt; for <.");
-  assert.equal(renderPage("x", "X", "A <ifr<iframe>ame> b", links).text.includes("<iframe"), false);
+  assert.equal(renderPage("x", "X", "A <span>b</span> c\n\n<div>block</div>\n\nd", links).text, "A b c d");
 });
