@@ -11,5 +11,7 @@ export const SITE = {
 
 /** Top-level navigation. Sections that do not exist yet stay out, so no link leads nowhere. */
 export const NAV: readonly { href: string; label: string }[] = [
-  { href: "/", label: "Overview" },
+  { href: "/docs/quickstart-5-minutes", label: "Docs" },
+  { href: "/commands", label: "Commands" },
+  { href: "/changelog", label: "Changelog" },
 ];

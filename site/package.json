@@ -7,12 +7,13 @@
     "#lib/*": "./src/lib/*"
   },
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "pnpm content && vite dev",
+    "build": "pnpm content && vite build && node scripts/check-build.ts",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "pnpm content && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "node --test 'src/**/*.test.ts'",
-    "sync-tokens": "node scripts/sync-tokens.mjs"
+    "sync-tokens": "node scripts/sync-tokens.mjs",
+    "content": "node --conditions=source --disable-warning=ExperimentalWarning scripts/content.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",
@@ -23,6 +24,8 @@
     "@sveltejs/kit": "3.1.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tailwindcss/vite": "4.3.3",
+    "marked": "18.1.1",
+    "rcllr": "workspace:*",
     "svelte": "5.57.2",
     "svelte-check": "4.7.7",
     "tailwindcss": "4.3.3",

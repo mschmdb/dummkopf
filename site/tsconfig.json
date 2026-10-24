@@ -4,7 +4,14 @@
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
     "sourceMap": true,
-    "strict": true
+    "strict": true,
+    "customConditions": [
+      "source"
+    ]
   },
-  "include": ["src", "scripts", "vite.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "vite.config.ts"
+  ]
 }
