@@ -84,7 +84,7 @@ export class Sandbox {
       GIT_CONFIG_GLOBAL: path.join(this.home, ".gitconfig"),
     });
     const program = binary();
-    if (program.includes(path.sep)) env.PATH = path.dirname(program) + path.delimiter + (env.PATH ?? "");
+    if (program.includes("/") || program.includes(path.sep)) env.PATH = path.dirname(program) + path.delimiter + (env.PATH ?? "");
     this.env = env;
   }
 
