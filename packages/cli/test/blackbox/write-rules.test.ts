@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fullNote, ingest, md, newEntry, packet, rev, Sandbox, topic } from "./harness.ts";
+import { fullNote, ingest, md, newEntry, NO_FILE_MODES, packet, rev, Sandbox, topic } from "./harness.ts";
 import type { Brain } from "./harness.ts";
 
 const LINK_UNAVAILABLE = "link-unavailable";
@@ -118,7 +118,7 @@ test("new sensitive note with the grant is saved and then hidden", () => {
   const result = ingest(brain, [newEntry("notes/secret.md", md({ body: "> SENSITIVE\n\nsecretword" }))],
     ["--allow-sensitive", "notes/secret.md"]);
   assert.equal(result.code, 0);
-  assert.equal(brain.mode("notes/secret.md"), 0o600);
+  if (!NO_FILE_MODES) assert.equal(brain.mode("notes/secret.md"), 0o600);
   assert.equal(brain.run(["read", "notes/secret.md"]).err, "Path unavailable or access excluded.\n");
   const hits: { path: string }[] = JSON.parse(brain.run(["find", "secretword", "--json"]).out).hits;
   assert.deepEqual(hits.map((hit) => hit.path), []);

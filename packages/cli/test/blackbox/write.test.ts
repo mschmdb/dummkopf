@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
-import { md, revOf, Sandbox } from "./harness.ts";
+import { md, NO_FILE_MODES, revOf, Sandbox } from "./harness.ts";
 import type { Brain, Result, Synced } from "./harness.ts";
 
 const SAVED = "Write status: saved; sync: ok\n";
@@ -77,7 +77,7 @@ test("summary is shortened from a long key fact", () => {
   assert.ok(summary.endsWith("…"));
 });
 
-test("new files get mode 0600", () => {
+test("new files get mode 0600", { skip: NO_FILE_MODES }, () => {
   const brain = repo();
   writeNew(brain, "notes/private-mode.md", md());
   assert.equal(brain.mode("notes/private-mode.md"), 0o600);
@@ -92,10 +92,10 @@ test("new files in new folders work and get mode 0600", () => {
     ],
   };
   assert.equal(brain.run(["ingest", "--input", "-"], { stdin: JSON.stringify(pkg) }).code, 0);
-  assert.equal(brain.mode("topics/fresh/page.md"), 0o600);
+  if (!NO_FILE_MODES) assert.equal(brain.mode("topics/fresh/page.md"), 0o600);
 });
 
-test("existing file mode is kept on change", () => {
+test("existing file mode is kept on change", { skip: NO_FILE_MODES }, () => {
   const brain = repo();
   fs.chmodSync(path.join(brain.root, "notes/first.md"), 0o640);
   assert.equal(brain.run(["write", "notes/first.md", "--expected", currentRev(brain, "notes/first.md"), "--append"],

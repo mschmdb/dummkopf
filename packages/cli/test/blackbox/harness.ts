@@ -18,7 +18,9 @@ export const GIT_IDENTITY: Readonly<Record<string, string>> = {
   GIT_COMMITTER_NAME: "Test",
   GIT_COMMITTER_EMAIL: "test@example.com",
 };
-export const BASE_TOML = (remote: string): string => 'schema_version = 1\n[repo]\nremote = "' + remote + '"\n';
+/** Windows has no POSIX file modes: tests about 0600 or the executable bit skip there. */
+export const NO_FILE_MODES = process.platform === "win32" ? "Windows has no POSIX file modes" : false;
+export const BASE_TOML = (remote: string): string => 'schema_version = 1\n[repo]\nremote = \'' + remote + '\'\n';
 export const PLACEHOLDER_REMOTE = "git@example.org:me/brain.git";
 const TIMEOUT_MS = 120_000;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +37,22 @@ export interface Result {
 /** The binary under test: RCLLR_BIN, else the development runner next to this suite. */
 export function binary(): string {
   return process.env.RCLLR_BIN || path.resolve(HERE, "../../dev/rcllr");
+}
+
+/**
+ * A folder as rcllr spells it: symlinks resolved, and on Windows the long name (not RUNNER~1) with
+ * forward slashes.
+ */
+export function canonical(folder: string): string {
+  if (process.platform !== "win32") return fs.realpathSync(folder);
+  return fs.realpathSync.native(folder).replaceAll("\\", "/");
+}
+
+/** Windows ignores shebangs: start Node or bash explicitly, depending on the script. */
+export function command(program: string, args: readonly string[]): [string, string[]] {
+  if (process.platform !== "win32") return [program, [...args]];
+  const shebang = fs.readFileSync(program, "utf-8").split("\n", 1)[0]!;
+  return [shebang.includes("node") ? process.execPath : "bash", [program, ...args]];
 }
 
 /** Python's text mode turned `\r\n` into `\n`; the suite compares output the same way. */
@@ -54,7 +72,7 @@ export class Sandbox {
   readonly env: Record<string, string | undefined>;
 
   constructor() {
-    this.tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "rcllr-bb-")));
+    this.tmp = canonical(fs.mkdtempSync(path.join(os.tmpdir(), "rcllr-bb-")));
     this.home = path.join(this.tmp, "home");
     fs.mkdirSync(this.home);
     process.on("exit", () => fs.rmSync(this.tmp, { recursive: true, force: true }));
@@ -66,12 +84,13 @@ export class Sandbox {
       GIT_CONFIG_GLOBAL: path.join(this.home, ".gitconfig"),
     });
     const program = binary();
-    if (program.includes(path.sep)) env.PATH = path.dirname(program) + path.delimiter + (env.PATH ?? "");
+    if (program.includes("/") || program.includes(path.sep)) env.PATH = path.dirname(program) + path.delimiter + (env.PATH ?? "");
     this.env = env;
   }
 
   run(args: readonly string[], options: { cwd?: string; stdin?: string; env?: Env } = {}): Result {
-    const done = spawnSync(binary(), args, {
+    const [program, argv] = command(binary(), args);
+    const done = spawnSync(program, argv, {
       cwd: options.cwd ?? this.tmp, input: options.stdin ?? "", encoding: "utf-8",
       env: { ...this.env, ...options.env }, timeout: TIMEOUT_MS,
     });
@@ -93,7 +112,7 @@ export class Sandbox {
     const toml = BASE_TOML(remote) + extra;
     fs.writeFileSync(path.join(root, "rcllr.toml"), toml, "utf-8");
     fs.writeFileSync(path.join(root, ".sensitive-paths"), "# generated\n", "utf-8");
-    return new Brain(this, fs.realpathSync(root), toml);
+    return new Brain(this, canonical(root), toml);
   }
 
   /** A brain cloned from a local bare remote, with one committed note, `notes/first.md`. */

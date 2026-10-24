@@ -9,7 +9,7 @@ import { Access } from "../src/access.ts";
 import { AccessDenied, RcllrError } from "../src/errors.ts";
 import { PyDate } from "../src/pydate.ts";
 import { check, ingest, type WriteResult } from "../src/write.ts";
-import { type Brain, brain, documentText as document, german, invoke, revision } from "./helpers.ts";
+import { type Brain, brain, documentText as document, german, invoke, NO_FILE_MODES, revision } from "./helpers.ts";
 
 process.setMaxListeners(0);
 
@@ -51,7 +51,7 @@ describe("write packets", () => {
     assert.deepEqual(write(b, data).changed, []);
   });
 
-  test("new files are private to the owner", () => {
+  test("new files are private to the owner", { skip: NO_FILE_MODES }, () => {
     const b = brain();
     write(b, packet(change("notes/new.md", document())));
     assert.equal(fs.statSync(path.join(b.root, "notes/new.md")).mode & 0o777, 0o600);

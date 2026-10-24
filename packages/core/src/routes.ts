@@ -12,7 +12,7 @@ import { getLocale, type Locale } from "./locale.ts";
 import { compareTuples, DIGIT, escapeRegExp, len, lstrip, pyInt, sorted, splitlines } from "./py.ts";
 import { isObject, type Json, loads } from "./pyjson.ts";
 import { PyDate } from "./pydate.ts";
-import { asPosix, exists, glob, isAbsolute, isSymlink, join, parts, readText, relativeTo } from "./pyos.ts";
+import { asPosix, exists, glob, isAbsolute, isSymlink, join, parts, readText, relativeTo, windowsUnsafe } from "./pyos.ts";
 import { words } from "./text.ts";
 
 /** First and last day, both included. */
@@ -98,7 +98,7 @@ export function routeProblem(route: Json, config: Config): string | null {
   }
   if (typeof source !== "string") return "sources must be a string";
   const items = parts(source);
-  if (isAbsolute(source) || items.includes("..") || source.includes("\\") || items.length < 3
+  if (isAbsolute(source) || items.includes("..") || source.includes("\\") || windowsUnsafe(source.replace(/[*?]/g, "x")) || items.length < 3
       || !config.layout.roots.includes(items[0]!) || /[*?[]/.test(items.slice(0, -1).join("/"))
       || !source.endsWith(".md") || source.includes("**")) {
     return "sources must look like <note folder>/<folder>/<name>-*.md, wildcards only in the file name";

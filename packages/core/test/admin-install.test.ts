@@ -1,13 +1,12 @@
 /** Port of tests/test_install.py. */
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
 
 import { loadConfig } from "../src/config.ts";
-import { type Brain, brain, DEV_BIN, GIT_ENV, german, type Invoked, invoke, runGit, tempDir } from "./helpers.ts";
+import { type Brain, brain, GIT_ENV, german, type Invoked, invoke, runGit, spawnDev, tempDir } from "./helpers.ts";
 
 function repo(): Brain {
   const target = brain();
@@ -21,7 +20,7 @@ function hookPath(target: Brain): string {
 
 /** The CLI without a brain, like main([...]) in Python. */
 function cli(args: readonly string[], cwd: string): Invoked {
-  const done = spawnSync(DEV_BIN, args, { cwd, encoding: "utf-8", env: { ...process.env, ...GIT_ENV } });
+  const done = spawnDev(args, { cwd, encoding: "utf-8", env: { ...process.env, ...GIT_ENV } });
   return { code: done.status ?? -1, out: done.stdout, err: done.stderr };
 }
 

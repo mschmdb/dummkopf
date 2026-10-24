@@ -28,7 +28,7 @@ Sources: [Claude Code memory](https://code.claude.com/docs/en/memory),
 
 ## Quickstart (5 minutes)
 
-You need Node.js 22.18 or newer, Git, and macOS or Linux.
+You need Node.js 22.18 or newer, Git, and macOS, Linux or Windows (with Git for Windows).
 
 ```bash
 npm install -g rcllr
@@ -214,10 +214,12 @@ Write rules rcllr enforces:
   the scope of notes that already sit below it.
 - No dead links, no links from a non-sensitive note to a sensitive one. `check` also warns when a visible note
   names a sensitive path in plain text.
-- New files get mode `0600`.
+- New files get mode `0600` (not on Windows, which has no such modes).
 - Symlinks never count as notes. A cloned brain cannot pull outside files into the index or the extras.
 - Paths must match the on-disk spelling, so `Topics/Health/x.md` never opens `topics/health/x.md` on a
-  case-insensitive file system.
+  case-insensitive file system, and a Windows short name like `HEALTH~1` never opens `health-notes`.
+- On Windows, note paths with a stream (`a.md:x`), a device name (`CON`, `nul.md`), a trailing dot or space,
+  or a backslash are denied.
 
 ## Commands
 
@@ -319,6 +321,9 @@ or `claude_args: --allowedTools`.
 typo never switches a rule off silently. The full file with every default is in
 [examples/rcllr.example.toml](examples/rcllr.example.toml).
 
+On Windows, write paths in single quotes or with forward slashes: `remote = 'C:\brains\remote.git'` or
+`remote = "C:/brains/remote.git"`. In double quotes, TOML reads `\b` or `\U` as an escape.
+
 | Section | Keys | Purpose |
 |---|---|---|
 | `[repo]` | `remote`, `remote_name`, `branch`, `auto_push`, `commit_message`, `sync_exclude` | Without `remote` the brain is local and never fetches or pushes. With it, sync refuses any other remote URL or branch. `auto_push = false` commits locally only. rcllr commits only note folders and generated files (see [Commands](#commands)); `sync_exclude` lists further paths inside them that humans commit themselves. |
@@ -417,7 +422,9 @@ rcllr has no other network code and no runtime dependencies beyond Node.js.
 0.08 s at either size, and 0.02 s of every call is Node starting up. A real brain of 189 notes on a Mac
 answers in 0.16 s. To measure your own machine, run `pnpm bench` in a checkout.
 
-**Windows?** Not tested yet. The process lock and the hooks assume a POSIX system.
+**Windows?** Yes. CI runs the test suite on Windows with Node 22 and 24. The Git hook and the agent hooks are shell
+scripts, so they need the bash from Git for Windows. Write paths in `rcllr.toml` in single quotes or with forward
+slashes, see [Configuration reference](#configuration-reference).
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
 the note folders. rcllr gives the same answer in all three cases, on purpose. With a narrow `--scope`, the answer

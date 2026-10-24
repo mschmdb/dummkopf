@@ -1,6 +1,6 @@
 /** Test helpers: temporary brains and Git repositories. */
 
-import { spawnSync } from "node:child_process";
+import { type SpawnSyncOptionsWithStringEncoding, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -8,12 +8,21 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CONFIG_NAME, type Config, loadConfig } from "../src/config.ts";
+import { resolve } from "../src/pyos.ts";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, "../../..");
 export const GERMAN_CONFIG = path.join(REPO, "examples", "config-german-hub.toml");
 export const DEV_BIN = path.join(REPO, "packages", "cli", "dev", "rcllr");
-export const BASE_CONFIG = (remote: string): string => 'schema_version = 1\n[repo]\nremote = "' + remote + '"\n';
+/** Run the development CLI. Windows ignores shebangs, so bash starts the shell script there. */
+export function spawnDev(args: readonly string[], options: SpawnSyncOptionsWithStringEncoding) {
+  return process.platform === "win32"
+    ? spawnSync("bash", [DEV_BIN, ...args], options)
+    : spawnSync(DEV_BIN, args, options);
+}
+/** Windows has no POSIX file modes: tests about 0600 or the executable bit skip there. */
+export const NO_FILE_MODES = process.platform === "win32" ? "Windows has no POSIX file modes" : false;
+export const BASE_CONFIG = (remote: string): string => 'schema_version = 1\n[repo]\nremote = \'' + remote + '\'\n';
 export const GIT_ENV = {
   GIT_AUTHOR_NAME: "Test",
   GIT_AUTHOR_EMAIL: "test@example.com",
@@ -23,7 +32,7 @@ export const GIT_ENV = {
 
 /** A fresh temporary folder, removed when the process exits. */
 export function tempDir(prefix = "rcllr-test-"): string {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
+  const dir = resolve(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
   process.on("exit", () => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
@@ -91,7 +100,7 @@ export function makeBrain(root: string, toml: string): Brain {
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(path.join(root, CONFIG_NAME), toml, "utf-8");
   fs.writeFileSync(path.join(root, ".sensitive-paths"), "# generated\n", "utf-8");
-  return new Brain(fs.realpathSync(root), toml);
+  return new Brain(resolve(root), toml);
 }
 
 export function brain(): Brain {
@@ -118,7 +127,7 @@ export interface Invoked {
 
 /** Run the CLI from its sources against a brain, like main(args, root=brain.root) in Python. */
 export function invoke(target: Brain, args: readonly string[], stdin = ""): Invoked {
-  const done = spawnSync(DEV_BIN, [...args, "--root", target.root], {
+  const done = spawnDev([...args, "--root", target.root], {
     cwd: target.root, input: stdin, encoding: "utf-8", env: { ...process.env, ...GIT_ENV },
   });
   return { code: done.status ?? -1, out: done.stdout, err: done.stderr };

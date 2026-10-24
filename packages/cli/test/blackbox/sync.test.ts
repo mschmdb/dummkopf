@@ -271,7 +271,7 @@ test("failed push after a write exits 3 and keeps the save", () => {
 
 test("a refused SSH login on push names the login after the save", () => {
   const world = synced();
-  const ssh = path.join(world.base, "fake-ssh");
+  const ssh = world.base + "/fake-ssh"; // Git runs core.sshCommand through sh, which eats backslashes.
   fs.writeFileSync(ssh, "#!/bin/sh\necho 'git@example.invalid: Permission denied (publickey).' >&2\nexit 255\n", "utf-8");
   fs.chmodSync(ssh, 0o755);
   world.brain.git(["config", "remote.origin.pushurl", "git@example.invalid:me/brain.git"]);

@@ -5,7 +5,7 @@ import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
-import { binary, type Brain, type Env, type Result, Sandbox, type Synced, fullNote, md } from "./harness.ts";
+import { binary, type Brain, command, type Env, fullNote, md, NO_FILE_MODES, type Result, Sandbox, type Synced } from "./harness.ts";
 
 const FILLER = "---\nupdated: 2026-10-01\nstatus: active\nkey_fact: K.\nsummary: K.\naliases: []\nperiod: []\n"
   + "entities: []\n---\n";
@@ -193,7 +193,7 @@ test("pre-commit regenerates the sensitive paths list", () => {
   assert.equal(result.code, 0);
   assert.ok(result.out.startsWith(".sensitive-paths updated.\n"));
   assert.equal(splitlines(b.read(".sensitive-paths")).at(-1), "notes/secret.md");
-  assert.equal(b.mode(".sensitive-paths"), 0o600);
+  if (!NO_FILE_MODES) assert.equal(b.mode(".sensitive-paths"), 0o600);
 });
 
 test("pre-commit lists a whole folder when its README has the marker", () => {
@@ -380,29 +380,34 @@ function which(name: string): string | null {
 test("commit runs the hook and includes the regenerated paths list", () => {
   const { sandbox, root } = hooked();
   fs.writeFileSync(path.join(root, "notes", "secret.md"), FILLER + "\n# Secret\n\n> SENSITIVE\n", "utf-8");
-  assert.equal(commit(sandbox, root).status, 0);
-  assert.ok(splitlines(sandbox.git(root, ["show", "HEAD:.sensitive-paths"])).includes("notes/secret.md"));
+  const done = commit(sandbox, root);
+  assert.equal(done.status, 0);
+  assert.ok(splitlines(sandbox.git(root, ["show", "HEAD:.sensitive-paths"])).includes("notes/secret.md"), done.stderr);
   assert.equal(sandbox.git(root, ["status", "--porcelain"]), "");
 });
 
 test("commit includes the rebuilt index", () => {
   const { sandbox, root } = hooked();
   fs.writeFileSync(path.join(root, "notes", "visible.md"), FILLER + "\n# Visible\n", "utf-8");
-  assert.equal(commit(sandbox, root).status, 0);
-  assert.ok(sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"));
+  const done = commit(sandbox, root);
+  assert.equal(done.status, 0);
+  assert.ok(sandbox.git(root, ["show", "HEAD:INDEX.md"]).includes("`notes/visible.md`"), done.stderr);
 });
 
 test("commit completes the frontmatter of a staged note", () => {
   const { sandbox, root } = hooked();
   fs.writeFileSync(path.join(root, "notes", "bare.md"), "# Bare\n\nno frontmatter\n", "utf-8");
-  assert.equal(commit(sandbox, root).status, 0);
+  const done = commit(sandbox, root);
+  assert.equal(done.status, 0);
   const committed = sandbox.git(root, ["show", "HEAD:notes/bare.md"]);
-  assert.ok(committed.startsWith("---\nupdated: "));
+  assert.ok(committed.startsWith("---\nupdated: "), done.stderr);
   assert.ok(committed.includes("status: active"));
   assert.ok(committed.endsWith("# Bare\n\nno frontmatter"));
 });
 
-test("commit still succeeds when rcllr is not on the PATH", () => {
+test("commit still succeeds when rcllr is not on the PATH", {
+  skip: process.platform === "win32" && "builds a POSIX PATH that holds only a symlink to git",
+}, () => {
   const { sandbox, root } = hooked();
   // Only git, never a rcllr that happens to share git's folder (Homebrew puts both in /opt/homebrew/bin).
   const gitOnly = path.join(sandbox.tmp, "git-only");
@@ -422,7 +427,8 @@ test("commit still succeeds when rcllr is not on the PATH", () => {
 /** One agent hook as its own process, so several can run at the same time like parallel sessions. */
 function agentProcess(synced: Synced, event: unknown, root = synced.brain.root): Promise<{ code: number | null; err: string }> {
   return new Promise((resolve) => {
-    const child = spawn(binary(), ["hook", "agent", "--root", root], { cwd: root, env: synced.sandbox.env });
+    const [program, argv] = command(binary(), ["hook", "agent", "--root", root]);
+    const child = spawn(program, argv, { cwd: root, env: synced.sandbox.env });
     let err = "";
     child.stderr.on("data", (chunk) => { err += String(chunk); });
     child.on("close", (code) => resolve({ code, err }));

@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type Brain, Sandbox } from "./harness.ts";
+import { type Brain, NO_FILE_MODES, Sandbox } from "./harness.ts";
 
 const INDEX = "# Index\n\nProse stays.\n\n## Topics\n\n## Notes (flat)\n\n## Bookmarks\n";
 
@@ -211,7 +211,7 @@ test("index regenerates the paths list and the tables", () => {
   assert.deepEqual(splitlines(result.out), [".sensitive-paths", "INDEX.md"]);
   assert.equal(result.err, "2 file(s) updated.\n");
   assert.deepEqual(splitlines(b.read(".sensitive-paths")).slice(3), ["notes/marked.md"]);
-  assert.equal(b.mode(".sensitive-paths"), 0o600);
+  if (!NO_FILE_MODES) assert.equal(b.mode(".sensitive-paths"), 0o600);
 });
 
 test("index lists folders with a marked README and always paths", () => {

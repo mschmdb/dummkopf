@@ -7,6 +7,7 @@ import { describe, test } from "node:test";
 
 import { CONFIG_NAME, configFile, findRoot, LEGACY_CONFIG_NAME, loadConfig } from "../src/config.ts";
 import { ConfigError, ConfigMissing } from "../src/errors.ts";
+import { resolve } from "../src/pyos.ts";
 import { REPO, tempDir } from "./helpers.ts";
 
 process.setMaxListeners(0);
@@ -29,7 +30,7 @@ describe("config", () => {
     const root = tempDir();
     write(root, MINIMAL);
     const config = loadConfig(root);
-    assert.equal(config.root, fs.realpathSync(root));
+    assert.equal(config.root, resolve(root));
     assert.equal(config.repo.remote, "git@example.org:me/brain.git");
     assert.equal(config.repo.branch, "main");
     assert.equal(config.repo.remoteName, "origin");
@@ -173,7 +174,7 @@ describe("config", () => {
     write(root, MINIMAL);
     const nested = path.join(root, "topics", "a");
     fs.mkdirSync(nested, { recursive: true });
-    assert.equal(findRoot(nested, null, {}), fs.realpathSync(root));
+    assert.equal(findRoot(nested, null, {}), resolve(root));
   });
 
   test("find root prefers explicit then env", () => {
@@ -184,8 +185,8 @@ describe("config", () => {
       fs.mkdirSync(directory);
       write(directory, MINIMAL);
     }
-    assert.equal(findRoot(base, first, { RCLLR_ROOT: second }), fs.realpathSync(first));
-    assert.equal(findRoot(base, null, { RCLLR_ROOT: second }), fs.realpathSync(second));
+    assert.equal(findRoot(base, first, { RCLLR_ROOT: second }), resolve(first));
+    assert.equal(findRoot(base, null, { RCLLR_ROOT: second }), resolve(second));
   });
 
   test("find root still reads DUMMKOPF_ROOT, but RCLLR_ROOT wins", () => {
@@ -196,8 +197,8 @@ describe("config", () => {
       fs.mkdirSync(directory);
       write(directory, MINIMAL);
     }
-    assert.equal(findRoot(base, null, { DUMMKOPF_ROOT: second }), fs.realpathSync(second));
-    assert.equal(findRoot(base, null, { RCLLR_ROOT: first, DUMMKOPF_ROOT: second }), fs.realpathSync(first));
+    assert.equal(findRoot(base, null, { DUMMKOPF_ROOT: second }), resolve(second));
+    assert.equal(findRoot(base, null, { RCLLR_ROOT: first, DUMMKOPF_ROOT: second }), resolve(first));
   });
 
   test("a brain with the old dummkopf.toml still loads and is found", () => {
@@ -205,9 +206,9 @@ describe("config", () => {
     fs.writeFileSync(path.join(root, LEGACY_CONFIG_NAME), MINIMAL + "[ui]\ntone = 'plain'\n", "utf-8");
     const nested = path.join(root, "notes");
     fs.mkdirSync(nested);
-    assert.equal(findRoot(nested, null, {}), fs.realpathSync(root));
+    assert.equal(findRoot(nested, null, {}), resolve(root));
     assert.equal(loadConfig(root).ui.tone, "plain");
-    assert.equal(configFile(root), path.join(fs.realpathSync(root), LEGACY_CONFIG_NAME));
+    assert.equal(configFile(root), resolve(root) + "/" + LEGACY_CONFIG_NAME);
   });
 
   test("rcllr.toml wins over dummkopf.toml", () => {
