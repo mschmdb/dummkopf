@@ -18,7 +18,7 @@ export const GIT_IDENTITY: Readonly<Record<string, string>> = {
   GIT_COMMITTER_NAME: "Test",
   GIT_COMMITTER_EMAIL: "test@example.com",
 };
-export const BASE_TOML = (remote: string): string => 'schema_version = 1\n[repo]\nremote = "' + remote + '"\n';
+export const BASE_TOML = (remote: string): string => 'schema_version = 1\n[repo]\nremote = \'' + remote + '\'\n';
 export const PLACEHOLDER_REMOTE = "git@example.org:me/brain.git";
 const TIMEOUT_MS = 120_000;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +35,13 @@ export interface Result {
 /** The binary under test: RCLLR_BIN, else the development runner next to this suite. */
 export function binary(): string {
   return process.env.RCLLR_BIN || path.resolve(HERE, "../../dev/rcllr");
+}
+
+/** Windows ignores shebangs: start Node or bash explicitly, depending on the script. */
+function command(program: string, args: readonly string[]): [string, string[]] {
+  if (process.platform !== "win32") return [program, [...args]];
+  const shebang = fs.readFileSync(program, "utf-8").split("\n", 1)[0]!;
+  return [shebang.includes("node") ? process.execPath : "bash", [program, ...args]];
 }
 
 /** Python's text mode turned `\r\n` into `\n`; the suite compares output the same way. */
@@ -71,7 +78,8 @@ export class Sandbox {
   }
 
   run(args: readonly string[], options: { cwd?: string; stdin?: string; env?: Env } = {}): Result {
-    const done = spawnSync(binary(), args, {
+    const [program, argv] = command(binary(), args);
+    const done = spawnSync(program, argv, {
       cwd: options.cwd ?? this.tmp, input: options.stdin ?? "", encoding: "utf-8",
       env: { ...this.env, ...options.env }, timeout: TIMEOUT_MS,
     });

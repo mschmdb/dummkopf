@@ -1,7 +1,6 @@
 /** Port of tests/test_hooks.py. A stand-in sync function replaces unittest.mock.patch. */
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "node:test";
@@ -11,7 +10,7 @@ import type { Config } from "../src/config.ts";
 import { agentEvent, type HookOutput, isBrainPath, preCommit } from "../src/hook.ts";
 import { syncRepository } from "../src/sync.ts";
 import { ingest } from "../src/write.ts";
-import { type Brain, brain, DEV_BIN, documentText, GIT_ENV, invoke, revision, synced, tempDir } from "./helpers.ts";
+import { type Brain, brain, DEV_BIN, documentText, GIT_ENV, invoke, revision, spawnDev, synced, tempDir } from "./helpers.ts";
 
 class Captured implements HookOutput {
   stdout = "";
@@ -81,7 +80,7 @@ test("a failed sync is non-blocking", () => {
 test("the hook command never returns 2", () => {
   const base = tempDir();
   for (const kind of ["agent", "pre-commit"]) {
-    const done = spawnSync(DEV_BIN, ["--root", base, "hook", kind], {
+    const done = spawnDev(["--root", base, "hook", kind], {
       cwd: base, input: JSON.stringify({ tool_name: "Bash", cwd: base }), encoding: "utf-8",
     });
     assert.equal(done.status, 0, kind);

@@ -105,7 +105,7 @@ function findWith(toml: string): Result {
 for (const [toml, named] of [
   [BASE_TOML("x") + "[repo2]\nx = 1\n", "repo2"],
   [BASE_TOML("x") + "[ui]\ntonee = 1\n", "ui.tonee"],
-  [BASE_TOML("x").replace('remote = "x"', 'remote = "x"\nbranchh = "m"'), "repo.branchh"],
+  [BASE_TOML("x").replace("remote = 'x'", "remote = 'x'\nbranchh = \"m\""), "repo.branchh"],
   [BASE_TOML("x") + "[search.weights]\ntitel = 1\n", "search.weights.titel"],
 ] as const) {
   test("unknown key is rejected and named: " + named, () => {

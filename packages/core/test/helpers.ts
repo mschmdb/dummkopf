@@ -1,6 +1,6 @@
 /** Test helpers: temporary brains and Git repositories. */
 
-import { spawnSync } from "node:child_process";
+import { type SpawnSyncOptionsWithStringEncoding, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -13,7 +13,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, "../../..");
 export const GERMAN_CONFIG = path.join(REPO, "examples", "config-german-hub.toml");
 export const DEV_BIN = path.join(REPO, "packages", "cli", "dev", "rcllr");
-export const BASE_CONFIG = (remote: string): string => 'schema_version = 1\n[repo]\nremote = "' + remote + '"\n';
+/** Run the development CLI. Windows ignores shebangs, so bash starts the shell script there. */
+export function spawnDev(args: readonly string[], options: SpawnSyncOptionsWithStringEncoding) {
+  return process.platform === "win32"
+    ? spawnSync("bash", [DEV_BIN, ...args], options)
+    : spawnSync(DEV_BIN, args, options);
+}
+export const BASE_CONFIG = (remote: string): string => 'schema_version = 1\n[repo]\nremote = \'' + remote + '\'\n';
 export const GIT_ENV = {
   GIT_AUTHOR_NAME: "Test",
   GIT_AUTHOR_EMAIL: "test@example.com",
