@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 import { parser } from "../../packages/cli/src/main.ts";
 import { optionName, positionalName, usage } from "../../packages/cli/src/help.ts";
+import { createCodeHighlighter } from "../src/lib/content/highlight.ts";
 import { type LinkMap, renderPage, slugify, splitSections } from "../src/lib/content/markdown.ts";
 
 const root = new URL("../../", import.meta.url);
@@ -25,9 +26,11 @@ for (const section of readme.sections) {
   }
 }
 const links: LinkMap = { anchors, repoBlob: REPO + "/blob/main/" };
+const highlight = await createCodeHighlighter();
+const bash = (code: string): string => highlight(code, "bash")!;
 
-const docs = readme.sections.map((section) => renderPage(section.slug, section.title, section.markdown, links));
-const changelog = renderPage("changelog", "Changelog", read("CHANGELOG.md").replace(/^# .*\n/, ""), links);
+const docs = readme.sections.map((section) => renderPage(section.slug, section.title, section.markdown, links, highlight));
+const changelog = renderPage("changelog", "Changelog", read("CHANGELOG.md").replace(/^# .*\n/, ""), links, highlight);
 
 const pages = parser().helpPages();
 const commands = pages.slice(1).map((page) => {
@@ -35,8 +38,10 @@ const commands = pages.slice(1).map((page) => {
   return {
     name,
     usage: usage(page),
+    usageHtml: bash(usage(page).replace(/^usage: /, "")),
     purpose: page.purpose,
     examples: page.examples ? page.examples.split("\n") : [],
+    examplesHtml: page.examples ? bash(page.examples) : "",
     notes: page.notes,
     positionals: page.positionals.map((item) => ({ name: positionalName(item), help: item.help })),
     options: page.options.map((item) => ({ name: optionName(item), help: item.help, group: item.group })),

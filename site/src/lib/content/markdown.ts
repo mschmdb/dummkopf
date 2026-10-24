@@ -2,6 +2,8 @@
 
 import { Marked, type Tokens } from "marked";
 
+import type { Highlight } from "./highlight.ts";
+
 export interface Heading {
   depth: number;
   text: string;
@@ -71,6 +73,10 @@ export function rewriteLink(href: string, links: LinkMap): string {
   return links.repoBlob + href.replace(/^\.\//, "");
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function plain(html: string): string {
   // Inline tags vanish without a gap ("<code>x</code>." stays "x."); block tags become spaces.
   return html.replace(/<\/?(?:a|code|strong|em|b|i)\b[^>]*>/g, "").replace(/<[^>]+>/g, " ")
@@ -79,7 +85,7 @@ function plain(html: string): string {
 }
 
 /** Render one page. Headings get GitHub-style ids; the page title is not repeated as a heading. */
-export function renderPage(slug: string, title: string, markdown: string, links: LinkMap): RenderedPage {
+export function renderPage(slug: string, title: string, markdown: string, links: LinkMap, highlight?: Highlight): RenderedPage {
   const headings: Heading[] = [];
   const marked = new Marked({
     gfm: true,
@@ -89,6 +95,11 @@ export function renderPage(slug: string, title: string, markdown: string, links:
         const id = slugify(plain(inner));
         if (token.depth <= 3) headings.push({ depth: token.depth, text: plain(inner), id });
         return `<h${token.depth} id="${id}">${inner}</h${token.depth}>\n`;
+      },
+      code(token: Tokens.Code) {
+        const highlighted = highlight?.(token.text, (token.lang ?? "").trim().split(/\s/)[0]!);
+        if (highlighted) return highlighted + "\n";
+        return "<pre><code>" + escapeHtml(token.text) + "</code></pre>\n";
       },
       link(this: { parser: { parseInline(tokens: Tokens.Generic[]): string } }, token: Tokens.Link) {
         const inner = this.parser.parseInline(token.tokens);

@@ -24,14 +24,14 @@
 <DocsShell {headings}>
 	<h1 class="font-mono text-3xl font-semibold tracking-tight">rcllr {command.name}</h1>
 	<p class="mt-4 text-lg text-ink-muted">{command.purpose}</p>
-	<pre class="mt-6 overflow-x-auto rounded-md border border-rule bg-bg-elevated p-4 font-mono text-sm"><code>{command.usage}</code></pre>
+	<div class="code-block mt-6" aria-label="Usage">{@html command.usageHtml}</div>
 	{#if command.notes}
 		<p class="mt-4 whitespace-pre-line text-ink-muted">{command.notes}</p>
 	{/if}
 
 	{#if command.examples.length}
 		<h2 id="examples" class="mt-10 text-xl font-semibold">Examples</h2>
-		<pre class="mt-4 overflow-x-auto rounded-md border border-rule bg-bg-elevated p-4 font-mono text-sm"><code>{command.examples.join('\n')}</code></pre>
+		<div class="code-block mt-4">{@html command.examplesHtml}</div>
 	{/if}
 
 	{#if command.positionals.length}

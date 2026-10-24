@@ -8,8 +8,10 @@ export interface Option { name: string; help: string; group: string }
 export interface Command {
   name: string;
   usage: string;
+  usageHtml: string;
   purpose: string;
   examples: string[];
+  examplesHtml: string;
   notes: string;
   positionals: { name: string; help: string }[];
   options: Option[];

@@ -71,9 +71,24 @@ body {
 .prose-rcllr ol { list-style: decimal; padding-left: 1.5rem; }
 .prose-rcllr li + li { margin-top: 0.35rem; }
 .prose-rcllr code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-xs); padding: 0 0.25em; }
-.prose-rcllr pre { overflow-x: auto; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 1rem; font-size: var(--text-sm); }
+.prose-rcllr pre, .code-block pre { overflow-x: auto; background: var(--bg-elevated); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 1rem; font-family: var(--font-mono); font-size: var(--text-sm); }
 .prose-rcllr pre code { border: 0; padding: 0; background: none; }
 .prose-rcllr table { display: block; overflow-x: auto; border-collapse: collapse; font-size: var(--text-sm); }
 .prose-rcllr th, .prose-rcllr td { border: 1px solid var(--rule); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
 .prose-rcllr th { background: var(--bg-elevated); font-weight: 600; }
 .prose-rcllr blockquote { border-left: 3px solid var(--rule-strong); padding-left: 1rem; color: var(--ink-muted); }
+
+/* Shiki's css-variables theme, mapped onto the tokens; the contrast test checks each of them on --bg-elevated. */
+:root {
+	--shiki-foreground: var(--ink);
+	--shiki-background: var(--bg-elevated);
+	--shiki-token-keyword: var(--accent);
+	--shiki-token-function: var(--focus);
+	--shiki-token-string: var(--success);
+	--shiki-token-string-expression: var(--success);
+	--shiki-token-constant: var(--warning);
+	--shiki-token-parameter: var(--ink);
+	--shiki-token-comment: var(--ink-subtle);
+	--shiki-token-punctuation: var(--ink-muted);
+	--shiki-token-link: var(--accent);
+}
