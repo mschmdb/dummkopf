@@ -20,7 +20,7 @@ const ratio = (a: string, b: string): number => contrastRatio(oklchToSrgb(parseO
 
 for (const [mode, selector] of [["light", ":root"], ["dark", "[data-theme='dark']"]] as const) {
   const t = tokens(selector);
-  for (const name of ["--ink", "--ink-muted", "--ink-subtle", "--accent", "--focus"]) {
+  for (const name of ["--ink", "--ink-muted", "--ink-subtle", "--accent", "--focus", "--success", "--warning", "--error"]) {
     test(`${mode}: ${name} on --bg and --bg-elevated reaches 4.5:1 (AA text)`, () => {
       assert.ok(ratio(t[name]!, t["--bg"]!) >= 4.5, `${name} on --bg: ${ratio(t[name]!, t["--bg"]!).toFixed(2)}`);
       assert.ok(ratio(t[name]!, t["--bg-elevated"]!) >= 4.5, `${name} on --bg-elevated`);

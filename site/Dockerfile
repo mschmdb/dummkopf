@@ -9,6 +9,9 @@ RUN corepack enable
 # Manifests first for the layer cache; install only the site and what it needs.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY site/package.json site/
+# The site reads the CLI help from the workspace packages.
+COPY packages/core/package.json packages/core/
+COPY packages/cli/package.json packages/cli/
 RUN pnpm install --frozen-lockfile --filter site...
 COPY . .
 RUN pnpm --dir site build

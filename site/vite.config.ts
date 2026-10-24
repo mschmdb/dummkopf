@@ -11,7 +11,9 @@ const csp: NonNullable<Parameters<typeof sveltekit>[0]>["csp"] = {
   mode: "hash",
   directives: {
     "default-src": ["self"],
-    "script-src": ["self"],
+    // Plausible on p.fliege.dev: its script, and the events it sends.
+    "script-src": ["self", "https://p.fliege.dev"],
+    "connect-src": ["self", "https://p.fliege.dev"],
     "style-src": ["self", "unsafe-inline"],
     "img-src": ["self", "data:"],
     "font-src": ["self"],

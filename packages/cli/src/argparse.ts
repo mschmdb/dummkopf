@@ -287,6 +287,11 @@ export class Parser {
     };
   }
 
+  /** The help of this parser and every subcommand, as data: the site builds its command reference from it. */
+  helpPages(): Page[] {
+    return [this.page(), ...[...this.commands.values()].map((sub) => sub.page())];
+  }
+
   /** The one-line usage. */
   usage(): string {
     return usage(this.page());
