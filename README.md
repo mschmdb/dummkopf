@@ -380,7 +380,19 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   under `~/.codex/memories/rollout_summaries/`, each naming the folder the session ran in. rcllr imports only the
   summaries whose folder lies in a listed project, into `topics/codex-memory/` with the scope `memory-codex`. Codex
   memories are off by default; turn them on in `~/.codex/config.toml` with `memories = true` under `[features]`.
-  `--codex-home` (default `$CODEX_HOME` or `~/.codex`) points elsewhere.
+  `--codex-home` (default `$CODEX_HOME` or `~/.codex`) points elsewhere. To import after every Codex session, add a
+  `SessionEnd` hook to `~/.codex/config.toml`. Codex gives such a hook 3 seconds and waits for it, so start the import
+  detached:
+
+  ```toml
+  [[hooks.SessionEnd]]
+  [[hooks.SessionEnd.hooks]]
+  type = "command"
+  command = 'nohup rcllr --root "$HOME/brain" import-memory --serious >/dev/null 2>&1 &'
+  ```
+
+  Codex asks you once to trust a new hook. Its summaries appear some time after a session, so each run imports
+  every listed project, not only the one that just ended.
 - **routes**: a `routes.json` entry like
   `{"routes":[{"aliases":["meal plan"],"sources":"topics/meals/plan-*.md","scope":"private","kind":"dated-plan"}]}`
   lets `context "meal plan next week"` open exactly the plan files named `plan-2026-10-05-to-11.md` that
