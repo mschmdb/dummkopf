@@ -36,3 +36,8 @@ test("a page collects its headings with ids and links rewritten", () => {
   assert.ok(page.html.includes('href="/docs/local-or-synced"'));
   assert.equal(page.text, "Headless agents See sync.");
 });
+
+test("plain text unescapes entities once and leaves no tags behind", () => {
+  assert.equal(renderPage("x", "X", "Write `&lt;` for <.", links).text, "Write &lt; for <.");
+  assert.equal(renderPage("x", "X", "A <ifr<iframe>ame> b", links).text.includes("<iframe"), false);
+});

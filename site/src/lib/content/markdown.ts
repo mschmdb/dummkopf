@@ -78,10 +78,16 @@ function escapeHtml(text: string): string {
 }
 
 function plain(html: string): string {
-  // Inline tags vanish without a gap ("<code>x</code>." stays "x."); block tags become spaces.
-  return html.replace(/<\/?(?:a|code|strong|em|b|i)\b[^>]*>/g, "").replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ").trim();
+  // Inline tags vanish without a gap ("<code>x</code>." stays "x."); block tags become spaces. Strip until
+  // nothing changes, so a nested "<ifr<iframe>ame>" cannot leave a tag behind.
+  let text = html;
+  for (let previous = ""; previous !== text;) {
+    previous = text;
+    text = text.replace(/<\/?(?:a|code|strong|em|b|i)\b[^>]*>/g, "").replace(/<[^>]+>/g, " ");
+  }
+  // &amp; last, so "&amp;lt;" becomes "&lt;" and not "<".
+  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 }
 
 /** Render one page. Headings get GitHub-style ids; the page title is not repeated as a heading. */

@@ -11,10 +11,11 @@ const read = (path: string): string => readFileSync(new URL(path, site), "utf8")
 const font = (path: string): string => readFileSync(new URL("node_modules/@fontsource/" + path, site)).toString("base64");
 
 const tokens = read("src/tokens.css");
-// The schmidbauer.dev mark, without its Svelte script and attributes.
-const mark = read("src/lib/components/BrandMark.svelte")
-  .replace(/<script[\s\S]*?<\/script>\s*/, "")
-  .replace(/class=\{className\}\s*/, "");
+// The schmidbauer.dev mark: the <svg> element of the component, without its Svelte class binding.
+const component = read("src/lib/components/BrandMark.svelte");
+const mark = component
+  .slice(component.indexOf("<svg"), component.lastIndexOf("</svg>") + "</svg>".length)
+  .replace("class={className}", "");
 
 const STYLE = `
 ${tokens}
