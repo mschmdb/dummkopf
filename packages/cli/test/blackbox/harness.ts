@@ -49,7 +49,7 @@ export function canonical(folder: string): string {
 }
 
 /** Windows ignores shebangs: start Node or bash explicitly, depending on the script. */
-function command(program: string, args: readonly string[]): [string, string[]] {
+export function command(program: string, args: readonly string[]): [string, string[]] {
   if (process.platform !== "win32") return [program, [...args]];
   const shebang = fs.readFileSync(program, "utf-8").split("\n", 1)[0]!;
   return [shebang.includes("node") ? process.execPath : "bash", [program, ...args]];

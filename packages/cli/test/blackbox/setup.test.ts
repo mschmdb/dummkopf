@@ -186,8 +186,8 @@ test("a fresh brain is ready to read", () => {
 
 test("init message is the same in both tones", () => {
   const sandbox = new Sandbox();
-  const a = path.join(sandbox.tmp, "a");
-  const b = path.join(sandbox.tmp, "b");
+  const a = sandbox.tmp + "/a";
+  const b = sandbox.tmp + "/b";
   const plain = sandbox.run(["init", a, "--serious"], { cwd: sandbox.tmp }).out;
   const cheeky = sandbox.run(["init", b], { cwd: sandbox.tmp }).out;
   assert.equal(plain.replaceAll(a, "<path>"), cheeky.replaceAll(b, "<path>"));
