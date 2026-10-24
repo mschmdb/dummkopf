@@ -1,0 +1,31 @@
+# Static files behind the Coolify proxy, which terminates TLS and routes to port 3000.
+:3000 {
+	root * /srv
+	encode zstd gzip
+
+	# adapter-static writes /commands/sync as commands/sync.html.
+	try_files {path} {path}.html {path}/index.html
+
+	header {
+		-Server
+		# The CSP ships as <meta> from SvelteKit's hash mode; a second policy here would block the hashed scripts.
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		Strict-Transport-Security "max-age=31536000"
+	}
+
+	@immutable path /_app/immutable/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	@html path *.html /
+	header @html Cache-Control "no-cache"
+
+	file_server
+
+	handle_errors {
+		@notfound expression {http.error.status_code} == 404
+		rewrite @notfound /404.html
+		file_server
+	}
+}

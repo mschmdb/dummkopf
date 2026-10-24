@@ -88,6 +88,24 @@ The Trusted Publishers allow only `npm stage publish`, so every release waits on
 Packages" until a maintainer approves it with 2FA, core first (or `npm stage approve <stage-id>`). The GitHub
 release appears right away; the npm versions follow once approved.
 
+## Site
+
+`site/` holds rcllr.schmidbauer.dev, a SvelteKit app with `adapter-static`. It is a workspace project, but not an npm
+package: the package jobs and the release job install with `--filter "./packages/**"`, so the site and its tooling
+never reach the job that publishes to npm.
+
+```bash
+pnpm install --filter site...
+pnpm --dir site dev        # local preview
+pnpm --dir site check      # svelte-check
+pnpm --dir site test       # contrast and theme tests
+pnpm --dir site build      # static files in site/build
+```
+
+The colors, fonts and radii come from schmidbauer.dev. `site/src/tokens.css` is a generated copy; refresh it with
+`pnpm --dir site sync-tokens [path/to/schmidbauer-dev]` instead of editing it. Coolify builds `site/Dockerfile` with the
+repository root as build context, because the site reads the README, the changelog and the CLI help.
+
 ## Translations
 
 A new locale needs an entry in `LOCALES` in `packages/core/src/locale.ts` and in `LOCALES` in

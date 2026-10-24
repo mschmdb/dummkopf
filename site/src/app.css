@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+/* Self-hosted fonts (CSP font-src 'self'): IBM Plex Sans for text, Mono for code and meta. */
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+
+@import './tokens.css';
+
+html {
+	background-color: var(--bg);
+	scroll-padding-top: calc(var(--header-height) + 1rem);
+}
+
+body {
+	background-color: var(--bg);
+	color: var(--ink);
+	font-family: var(--font-sans);
+	line-height: var(--leading-body);
+	-webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html,
+	body {
+		transition:
+			background-color 200ms ease,
+			color 200ms ease;
+	}
+}
+
+/* Tokens as Tailwind utilities (bg-bg, text-ink, border-rule, text-accent, font-mono …); they follow data-theme. */
+@theme inline {
+	--color-bg: var(--bg);
+	--color-bg-elevated: var(--bg-elevated);
+	--color-ink: var(--ink);
+	--color-ink-muted: var(--ink-muted);
+	--color-ink-subtle: var(--ink-subtle);
+	--color-rule: var(--rule);
+	--color-rule-strong: var(--rule-strong);
+	--color-accent: var(--accent);
+	--color-accent-soft: var(--accent-soft);
+	--color-focus: var(--focus);
+
+	--font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+	--radius-xs: var(--radius-xs);
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+}
