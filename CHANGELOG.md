@@ -10,6 +10,13 @@ All notable changes to this project are listed here. The format follows
 - `check` warns when a visible note names a sensitive file or folder in plain text, for example a path in backticks.
   Links to sensitive notes were already rejected; a plain path still told every reader that the hidden note exists.
   The warning names the visible note and line, never the sensitive path.
+- Windows support. CI runs the test suite on Windows with Node 22 and 24. Paths keep their drive letter and use
+  forward slashes inside rcllr. On Windows, note and config paths with a stream (`a.md:x`), a device name, a trailing
+  dot or space are denied. In `rcllr.toml`, write Windows paths in single quotes or with forward slashes.
+
+### Fixed
+
+- `init --remote` escapes the remote in `rcllr.toml`, so a path with a backslash or a quote no longer breaks the file.
 
 ## [0.5.4] - 2026-10-24
 
