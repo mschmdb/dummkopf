@@ -219,7 +219,7 @@ const SCHEMA: Section = {
   search: {
     weights: {
       title: ["int", 8], aliases: ["int", 12], key_fact: ["int", 4], path: ["int", 3], body: ["int", 1],
-      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25], imported_percent: ["int", 25],
+      topic_readme_bonus: ["int", 30], curator_report_percent: ["int", 25], imported_percent: ["int", 60],
     },
   },
   context: { routes_file: ["str", "routes.json"] },

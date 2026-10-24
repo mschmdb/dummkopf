@@ -75,7 +75,7 @@ path = 3
 body = 1
 topic_readme_bonus = 30
 curator_report_percent = 25            # reports under curator.report_dir score this share, unless the query names the curator
-imported_percent = 25                  # imported agent memory (claude_memory.topic) scores this share
+imported_percent = 60                  # imported agent memory scores this share of an own note
 
 [context]
 routes_file = "routes.json"            # optional; when set here, `check` warns if the file is missing

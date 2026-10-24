@@ -4,7 +4,7 @@
  * Exit codes: 0 ok, 2 rejected call (nothing changed), 3 saved but Git sync failed.
  */
 
-import { type Config, RcllrError, findRoot, HELP, loadConfig, VERSION } from "@rcllr/core";
+import { type Config, RcllrError, findRoot, HELP, loadConfig, message, VERSION } from "@rcllr/core";
 
 import {
   register as registerAdmin, runCurator, runHook, runInit, runInstall, runLinks, runMeta, runMigrateName,
@@ -80,6 +80,7 @@ export function main(argv: readonly string[]): number {
     throw error;
   }
   let tone = "plain";
+  let allScopes: string | null = null;
   try {
     const explicit = typeof args.root === "string" ? args.root : null;
     const [withConfig, withoutConfig] = handlers();
@@ -87,6 +88,7 @@ export function main(argv: readonly string[]): number {
     const noConfig = withoutConfig[command];
     if (noConfig) return noConfig(args, explicit ?? process.cwd(), tone);
     const config = loadConfig(findRoot(process.cwd(), explicit));
+    allScopes = config.scopes.all;
     if (!args.serious) tone = config.ui.tone;
     if ("maxChars" in args) {
       if (args.maxChars === null) args.maxChars = config.limits.maxChars;
@@ -95,7 +97,11 @@ export function main(argv: readonly string[]): number {
     return withConfig[command]!(args, config, tone);
   } catch (error) {
     if (error instanceof RcllrError) {
-      err(error.render(tone) + "\n");
+      // The hint depends only on the request, never on the path, so it reveals nothing a missing file would not.
+      const narrow = error.key === "path_denied" && typeof args.scope === "string" && allScopes !== null
+        && args.scope !== allScopes;
+      const hint = narrow ? " " + message("scope_hint", tone, { scope: args.scope, all: allScopes }) : "";
+      err(error.render(tone) + hint + "\n");
       return error.exitCode;
     }
     throw error;

@@ -6,6 +6,8 @@ import { Sandbox, note } from "./harness.ts";
 import type { Brain } from "./harness.ts";
 
 const DENIED = "Path unavailable or access excluded.\n";
+const DENIED_IN_WORK = "Path unavailable or access excluded. With --scope work, notes of other scopes stay hidden; "
+  + "--scope both searches them too.\n";
 const CUSTOM_SCOPES = '[scopes]\nvalues = ["home", "office"]\nall = "any"\nquery_default = "any"\nlink_barriers = []\n';
 
 function paths(target: Brain, args: string[] = [], command = "find"): string[] {
@@ -97,7 +99,7 @@ test("read outside the scope is denied like a missing file", () => {
   const target = scoped();
   const denied = target.run(["read", "topics/home/c.md", "--scope", "work"]);
   const missing = target.run(["read", "topics/home/absent.md", "--scope", "work"]);
-  assert.deepEqual([denied.code, denied.err], [2, DENIED]);
+  assert.deepEqual([denied.code, denied.err], [2, DENIED_IN_WORK]);
   assert.deepEqual(denied, missing);
 });
 

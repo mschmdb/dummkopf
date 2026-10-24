@@ -11,6 +11,7 @@ export const PLAIN: Readonly<Record<string, string>> = {
   "config_unreadable": "rcllr.toml is not readable: {detail}",
   "config_invalid": "rcllr.toml: {key}: {problem}",
   "path_denied": "Path unavailable or access excluded.",
+  "scope_hint": "With --scope {scope}, notes of other scopes stay hidden; --scope {all} searches them too.",
   "invalid_scope": "Invalid scope. Use one of: {choices}.",
   "invalid_topic": "Invalid topic name. Use letters, digits and hyphens.",
   "grant_needs_path": "--allow-sensitive needs a topic folder or a concrete .md file.",
