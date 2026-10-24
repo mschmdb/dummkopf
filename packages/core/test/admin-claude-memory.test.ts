@@ -208,3 +208,31 @@ test("a denied read with a narrow scope hints at the wider one, the same for hid
   assert.deepEqual(hidden, missing);
   assert.equal(invoke(target, ["read", "notes/zz.md", "--serious"]).err, "Path unavailable or access excluded.\n");
 });
+
+test("scope_by_project puts a project's memory in its own scope, the rest in the default scope", () => {
+  const target = brain();
+  target.toml = target.toml.replace(/^remote = .*\n/m, "");
+  target.configure('[extras]\nclaude_memory = true\n[claude_memory]\nprojects = ["*"]\nscope = "work"\n'
+    + 'scope_by_project = ["/Users/me/notes=private"]\n');
+  target.gitInit();
+  target.commit("Initial");
+  const home = claudeHome({ "a.md": memoryFile("a", "Shop fact.", "Body.") });
+  const folder = path.join(home, "projects", claudeProjectFolder("/Users/me/notes"), "memory");
+  fs.mkdirSync(folder, { recursive: true });
+  fs.writeFileSync(path.join(folder, "b.md"), memoryFile("b", "Private fact.", "Body."));
+  run(target, home);
+  const work = new Access(target.config, "work");
+  assert.equal(work.read("topics/claude-memory/users-me-sites-shop/a.md").scope, "work");
+  assert.throws(() => work.read("topics/claude-memory/users-me-notes/b.md"));
+  assert.equal(new Access(target.config, "private").read("topics/claude-memory/users-me-notes/b.md").scope, "private");
+  assert.match(target.read("topics/claude-memory/README.md"), /^scope: work$/m);
+});
+
+test("a scope_by_project entry without a known scope is rejected", () => {
+  const target = brain();
+  target.write("rcllr.toml", target.toml + '[extras]\nclaude_memory = true\n[claude_memory]\nscope = "work"\n'
+    + 'scope_by_project = ["/Users/me/notes=secret"]\n');
+  const result = invoke(target, ["check", "--serious"]);
+  assert.equal(result.code, 2);
+  assert.ok(result.err.includes("claude_memory.scope_by_project"), result.err);
+});

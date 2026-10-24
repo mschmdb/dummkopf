@@ -4,6 +4,7 @@ import { ConfigError, ConfigMissing } from "./errors.ts";
 import { strip } from "./py.ts";
 import { asPosix, isAbsolute, isFile, isSymlink, join, parents, parts, readBytesText, resolve,
   stripTrailingSlashes } from "./pyos.ts";
+import { validateMemorySources } from "./config-memory.ts";
 import { isTable, parseToml, TomlDateTime, TomlError, TomlFloat } from "./toml.ts";
 
 export const CONFIG_NAME = "rcllr.toml";
@@ -149,7 +150,10 @@ export interface MemorySourceOptions {
   readonly projects: readonly string[];
   /** Project folders left out, also when `projects` is `*`. */
   readonly exclude: readonly string[];
+  /** Scope of a note unless `scope_by_project` names its project. */
   readonly scope: string;
+  /** `<project folder>=<scope>` entries, e.g. `~/Sites/blog=private`. */
+  readonly scopeByProject: readonly string[];
   readonly topic: string;
 }
 
@@ -233,8 +237,10 @@ const SCHEMA: Section = {
     open_days: ["int", 28], stale_days: ["int", 56], report_dir: ["str", "topics/curator"],
     keep_key: ["str", "curator_keep"],
   },
-  claude_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-claude"], topic: ["str", "claude-memory"] },
-  codex_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-codex"], topic: ["str", "codex-memory"] },
+  claude_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-claude"], scope_by_project: ["list", []],
+    topic: ["str", "claude-memory"] },
+  codex_memory: { projects: ["list", []], exclude: ["list", []], scope: ["str", "memory-codex"], scope_by_project: ["list", []],
+    topic: ["str", "codex-memory"] },
 };
 
 function camel(key: string): string {
@@ -402,13 +408,8 @@ function validate(config: Config): void {
   }
   relativePath(config.links.entitiesFile, "links.entities_file");
   relativePath(config.curator.reportDir, "curator.report_dir", true, true);
-  for (const [name, on, memory] of [["claude_memory", config.extras.claudeMemory, config.claudeMemory],
-    ["codex_memory", config.extras.codexMemory, config.codexMemory]] as const) {
-    if (on && !scopes.values.includes(memory.scope)) {
-      throw invalid(name + ".scope", "must be one of scopes.values; add '" + memory.scope + "' there");
-    }
-    if (!/^[\p{L}\p{N}_-]+$/u.test(memory.topic)) throw invalid(name + ".topic", "use letters, digits, - and _ only");
-  }
+  validateMemorySources(config);
+
   for (const folder of config.links.allowOutside) {
     relativePath(folder, "links.allow_outside", true, true);
     if ((layout.roots as readonly string[]).includes(parts(stripTrailingSlashes(folder))[0]!)) {
