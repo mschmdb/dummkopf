@@ -212,7 +212,8 @@ Write rules rcllr enforces:
 - A new topic needs a `README.md` with a scope in the same package.
 - No removing markers, no changing scopes, no edits under `sources/`. A new `README.md` must not change
   the scope of notes that already sit below it.
-- No dead links, no links from a non-sensitive note to a sensitive one.
+- No dead links, no links from a non-sensitive note to a sensitive one. `check` also warns when a visible note
+  names a sensitive path in plain text.
 - New files get mode `0600`.
 - Symlinks never count as notes. A cloned brain cannot pull outside files into the index or the extras.
 - Paths must match the on-disk spelling, so `Topics/Health/x.md` never opens `topics/health/x.md` on a

@@ -5,6 +5,12 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `check` warns when a visible note names a sensitive file or folder in plain text, for example a path in backticks.
+  Links to sensitive notes were already rejected; a plain path still told every reader that the hidden note exists.
+  The warning names the visible note and line, never the sensitive path.
+
 ## [0.5.4] - 2026-10-24
 
 ### Changed
