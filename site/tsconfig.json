@@ -1,0 +1,10 @@
+{
+  "extends": "$app/tsconfig",
+  "compilerOptions": {
+    "rewriteRelativeImportExtensions": true,
+    "allowImportingTsExtensions": true,
+    "sourceMap": true,
+    "strict": true
+  },
+  "include": ["src", "scripts", "vite.config.ts"]
+}

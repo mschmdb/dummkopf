@@ -36,8 +36,8 @@ jobs:
           git config --global user.name "CI"
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      - name: Install the packages, not the site
+        run: pnpm install --frozen-lockfile --filter "./packages/**" --filter rcllr-workspace
       - name: Type check
         run: pnpm typecheck
       - name: Unit tests
@@ -56,10 +56,30 @@ jobs:
         with:
           node-version: "24"
           cache: pnpm
-      - name: Install
-        run: pnpm install --frozen-lockfile
+      - name: Install the packages, not the site
+        run: pnpm install --frozen-lockfile --filter "./packages/**" --filter rcllr-workspace
       - name: TOML parser against the official toml-test suite
         run: pnpm test:toml
+
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - name: Install the site and what it needs
+        run: pnpm install --frozen-lockfile --filter site...
+      - name: Type check
+        run: pnpm --dir site check
+      - name: Tests (contrast, theme)
+        run: pnpm --dir site test
+      - name: Build
+        run: pnpm --dir site build
+      - name: Build the image Coolify deploys
+        run: docker build -f site/Dockerfile -t rcllr-site .
 
   secrets:
     runs-on: ubuntu-latest
