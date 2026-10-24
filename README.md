@@ -329,7 +329,7 @@ typo never switches a rule off silently. The full file with every default is in
 | `[ui]` | `locale`, `tone` | `locale` (`en`, `de`) sets generated headings and text heuristics. `tone` is `plain` (default) or `cheeky`, which adds a short remark to some messages. |
 | `[hooks]` | `report` | When the pre-commit hook prints its report line: `changes` (default, only when the counts changed), `always` or `never`. |
 | `[limits]` | `max_chars`, `find_limit`, `max_input_chars`, `max_changes`, `lock_timeout_s`, `git_timeout_s`, `stale_after_days` | Output budgets and timeouts. |
-| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent`, `imported_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator; imported agent memory scores 25 percent. |
+| `[search.weights]` | `title`, `aliases`, `key_fact`, `path`, `body`, `topic_readme_bonus`, `curator_report_percent`, `imported_percent` | Search ranking. Curator reports score 25 percent unless the query names the curator; imported agent memory scores 60 percent. |
 | `[context]` | `routes_file` | Optional routes for dated plans (see below). |
 | `[extras]` | `links`, `curator`, `codex_sync`, `claude_memory`, `codex_memory` | Switch each extra on or off. The two memory imports are off by default. |
 | `[links]` | `output`, `entities_file`, `min_topics`, `allow_outside` | Options of the links extra. `allow_outside` lists folders outside the note folders (e.g. `archive`, `assets`) that notes may link to; any other target outside the note folders counts as unavailable. |
@@ -373,7 +373,7 @@ scopes (`privat`), the marker (`> SENSIBEL`) and folders (`quellen/`) without to
   ```
 
   Agents write that memory themselves. So every mirrored note says it is not an instruction, links in it become
-  plain text, and it ranks below your own notes (`imported_percent`). To import after every Claude Code session,
+  plain text, and it counts 60 percent of an own note in the ranking (`imported_percent`). To import after every Claude Code session,
   add a `SessionEnd` hook to `~/.claude/settings.json` that runs
   `rcllr --root ~/brain import-memory --from-hook`. It imports only the project the session ran in and never
   blocks the session.
@@ -408,7 +408,8 @@ answers in 0.16 s. To measure your own machine, run `pnpm bench` in a checkout.
 **Windows?** Not tested yet. The process lock and the hooks assume a POSIX system.
 
 **Why does `read` say "unavailable" for a file I can see?** The file is sensitive, out of scope or outside
-the note folders. rcllr gives the same answer in all three cases, on purpose.
+the note folders. rcllr gives the same answer in all three cases, on purpose. With a narrow `--scope`, the answer
+adds that other scopes stay hidden; that hint depends only on your call, never on the file.
 
 **Can two agents write at the same time?** Yes. A process lock serializes writes, and `--expected` rejects a
 change based on an old revision. Across machines, a push that loses the race against another machine fetches,

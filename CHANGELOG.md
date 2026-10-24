@@ -5,6 +5,13 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Imported agent memory counts 60 percent of an own note in the ranking instead of 25. At 25, `context` showed
+  loosely related own notes and dropped the memory that answered the question.
+- A denied read or write with a narrow `--scope` adds that other scopes stay hidden and how to widen the search.
+  The hint depends only on the call, so hidden and missing paths still answer alike.
+
 ## [0.5.3] - 2026-10-24
 
 ### Fixed

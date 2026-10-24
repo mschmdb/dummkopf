@@ -141,7 +141,8 @@ test("from a hook, only the project the session ran in is imported, and never wi
 
 test("imported memory ranks below the user's own note on the same words", () => {
   const target = enabled();
-  target.note("notes/espresso.md", { title: "Espresso", body: "Grind finer for espresso." });
+  target.note("notes/espresso.md", { title: "Espresso", body: "Grind finer for espresso.",
+    fields: "key_fact: Espresso grind finer.\naliases: [espresso]\n" });
   target.commit("Own note");
   run(target, claudeHome({ "espresso.md": memoryFile("espresso", "Espresso grind finer.", "Grind finer for espresso.") }));
   const paths = find(new Access(target.config), "espresso grind").hits.map((hit) => hit.path);
@@ -183,4 +184,27 @@ test("projects = [\"*\"] imports every project except the excluded ones, labelle
     "topics/claude-memory/users-me-notes/b.md"]);
   assert.ok(target.read("topics/claude-memory/users-me-notes/b.md").includes("Claude Code memory of /Users/me/notes."));
   assert.ok(target.read("topics/claude-memory/users-me-sites-shop/a.md").includes("memory of -Users-me-Sites-shop."));
+});
+
+test("a memory that answers the question beats an own note that shares only one word (context ranks by score)", () => {
+  const target = enabled();
+  target.note("notes/servers.md", { title: "Server master", body: "The build server is called master.",
+    fields: "key_fact: The master server builds releases.\naliases: [master, server]\n" });
+  target.commit("Own note");
+  run(target, claudeHome({ "master-pdf.md": memoryFile("master-pdf-run-is-hand-check",
+    "The run with the Master-Test-PDF plus PAC counts as the hand check for every story.", "Upload, review, PAC.") }));
+  const hits = find(new Access(target.config), "was weisst du ueber das Master-Test-PDF", 3, true).hits;
+  assert.equal(hits[0]!.path, "topics/claude-memory/users-me-sites-shop/master-pdf.md");
+});
+
+test("a denied read with a narrow scope hints at the wider one, the same for hidden and missing paths", () => {
+  const target = enabled();
+  run(target, claudeHome({ "a.md": memoryFile("a", "Fact.", "Body.") }));
+  const hidden = invoke(target, ["read", "topics/claude-memory/users-me-sites-shop/a.md", "--scope", "work", "--serious"]);
+  const missing = invoke(target, ["read", "topics/claude-memory/users-me-sites-shop/zz.md", "--scope", "work", "--serious"]);
+  assert.equal(hidden.code, 2);
+  assert.equal(hidden.err, "Path unavailable or access excluded. With --scope work, notes of other scopes stay hidden; "
+    + "--scope both searches them too.\n");
+  assert.deepEqual(hidden, missing);
+  assert.equal(invoke(target, ["read", "notes/zz.md", "--serious"]).err, "Path unavailable or access excluded.\n");
 });

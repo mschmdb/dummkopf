@@ -7,7 +7,9 @@ import { test } from "node:test";
 
 import { type Brain, ingest, md, newEntry, Sandbox } from "./harness.ts";
 
-const DENIED = "Path unavailable or access excluded.\n";
+/** A narrow --scope adds a hint that depends only on the request, so hidden and missing paths still answer alike. */
+const DENIED_IN_WORK = "Path unavailable or access excluded. With --scope work, notes of other scopes stay hidden; "
+  + "--scope both searches them too.\n";
 const TOPIC_UNAVAILABLE = "This topic is unavailable to this call, or it is new and needs a README.md "
   + "with a scope in the same package.\n";
 const WORK = ["--scope", "work", "--dry-run"];
@@ -31,7 +33,7 @@ test("a new file over a hidden note in a hidden topic says the path is taken", (
   const entry = newEntry("topics/private/sub/hidden.md");
   assert.equal(ingest(brain, [entry], WORK).err, TOPIC_UNAVAILABLE);
   brain.write("topics/private/sub/hidden.md", md());
-  assert.equal(ingest(brain, [entry], WORK).err, DENIED);
+  assert.equal(ingest(brain, [entry], WORK).err, DENIED_IN_WORK);
 });
 
 // --- a new README above hidden notes ------------------------------------------------------------------------
