@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { parseToml, TomlDateTime, TomlError } from "../src/toml.ts";
+import { parseToml, TomlDateTime, TomlError, tomlEscape } from "../src/toml.ts";
 
 test("date-times with out-of-range fields are rejected", () => {
   for (const value of [
@@ -52,4 +52,11 @@ test("CRLF line endings parse like LF, a bare CR is rejected", () => {
   for (const bad of ["a = 1\rb = 2", "# c\r\na = 1\r", 'm = """\rx"""', "l = '''x\ry'''", "# c\rx\n", "ar = [1,\r2]"]) {
     assert.throws(() => parseToml(bad), TomlError, JSON.stringify(bad));
   }
+});
+
+test("tomlEscape round-trips Windows paths, quotes and control characters in a basic string", () => {
+  for (const value of ["C:\\Users\\me\\remote.git", 'a"b', "tab\there", "nul\u0000x\u007f", "über", "me@example.org:me/b.git"]) {
+    assert.equal(parseToml('v = "' + tomlEscape(value) + '"').v, value, JSON.stringify(value));
+  }
+  assert.equal(tomlEscape("me@example.org:me/brain.git"), "me@example.org:me/brain.git");
 });

@@ -485,6 +485,18 @@ function newTable(): TomlTable {
   return Object.create(null) as TomlTable;
 }
 
+/** The inside of a TOML basic string for `value`: backslashes, quotes and control characters escaped. */
+export function tomlEscape(value: string): string {
+  let out = "";
+  for (const char of value) {
+    const code = char.codePointAt(0)!;
+    if (char === "\\" || char === '"') out += "\\" + char;
+    else if (code < 0x20 || code === 0x7f) out += "\\u" + code.toString(16).padStart(4, "0");
+    else out += char;
+  }
+  return out;
+}
+
 export function isTable(value: unknown): value is TomlTable {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     && !(value instanceof TomlFloat) && !(value instanceof TomlDateTime);

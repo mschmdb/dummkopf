@@ -10,6 +10,7 @@ import { run } from "./proc.ts";
 import { format } from "./py.ts";
 import { exists, isDir, join, listdir, resolve, writeText } from "./pyos.ts";
 import { Sensitivity } from "./sensitive.ts";
+import { tomlEscape } from "./toml.ts";
 
 export const PLACEHOLDER_REMOTE = "git@github.com:you/your-brain.git";
 
@@ -112,7 +113,7 @@ export function init(targetPath: string, remote: string | null, locale: string):
   fs.mkdirSync(target, { recursive: true });
   // Without --remote the brain stays local: the remote line is only a commented hint.
   const settings = remote
-    ? template("rcllr.toml").replaceAll("{remote}", () => remote)
+    ? template("rcllr.toml").replaceAll("{remote}", () => tomlEscape(remote))
     : template("rcllr.toml").replace('remote = "{remote}"\n', () => LOCAL_REMOTE_HINT);
   writeText(join(target, CONFIG_NAME), settings.replaceAll("{locale}", () => locale));
   const config = loadConfig(target);
